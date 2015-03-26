@@ -55,16 +55,58 @@ namespace FermentationController
             return (Task<string>) methodImpls["GetAllProfiles"](Client, arguments);
         }
 
-        public virtual Task<string> GetProfile(string id)
+        public virtual Task<string> GetProfile(string profileName)
         {
-            var arguments = new object[] { id };
+            var arguments = new object[] { profileName };
             return (Task<string>) methodImpls["GetProfile"](Client, arguments);
         }
 
-        public virtual Task Profile(string payload)
+        public virtual Task Profile(string profileName,string payload,int offset)
         {
-            var arguments = new object[] { payload };
+            var arguments = new object[] { profileName,payload,offset };
             return (Task) methodImpls["Profile"](Client, arguments);
+        }
+
+        public virtual Task ExecuteProfile(string profileName,int offset)
+        {
+            var arguments = new object[] { profileName,offset };
+            return (Task) methodImpls["ExecuteProfile"](Client, arguments);
+        }
+
+        public virtual Task TerminateProfile(string profileName,int offset)
+        {
+            var arguments = new object[] { profileName,offset };
+            return (Task) methodImpls["TerminateProfile"](Client, arguments);
+        }
+
+        public virtual Task TruncateProfile()
+        {
+            var arguments = new object[] {  };
+            return (Task) methodImpls["TruncateProfile"](Client, arguments);
+        }
+
+        public virtual Task GetRunHistory(string profileName)
+        {
+            var arguments = new object[] { profileName };
+            return (Task) methodImpls["GetRunHistory"](Client, arguments);
+        }
+
+        public virtual Task GetTemperatureTrend(long startSecondsFromEpoch,long endSecondsFromEpoch)
+        {
+            var arguments = new object[] { startSecondsFromEpoch,endSecondsFromEpoch };
+            return (Task) methodImpls["GetTemperatureTrend"](Client, arguments);
+        }
+
+        public virtual Task GetTemperature()
+        {
+            var arguments = new object[] {  };
+            return (Task) methodImpls["GetTemperature"](Client, arguments);
+        }
+
+        public virtual Task GetTemperatureForProbe(int probeId)
+        {
+            var arguments = new object[] { probeId };
+            return (Task) methodImpls["GetTemperatureForProbe"](Client, arguments);
         }
 
     }
