@@ -1,17 +1,22 @@
 ﻿using System;
 using Refit;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace FermentationController
 {
 	public interface IFermentationControllerAPI
 	{
-		[Get("/ECHO?{data}")]
+		[Get("/ECHO?echo={data}")]
 		Task<string> Echo(string data);
 
 		//time in seconds from UNIX epoch
 		[Put("/time?time={time}")]
 		Task SetTime(long time);
+
+		//get api/status
+		[Get("/status")]
+		Task<string> GetStatus();
 
 		//get api/profile
 		[Get ("/profile")]
@@ -37,7 +42,7 @@ namespace FermentationController
 		Task TruncateProfile ();
 
 		[Get ("/runhistory?name={profileName}")]
-		Task GetRunHistory (string profileName);
+		Task<string> GetRunHistory (string profileName);
 
 		//*Note: Start and either End OR Length is required.\n  Response BODY=application/octet-stream (*See Temperature Trend Data Structure)\n
 		//&length={length (s)}
@@ -49,11 +54,11 @@ namespace FermentationController
 		//		{Probe 0 Temperature in C}\r\n
 		//		{Probe 1 Temperature in C}\r\n
 		[Get ("/temperature")]
-		Task GetTemperature ();
+		Task<string> GetTemperature ();
 
 		//probeId = 0,1
 		[Get ("/temperature?probe={probeId}")]
-		Task GetTemperatureForProbe (int probeId);
+		Task<string> GetTemperatureForProbe (int probeId);
 
 		//		get api/profile?{id}
 		//		get api/profile/log?{profileId}

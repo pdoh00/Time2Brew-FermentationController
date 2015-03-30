@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Refit;
 using System.Threading.Tasks;
+using System.IO;
 
 /* ******** Hey You! *********
  *
@@ -55,6 +56,12 @@ namespace FermentationController
             return (Task) methodImpls["SetTime"](Client, arguments);
         }
 
+        public virtual Task<string> GetStatus()
+        {
+            var arguments = new object[] {  };
+            return (Task<string>) methodImpls["GetStatus"](Client, arguments);
+        }
+
         public virtual Task<string> GetAllProfiles()
         {
             var arguments = new object[] {  };
@@ -91,10 +98,10 @@ namespace FermentationController
             return (Task) methodImpls["TruncateProfile"](Client, arguments);
         }
 
-        public virtual Task GetRunHistory(string profileName)
+        public virtual Task<string> GetRunHistory(string profileName)
         {
             var arguments = new object[] { profileName };
-            return (Task) methodImpls["GetRunHistory"](Client, arguments);
+            return (Task<string>) methodImpls["GetRunHistory"](Client, arguments);
         }
 
         public virtual Task GetTemperatureTrend(long startSecondsFromEpoch,long endSecondsFromEpoch)
@@ -103,16 +110,16 @@ namespace FermentationController
             return (Task) methodImpls["GetTemperatureTrend"](Client, arguments);
         }
 
-        public virtual Task GetTemperature()
+        public virtual Task<string> GetTemperature()
         {
             var arguments = new object[] {  };
-            return (Task) methodImpls["GetTemperature"](Client, arguments);
+            return (Task<string>) methodImpls["GetTemperature"](Client, arguments);
         }
 
-        public virtual Task GetTemperatureForProbe(int probeId)
+        public virtual Task<string> GetTemperatureForProbe(int probeId)
         {
             var arguments = new object[] { probeId };
-            return (Task) methodImpls["GetTemperatureForProbe"](Client, arguments);
+            return (Task<string>) methodImpls["GetTemperatureForProbe"](Client, arguments);
         }
 
     }

@@ -37,8 +37,9 @@ namespace FermentationController
 		//Heat Relay Status {0=Off, 1=On}
 		[FieldOffset (12)]
 		public byte HeatRelayStatus;
-		[FieldOffset (13)]
+
 		//Cool Relay Status {0=Off, 1=On}
+		[FieldOffset (13)]
 		public byte CoolRelayStatus;
 
 		//64 byte NULL terminated string = Currently Running Profile.  Empty if no profile is active.

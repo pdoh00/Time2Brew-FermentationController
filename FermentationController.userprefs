@@ -1,28 +1,33 @@
 ﻿<Properties StartupItem="Droid\FermentationController.Droid.csproj">
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="Android.API_21_ARM" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="ControllerStatus.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="MainPageViewModel.cs">
     <Files>
-      <File FileName="MainPageView.xaml" Line="1" Column="1" />
-      <File FileName="MainPageView.xaml.cs" Line="1" Column="1" />
-      <File FileName="MainPageViewModel.cs" Line="1" Column="1" />
-      <File FileName="IFermentationControllerAPI.cs" Line="1" Column="1" />
+      <File FileName="MainPageView.xaml" Line="9" Column="29" />
+      <File FileName="MainPageView.xaml.cs" Line="20" Column="3" />
+      <File FileName="MainPageViewModel.cs" Line="32" Column="6" />
+      <File FileName="IFermentationControllerAPI.cs" Line="18" Column="38" />
       <File FileName="AppBootstrapper.cs" Line="1" Column="1" />
-      <File FileName="ControllerStatus.cs" Line="32" Column="54" />
       <File FileName="Profile.cs" Line="9" Column="3" />
+      <File FileName="FermentationController.csproj" Line="1" Column="1" />
+      <File FileName="ProfileStepData.cs" Line="10" Column="20" />
+      <File FileName="ProfileData.cs" Line="26" Column="1" />
+      <File FileName="TruncationData.cs" Line="14" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="FermentationController" expanded="True">
-            <Node name="References" expanded="True" selected="True" />
-            <Node name="Packages" expanded="True" />
+            <Node name="Properties" selected="True" />
           </Node>
         </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
+    <BreakpointStore>
+      <Breakpoint file="D:\dev_bin\Time2Brew-FermentationController\MainPageViewModel.cs" line="33" column="6" />
+      <Breakpoint file="D:\dev_bin\Time2Brew-FermentationController\MainPageViewModel.cs" line="18" column="12" />
+    </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>

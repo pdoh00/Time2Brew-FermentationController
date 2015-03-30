@@ -3,6 +3,8 @@ using ReactiveUI;
 using System.Runtime.Serialization;
 using Polly;
 using System.Net;
+using System.Reactive.Linq;
+using System.IO;
 
 namespace FermentationController
 {
@@ -10,21 +12,73 @@ namespace FermentationController
 	{
 		public MainPageViewModel (IFermentationControllerAPI fermApi)
 		{
-			var retry = Polly.Policy.Handle<WebException>().WaitAndRetryAsync(3, x=> TimeSpan.FromSeconds(Math.Pow(2, x)));
+			var retry = Polly.Policy.Handle<WebException>().WaitAndRetryAsync(1, x=> TimeSpan.FromSeconds(Math.Pow(2, x)));
 
 			Echo = ReactiveCommand.CreateAsyncTask (async _=> {
-				try
-				{
+				
 					var response = await retry.ExecuteAsync(() => fermApi.Echo(this.EchoText));
 					return response;
-				}
-				catch(Exception ex)
-				{
-					return "Cannot echo!  " + ex.Message;
-				}
 			});
 
 			Echo.ToProperty (this, vm => vm.EchoResponse, out _EchoResponse);
+
+			GetStatus = ReactiveCommand.CreateAsyncTask(async _=>{
+				string output = string.Empty;
+
+
+				await UserError.Throw(new UserError("IM IN!"));
+
+				var response = await retry.ExecuteAsync (() =>fermApi.GetStatus());
+				var theData = Convert.FromBase64String(response);
+				using(var ms = new MemoryStream(theData))
+				{
+					var systemTime = ms.ReadUInt32();
+					var systemMode = ms.ReadByte();
+					var regMode = ms.ReadByte();
+					var probe0Assignment = ms.ReadByte();
+					var probe0Temp = ms.ReadUInt16(); 
+					var probe1Assignment = ms.ReadByte();
+					var probe1Temp = ms.ReadUInt16();
+					var heatRelayStatus = ms.ReadByte();
+					var coolRelayStatus = ms.ReadByte();
+					var runningProfile = ms.ReadString(64);
+					var profileStepIdx = ms.ReadUInt16();
+					var profileStepTemp = ms.ReadUInt16();
+					var profileStepTimeRemaining = ms.ReadUInt32();
+					var manualSetpointTemp = ms.ReadUInt16();
+					var profileStartTime = ms.ReadUInt32();
+
+					output += string.Format("System Time:{0}/n", systemTime);
+					output += string.Format("System Mode:{0}/n", systemMode);
+					output += string.Format("Regulation Mode:{0}/n", regMode);
+
+					output += string.Format("Probe0 Assign:{0}/n", probe0Assignment);
+					output += string.Format("Probe0 Temp:{0}/n", probe0Temp);
+
+					output += string.Format("Probe1 Assign:{0}/n", probe1Assignment);
+					output += string.Format("Probe1 Temp:{0}/n", probe1Temp);
+
+					output += string.Format("Heat Relay Status:{0}/n", heatRelayStatus);
+					output += string.Format("Cool Relay Status:{0}/n", coolRelayStatus);
+
+					output += string.Format("Running Profile:{0}/n", runningProfile);
+
+					output += string.Format("Profile Step Index:{0}/n", profileStepIdx);
+					output += string.Format("Profile Step Temperature:{0}/n", profileStepTemp);
+					output += string.Format("Profile Step Time Remaining:{0}/n", profileStepTimeRemaining);
+					output += string.Format("Manual Setpoint Temp:{0}/n", manualSetpointTemp);
+					output += string.Format("Profile Start Time:{0}/n", profileStartTime);
+				}
+
+					return output;
+			});
+
+			GetStatus.ThrownExceptions
+				.Select (x => new UserError ("Status cannot be retrieved", "Check your connected to the TEMPERATURE wifi"))
+				.SelectMany (UserError.Throw);
+
+			GetStatus.ToProperty (this, vm => vm.StatusResponse, out _StatusResponse);
+
 		}
 
 		[IgnoreDataMember]
@@ -39,7 +93,7 @@ namespace FermentationController
 		}
 
 		[IgnoreDataMember] public ReactiveCommand<string> Echo { get; private set; }
-		[IgnoreDataMember] public ReactiveCommand<ControllerStatus> GetStatus { get; private set; }
+		[IgnoreDataMember] public ReactiveCommand<string> GetStatus { get; private set; }
 
 
 		private string _EchoText;
@@ -61,7 +115,6 @@ namespace FermentationController
 		public string StatusResponse { 
 			get { return _StatusResponse.Value; }
 		}
-
 
 	}
 }
