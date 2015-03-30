@@ -5,6 +5,10 @@
 			<Entry x:Name="entryEcho" Placeholder="Echo text here!"/>
 			<Button x:Name="btnEcho" Text="Send" VerticalOptions="Center"/>
 			<Label x:Name="lblEchoReturnData"/>
+
+			<Button x:Name="btnStatus" Text="Get Status" VerticalOptions="Center"/>
+			<Label x:Name="lblStatusReturnData"/>
+
 		</StackLayout>
 	</ContentPage.Content>
 </ContentPage>

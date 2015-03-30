@@ -49,6 +49,12 @@ namespace FermentationController
             return (Task<string>) methodImpls["Echo"](Client, arguments);
         }
 
+        public virtual Task SetTime(long time)
+        {
+            var arguments = new object[] { time };
+            return (Task) methodImpls["SetTime"](Client, arguments);
+        }
+
         public virtual Task<string> GetAllProfiles()
         {
             var arguments = new object[] {  };

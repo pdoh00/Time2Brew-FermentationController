@@ -29,7 +29,7 @@ namespace FermentationController
 		public byte CoolRelayStatus;
 
 		//64 byte NULL terminated string = Currently Running Profile.  Empty if no profile is active.
-		//[MarshalAs(UnmanagedType.ByValArray, SizeConst=64)]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst=64)]
 		char[] RunningProfile;
 
 		//Profile Step Index

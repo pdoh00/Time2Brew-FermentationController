@@ -39,6 +39,7 @@ namespace FermentationController
 		}
 
 		[IgnoreDataMember] public ReactiveCommand<string> Echo { get; private set; }
+		[IgnoreDataMember] public ReactiveCommand<ControllerStatus> GetStatus { get; private set; }
 
 
 		private string _EchoText;
@@ -53,6 +54,12 @@ namespace FermentationController
 		[DataMember]
 		public string EchoResponse { 
 			get { return _EchoResponse.Value; }
+		}
+
+		private ObservableAsPropertyHelper<string> _StatusResponse;
+		[DataMember]
+		public string StatusResponse { 
+			get { return _StatusResponse.Value; }
 		}
 
 

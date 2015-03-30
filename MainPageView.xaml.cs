@@ -12,6 +12,9 @@ namespace FermentationController
 			this.Bind (ViewModel, vm => vm.EchoText, v => v.entryEcho.Text);
 			this.OneWayBind (ViewModel, vm => vm.EchoResponse, v => v.lblEchoReturnData.Text);
 			this.BindCommand (ViewModel, vm => vm.Echo, v => v.btnEcho);
+
+			this.OneWayBind (ViewModel, vm => vm.StatusResponse, v => v.lblStatusReturnData.Text);
+			this.BindCommand (ViewModel, vm => vm.GetStatus, v => v.btnStatus);
 		}
 
 		public MainPageViewModel ViewModel {

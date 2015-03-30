@@ -7,9 +7,12 @@ namespace FermentationController
 	public interface IFermentationControllerAPI
 	{
 
-		//get api/profile
 		[Get("/ECHO?{data}")]
 		Task<string> Echo(string data);
+
+		//
+		[Put("/time?time={time}")]
+		Task SetTime(long time);
 
 		//get api/profile
 		[Get("/profile")]
