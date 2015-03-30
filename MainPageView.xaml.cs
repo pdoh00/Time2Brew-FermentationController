@@ -11,6 +11,8 @@ namespace FermentationController
 
 			this.Bind (ViewModel, vm => vm.EchoText, v => v.entryEcho.Text);
 
+			this.BindCommand (ViewModel, vm => vm.SetTimeToNow, v => v.btnSetTimeNow);
+
 			this.OneWayBind (ViewModel, vm => vm.EchoResponse, v => v.lblEchoReturnData.Text);
 			this.BindCommand (ViewModel, vm => vm.Echo, v => v.btnEcho);
 

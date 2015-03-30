@@ -6,6 +6,9 @@
 			<Button x:Name="btnEcho" Text="Send" VerticalOptions="Center"/>
 			<Label x:Name="lblEchoReturnData"/>
 
+
+			<Button x:Name="btnSetTimeNow" Text="Set Time to Now" VerticalOptions="Center"/>
+
 			<Button x:Name="btnStatus" Text="Get Status" VerticalOptions="Center"/>
 			<Label x:Name="lblStatusReturnData"/>
 
