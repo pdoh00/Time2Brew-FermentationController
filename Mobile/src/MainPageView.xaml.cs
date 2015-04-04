@@ -19,6 +19,8 @@ namespace FermentationController
 			this.OneWayBind (ViewModel, vm => vm.StatusResponse, v => v.lblStatusReturnData.Text);
 			this.BindCommand (ViewModel, vm => vm.GetStatus, v => v.btnStatus);
 
+			this.BindCommand (ViewModel, vm => vm.NavigateToCreateProfilePage, v => v.btnCreateProfile);
+
 			UserError.RegisterHandler (async (arg) => {
 				 await DisplayAlert (arg.ErrorMessage, arg.ErrorCauseOrResolution, "Cancel");
 				return RecoveryOptionResult.CancelOperation;

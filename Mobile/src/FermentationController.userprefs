@@ -1,24 +1,8 @@
-﻿<Properties StartupItem="Droid\FermentationController.Droid.csproj">
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="Android.API19" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="MainPageViewModel.cs">
-    <Files>
-      <File FileName="MainPageView.xaml" Line="1" Column="1" />
-      <File FileName="MainPageView.xaml.cs" Line="1" Column="1" />
-      <File FileName="MainPageViewModel.cs" Line="32" Column="6" />
-      <File FileName="IFermentationControllerAPI.cs" Line="1" Column="1" />
-      <File FileName="AppBootstrapper.cs" Line="1" Column="1" />
-      <File FileName="Profile.cs" Line="1" Column="1" />
-      <File FileName="FermentationController.csproj" Line="1" Column="1" />
-      <File FileName="ProfileStepData.cs" Line="1" Column="1" />
-      <File FileName="ProfileData.cs" Line="1" Column="1" />
-      <File FileName="TruncationData.cs" Line="1" Column="1" />
-    </Files>
-  </MonoDevelop.Ide.Workbench>
+﻿<Properties StartupItem="FermentationController.csproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore>
-      <Breakpoint file="D:\dev_bin\Time2Brew-FermentationController\MainPageViewModel.cs" line="33" column="6" />
-      <Breakpoint file="D:\dev_bin\Time2Brew-FermentationController\MainPageViewModel.cs" line="18" column="12" />
-    </BreakpointStore>
+    <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>

@@ -21,13 +21,14 @@ namespace FermentationController
 
 			Locator.CurrentMutable.RegisterConstant (this, typeof(IScreen));
 			Locator.CurrentMutable.Register (() => new MainPageView (), typeof(IViewFor<MainPageViewModel>));
+			Locator.CurrentMutable.Register (() => new CreateProfileView (), typeof(IViewFor<CreateProfileViewModel>));
 
 			var fermApi = RestService.For<IFermentationControllerAPI> (new HttpClient (new NativeMessageHandler ())
 				{
 					BaseAddress = new Uri ("http://192.168.4.1/API")
 				});
 
-			Router.Navigate.Execute (new MainPageViewModel (fermApi));
+			Router.Navigate.Execute (new MainPageViewModel (fermApi, this));
 		}
 
 		public Page CreateMainPage ()

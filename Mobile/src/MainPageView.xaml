@@ -12,6 +12,8 @@
 			<Button x:Name="btnStatus" Text="Get Status" VerticalOptions="Center"/>
 			<Label x:Name="lblStatusReturnData"/>
 
+
+			<Button x:Name="btnCreateProfile" Text="New Profile" VerticalOptions="Center"/>
 		</StackLayout>
 	</ContentPage.Content>
 </ContentPage>

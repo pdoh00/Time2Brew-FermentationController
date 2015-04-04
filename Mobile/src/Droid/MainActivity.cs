@@ -20,8 +20,10 @@ namespace FermentationController.Droid
 		{
 			base.OnCreate (bundle);
 			Forms.Init (this, bundle);
+
 			var mainPage = RxApp.SuspensionHost.GetAppState<AppBootstrapper> ().CreateMainPage ();
 			this.SetPage (mainPage);
+
 //			LoadApplication (new App ());
 		}
 	}

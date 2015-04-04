@@ -11,9 +11,11 @@ namespace FermentationController
 {
 	public class MainPageViewModel :ReactiveObject, IRoutableViewModel
 	{
-		public MainPageViewModel (IFermentationControllerAPI fermApi)
+		public MainPageViewModel (IFermentationControllerAPI fermApi, IScreen hostScreen)
 		{
 			var retry = Polly.Policy.Handle<WebException>().WaitAndRetryAsync(1, x=> TimeSpan.FromSeconds(Math.Pow(2, x)));
+
+			HostScreen = hostScreen;
 
 			SetTimeToNow = ReactiveCommand.CreateAsyncTask (async _=> {
 				var secFromEpoch = DateTimeMixins.SecondsFromEpoch();
@@ -81,6 +83,9 @@ namespace FermentationController
 
 			GetStatus.ToProperty (this, vm => vm.StatusResponse, out _StatusResponse);
 
+			NavigateToCreateProfilePage = ReactiveCommand.Create ();
+			NavigateToCreateProfilePage
+				.Subscribe(_=> HostScreen.Router.Navigate.Execute(new CreateProfileViewModel(hostScreen)));
 		}
 
 		[IgnoreDataMember]
@@ -97,6 +102,7 @@ namespace FermentationController
 		[IgnoreDataMember] public ReactiveCommand<string> Echo { get; private set; }
 		[IgnoreDataMember] public ReactiveCommand<string> GetStatus { get; private set; }
 		[IgnoreDataMember] public ReactiveCommand<Unit> SetTimeToNow { get; protected set; }
+		[IgnoreDataMember] public ReactiveCommand<object> NavigateToCreateProfilePage { get; protected set; }
 
 		private string _EchoText;
 		[DataMember]
