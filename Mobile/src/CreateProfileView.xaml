@@ -3,16 +3,51 @@
 	<ContentPage.Content>
 		<Grid>
 			<Grid.RowDefinitions>
-				<RowDefinition Height="150" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
-			<StackLayout Orientation="Horizontal" VerticalOptions="Start" Grid.Row="0">
-				<ListView x:Name="listHours" HorizontalOptions="Start"></ListView>
-				<ListView x:Name="listMins" HorizontalOptions="Center"></ListView>
-				<ListView x:Name="listSecs" HorizontalOptions="End"></ListView>
+
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
+				<Label Text="Name" Grid.Column="0"/>
+				<Entry x:Name="txtName" Grid.Column="1"/>
+			</Grid>
+
+			<StackLayout Orientation="Vertical" Grid.Row="1">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+
+					<Stepper x:Name="stpStartTemp" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0" Grid.Row="0"/>
+					<Entry x:Name="entryStartTemp" Keyboard="Numeric" Grid.Column="1"  Grid.Row="0"/>
+					<Label Text="F" Grid.Column="2"  Grid.Row="0"/>
+
+					<Stepper x:Name="stpStepTime" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0"  Grid.Row="1"/>
+					<Entry x:Name="entryStepTime" Keyboard="Numeric" Grid.Column="1"  Grid.Row="1"/>
+					<Label Text="Hrs" Grid.Column="2"  Grid.Row="1"/>
+
+					<Stepper x:Name="stpEndTemp" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0"  Grid.Row="2"/>
+					<Entry x:Name="entryEndTemp" Keyboard="Numeric" Grid.Column="1"  Grid.Row="2"/>
+					<Label Text="F" Grid.Column="2"  Grid.Row="2"/>
+				</Grid>
+
+
+				<Button x:Name="btnCommitStep" Text="Commit" HorizontalOptions="CenterAndExpand"/>
 			</StackLayout>
 
-			<Label x:Name="lblSelectedTime" VerticalOptions="EndAndExpand" HorizontalOptions="CenterAndExpand" Grid.Row="1"/>
+			<ListView x:Name="lstStepDescriptions" Grid.Row="2"></ListView>
 		</Grid>
 
 			

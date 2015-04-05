@@ -12,15 +12,15 @@ namespace FermentationController
 			InitializeComponent ();
 
 //			this.Bind (ViewModel, vm => vm.SomeTime, v => v.time.Time);
-			this.OneWayBind (ViewModel, vm => vm.Hours, v => v.listHours.ItemsSource);
-			this.OneWayBind (ViewModel, vm => vm.Mins, v => v.listMins.ItemsSource);
-			this.OneWayBind (ViewModel, vm => vm.Secs, v => v.listSecs.ItemsSource);
+//			this.OneWayBind (ViewModel, vm => vm.Hours, v => v.listHours.ItemsSource);
+//			this.OneWayBind (ViewModel, vm => vm.Mins, v => v.listMins.ItemsSource);
+//			this.OneWayBind (ViewModel, vm => vm.Secs, v => v.listSecs.ItemsSource);
+//
+//			this.Bind (ViewModel, vm => vm.SelectedHours, v => v.listHours.SelectedItem);
+//			this.Bind (ViewModel, vm => vm.SelectedMins, v => v.listMins.SelectedItem);
+//			this.Bind (ViewModel, vm => vm.SelectedSecs, v => v.listSecs.SelectedItem);
 
-			this.Bind (ViewModel, vm => vm.SelectedHours, v => v.listHours.SelectedItem);
-			this.Bind (ViewModel, vm => vm.SelectedMins, v => v.listMins.SelectedItem);
-			this.Bind (ViewModel, vm => vm.SelectedSecs, v => v.listSecs.SelectedItem);
-
-			this.OneWayBind (ViewModel, vm => vm.SelectedStepTime, v => v.lblSelectedTime.Text);
+//			this.OneWayBind (ViewModel, vm => vm.SelectedStepTime, v => v.lblSelectedTime.Text);
 		}
 
 		public CreateProfileViewModel ViewModel {

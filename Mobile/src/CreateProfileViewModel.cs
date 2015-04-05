@@ -9,68 +9,84 @@ namespace FermentationController
 	{
 		public CreateProfileViewModel (IScreen hostScreen)
 		{
-			AddStep = ReactiveCommand.Create ();
+			
 			HostScreen = hostScreen;
-			SomeTime = TimeSpan.FromMinutes (125);
 
-			for (int i = 0; i <= 168; i++) {
-				Hours.Add (i);
-			}
+			AddStep = ReactiveCommand.Create ();
 
-			for (int i = 0; i <= 60; i++) {
-				Mins.Add (i);
-			}
-
-			for (int i = 0; i <= 60; i++) {
-				Secs.Add (i);
-			}
-
-			this.WhenAnyValue (x => x.SelectedHours, x => x.SelectedMins, x => x.SelectedSecs)
-				.Select (x => {return x.Item1.ToString() + ":" + x.Item2.ToString() + ":" + x.Item3.ToString();})
-				.ToProperty (this, x => x.SelectedStepTime, out _SelectedStepTime);
 
 		}
 
-		public ReactiveCommand<object> AddStep {get; protected set;}
-		public ReactiveCommand<object> RemoveStep {get; protected set;}
-		public ReactiveCommand<object> SaveProfile {get; protected set;}
+		public ReactiveCommand<object> AddStep { get; protected set; }
 
-		public ReactiveList<int> Hours = new ReactiveList<int>();
-		public ReactiveList<int> Mins = new ReactiveList<int>();
-		public ReactiveList<int> Secs = new ReactiveList<int>();
+		public ReactiveCommand<object> CommitStep { get; private set; }
+
+		public ReactiveCommand<object> RemoveStep { get; protected set; }
+
+		public ReactiveCommand<object> SaveProfile { get; protected set; }
+
+
+		private int _SelectedDays;
+
+		public int SelectedDays {
+			get { return _SelectedDays; }
+			set { this.RaiseAndSetIfChanged (ref _SelectedDays, value); }
+		}
 
 		private int _SelectedHours;
-		public int SelectedHours
-		{
+
+		public int SelectedHours {
 			get { return _SelectedHours; }
-			set { this.RaiseAndSetIfChanged(ref _SelectedHours, value); }
+			set { this.RaiseAndSetIfChanged (ref _SelectedHours, value); }
 		}
 
 		private int _SelectedMins;
-		public int SelectedMins
-		{
+
+		public int SelectedMins {
 			get { return _SelectedMins; }
-			set { this.RaiseAndSetIfChanged(ref _SelectedMins, value); }
+			set { this.RaiseAndSetIfChanged (ref _SelectedMins, value); }
 		}
 
-		private int _SelectedSecs;
-		public int SelectedSecs
-		{
-			get { return _SelectedSecs; }
-			set { this.RaiseAndSetIfChanged(ref _SelectedSecs, value); }
+		private double _StartingTemp;
+
+		public double StartingTemp { 
+			get { return _StartingTemp; }
+			set { this.RaiseAndSetIfChanged (ref _StartingTemp, value); }	
 		}
 
-		private ObservableAsPropertyHelper<string> _SelectedStepTime;
-		[DataMember]
-		public string SelectedStepTime { 
-			get { return _SelectedStepTime .Value; }
+		private double _EndingTemp;
+
+		public double EndingTemp { 
+			get { return _EndingTemp; }
+			set { this.RaiseAndSetIfChanged (ref _EndingTemp, value); }	
 		}
 
-		private TimeSpan _SomeTime;
-		public TimeSpan SomeTime
-		{
-			get { return _SomeTime; }
-			set { this.RaiseAndSetIfChanged(ref _SomeTime, value); }
+		private int _StepDays;
+
+		public int StepDays { 
+			get { return _StepDays; }
+			set { this.RaiseAndSetIfChanged (ref _StepDays, value); }	
+		}
+
+		private int _StepHours;
+
+		public int StepHours { 
+			get { return _StepHours; }
+			set { this.RaiseAndSetIfChanged (ref _StepHours, value); }	
+		}
+
+		private int _StepMinutes;
+
+		public int StepMinutes { 
+			get { return _StepMinutes; }
+			set { this.RaiseAndSetIfChanged (ref _StepMinutes, value); }	
+		}
+
+		private bool _IsRampStep;
+
+		public bool IsRampStep { 
+			get { return _IsRampStep; }
+			set { this.RaiseAndSetIfChanged (ref _IsRampStep, value); }	
 		}
 
 		public string UrlPathSegment {
@@ -79,7 +95,7 @@ namespace FermentationController
 			}
 		}
 
-		public IScreen HostScreen { get; protected set;}
+		public IScreen HostScreen { get; protected set; }
 	}
 }
 
