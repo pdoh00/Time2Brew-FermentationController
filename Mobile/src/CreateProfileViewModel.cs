@@ -2,6 +2,7 @@
 using ReactiveUI;
 using System.Reactive.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 
 namespace FermentationController
 {
@@ -14,38 +15,102 @@ namespace FermentationController
 
 			AddStep = ReactiveCommand.Create ();
 
+			//Days
+			IncrementTimeDays = ReactiveCommand.CreateAsyncTask (x => {
+				return Task.FromResult (this.SelectedDays + 1);
+			});
 
+			IncrementTimeDays
+				.StartWith (0)
+				.Where (x => x >= 0)
+				.ToProperty (this, x => x.SelectedDays, out _SelectedDays);
+
+			DecrementTimeDays = ReactiveCommand.CreateAsyncTask (x => {
+				return Task.FromResult (this.SelectedDays - 1);
+			});
+
+			DecrementTimeDays
+				.Where (x => x >= 0)
+				.ToProperty (this, x => x.SelectedDays, out _SelectedDays);
+
+			//Hours
+			IncrementTimeHours = ReactiveCommand.CreateAsyncTask (x => {
+				return Task.FromResult (this.SelectedHours + 1);
+			});
+
+			IncrementTimeHours
+				.StartWith (0)
+				.Where (x => x >= 0)
+				.ToProperty (this, x => x.SelectedHours, out _SelectedHours);
+
+			DecrementTimeHours = ReactiveCommand.CreateAsyncTask (x => {
+				return Task.FromResult (this.SelectedHours - 1);
+			});
+
+			DecrementTimeHours
+				.Where (x => x >= 0)
+				.ToProperty (this, x => x.SelectedHours, out _SelectedHours);
+
+			//Mins
+			IncrementTimeMins = ReactiveCommand.CreateAsyncTask (x => {
+				return Task.FromResult ((int)x);
+			});
+
+			IncrementTimeMins
+				.StartWith (0)
+				.Where (x => x >= 0)
+				.ToProperty (this, x => x.SelectedMins, out _SelectedMins);
+
+
+
+			AddStep = ReactiveCommand.Create ();
+			AddStep
+				.Select (x => new StepData (ConvertToCelcius (this.StartingTemp), ConvertToCelcius (this.EndingTemp), new TimeSpan (this.SelectedDays, this.SelectedHours, this.SelectedMins, 0).TotalSeconds))
+				.Subscribe (x => {
+				//add to steps here
+			});
 		}
 
 		public ReactiveCommand<object> AddStep { get; protected set; }
-
-		public ReactiveCommand<object> CommitStep { get; private set; }
 
 		public ReactiveCommand<object> RemoveStep { get; protected set; }
 
 		public ReactiveCommand<object> SaveProfile { get; protected set; }
 
+		public ReactiveCommand<int> IncrementTimeDays { get; protected set; }
 
-		private int _SelectedDays;
+		public ReactiveCommand<int> IncrementTimeHours { get; protected set; }
 
-		public int SelectedDays {
-			get { return _SelectedDays; }
-			set { this.RaiseAndSetIfChanged (ref _SelectedDays, value); }
+		public ReactiveCommand<int> IncrementTimeMins { get; protected set; }
+
+		public ReactiveCommand<int> DecrementTimeDays { get; protected set; }
+
+		public ReactiveCommand<int> DecrementTimeHours { get; protected set; }
+
+		public ReactiveCommand<int> DecrementTimeMins { get; protected set; }
+
+
+		private ObservableAsPropertyHelper<int> _SelectedDays;
+
+		[DataMember]
+		public int SelectedDays { 
+			get { return _SelectedDays.Value; }
 		}
 
-		private int _SelectedHours;
+		private ObservableAsPropertyHelper<int> _SelectedHours;
 
-		public int SelectedHours {
-			get { return _SelectedHours; }
-			set { this.RaiseAndSetIfChanged (ref _SelectedHours, value); }
+		[DataMember]
+		public int SelectedHours { 
+			get { return _SelectedHours.Value; }
 		}
 
-		private int _SelectedMins;
+		private ObservableAsPropertyHelper<int> _SelectedMins;
 
-		public int SelectedMins {
-			get { return _SelectedMins; }
-			set { this.RaiseAndSetIfChanged (ref _SelectedMins, value); }
+		[DataMember]
+		public int SelectedMins { 
+			get { return _SelectedMins.Value; }
 		}
+
 
 		private double _StartingTemp;
 
@@ -96,6 +161,12 @@ namespace FermentationController
 		}
 
 		public IScreen HostScreen { get; protected set; }
+
+		static double ConvertToCelcius (double farenheit)
+		{
+			return (farenheit - 32.0) * (5.0 / 9.0);
+		}
+
 	}
 }
 

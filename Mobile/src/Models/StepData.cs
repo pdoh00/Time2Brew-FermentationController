@@ -17,20 +17,28 @@ namespace FermentationController
 			this.Duration = duration;
 		}
 
+		/// <summary>
+		/// Gets the starting temp in Celcius.
+		/// </summary>
+		/// <value>The starting temp in Celcius.</value>
 		public double StartingTemp {
 			get;
 			private set;
 		}
 
+		/// <summary>
+		/// Gets the ending temp in Celcius.
+		/// </summary>
+		/// <value>The ending temp in Celcius.</value>
 		public double EndingTemp {
 			get;
 			private set;
 		}
 
 		/// <summary>
-		/// Gets the duration.
+		/// Gets the duration in seconds.
 		/// </summary>
-		/// <value>The duration.</value>
+		/// <value>The duration in seconds.</value>
 		public int Duration {
 			get;
 			private set;

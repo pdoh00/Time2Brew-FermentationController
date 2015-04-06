@@ -14,7 +14,7 @@
 					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 				<Label Text="Name" Grid.Column="0"/>
-				<Entry x:Name="txtName" Grid.Column="1"/>
+				<Entry x:Name="txtName" Placeholder="Profile Name Here" Grid.Column="1"/>
 			</Grid>
 
 			<StackLayout Orientation="Vertical" Grid.Row="1">
@@ -35,16 +35,22 @@
 					<Label Text="F" Grid.Column="2"  Grid.Row="0"/>
 
 					<Stepper x:Name="stpStepTime" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0"  Grid.Row="1"/>
-					<Entry x:Name="entryStepTime" Keyboard="Numeric" Grid.Column="1"  Grid.Row="1"/>
+					<StackLayout Orientation="Horizontal" Grid.Column="1"  Grid.Row="1">
+						<Entry x:Name="entryStepTimeDays" Keyboard="Numeric" />
+						<Entry x:Name="entryStepTimeHours" Keyboard="Numeric" />
+						<Entry x:Name="entryStepTimeMinutes" Keyboard="Numeric" />
+					</StackLayout>
 					<Label Text="Hrs" Grid.Column="2"  Grid.Row="1"/>
 
 					<Stepper x:Name="stpEndTemp" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0"  Grid.Row="2"/>
 					<Entry x:Name="entryEndTemp" Keyboard="Numeric" Grid.Column="1"  Grid.Row="2"/>
 					<Label Text="F" Grid.Column="2"  Grid.Row="2"/>
+
+					<Button x:Name="btnAddStep" Text="Add" HorizontalOptions="CenterAndExpand"/>
 				</Grid>
 
 
-				<Button x:Name="btnCommitStep" Text="Commit" HorizontalOptions="CenterAndExpand"/>
+				<Button x:Name="btnCommitStep" Text="Commit profile" HorizontalOptions="EndAndExpand"/>
 			</StackLayout>
 
 			<ListView x:Name="lstStepDescriptions" Grid.Row="2"></ListView>

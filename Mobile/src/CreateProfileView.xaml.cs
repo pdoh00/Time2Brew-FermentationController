@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using ReactiveUI;
 using Xamarin.Forms;
+using System.Reactive.Linq;
 
 namespace FermentationController
 {
@@ -10,6 +11,18 @@ namespace FermentationController
 		public CreateProfileView ()
 		{
 			InitializeComponent ();
+
+			this.Bind (ViewModel, vm => vm.StartingTemp, v => v.stpStartTemp.Value);
+			this.Bind (ViewModel, vm => vm.EndingTemp, v => v.stpEndTemp.Value);
+
+			this.WhenActivated (d => {
+				d (this.WhenAnyValue (x => x.stpStepTime.Value)
+					.SelectMany (x => ViewModel.IncrementTimeMins.ExecuteAsync (x))
+					.Subscribe ());
+			});
+
+
+			//this.Bind (ViewModel, vm => vm.SelectedDays, v => v.entryStepTimeDays.Value);
 
 //			this.Bind (ViewModel, vm => vm.SomeTime, v => v.time.Time);
 //			this.OneWayBind (ViewModel, vm => vm.Hours, v => v.listHours.ItemsSource);
