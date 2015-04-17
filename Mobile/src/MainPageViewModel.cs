@@ -85,7 +85,11 @@ namespace FermentationController
 
 			NavigateToCreateProfilePage = ReactiveCommand.Create ();
 			NavigateToCreateProfilePage
-				.Subscribe(_=> HostScreen.Router.Navigate.Execute(new CreateProfileViewModel(hostScreen)));
+				.Subscribe(_=> HostScreen.Router.Navigate.Execute(new CreateProfileViewModel(hostScreen, fermApi)));
+
+			NavigateToPreferencesPage = ReactiveCommand.Create ();
+			NavigateToPreferencesPage
+				.Subscribe(_=> HostScreen.Router.Navigate.Execute(new PreferencesPageViewModel(hostScreen, new UserSettings())));
 		}
 
 		[IgnoreDataMember]
@@ -103,6 +107,7 @@ namespace FermentationController
 		[IgnoreDataMember] public ReactiveCommand<string> GetStatus { get; private set; }
 		[IgnoreDataMember] public ReactiveCommand<Unit> SetTimeToNow { get; protected set; }
 		[IgnoreDataMember] public ReactiveCommand<object> NavigateToCreateProfilePage { get; protected set; }
+		[IgnoreDataMember] public ReactiveCommand<object> NavigateToPreferencesPage { get; private set; }
 
 		private string _EchoText;
 		[DataMember]

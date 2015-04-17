@@ -1,21 +1,19 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
-<ContentPage xmlns="http://xamarin.com/schemas/2014/forms" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="FermentationController.CreateProfileView">
-	<ContentPage.Content>
+<rui:ReactiveContentPage x:TypeArguments="local:CreateProfileViewModel"
+			 xmlns="http://xamarin.com/schemas/2014/forms" 
+			xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" 
+			xmlns:rui="clr-namespace:ReactiveUI.XamForms;assembly=ReactiveUI.XamForms"
+			x:Class="FermentationController.CreateProfileView">
+	<rui:ReactiveContentPage.Content>
 		<Grid>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="*" />
+				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
 
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="*"/>
-				</Grid.ColumnDefinitions>
-				<Label Text="Name" Grid.Column="0"/>
-				<Entry x:Name="txtName" Placeholder="Profile Name Here" Grid.Column="1"/>
-			</Grid>
+			<Entry x:Name="entryName" Placeholder="Enter Profile Name ..." HorizontalOptions="FillAndExpand" Grid.Row="0"/>
 
 			<StackLayout Orientation="Vertical" Grid.Row="1">
 				<Grid>
@@ -24,42 +22,76 @@
 						<ColumnDefinition Width="*"/>
 						<ColumnDefinition Width="Auto"/>
 					</Grid.ColumnDefinitions>
+
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
 					</Grid.RowDefinitions>
 
-					<Stepper x:Name="stpStartTemp" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0" Grid.Row="0"/>
-					<Entry x:Name="entryStartTemp" Keyboard="Numeric" Grid.Column="1"  Grid.Row="0"/>
+					<Stepper x:Name="stpStartTemp" Minimum="-100" Maximum="100" Increment="0.5" HorizontalOptions="Start" Grid.Column="0" Grid.Row="0"/>
+					<Entry x:Name="entryStartTemp" Keyboard="Numeric" HorizontalOptions="FillAndExpand" Grid.Column="1"  Grid.Row="0"/>
 					<Label Text="F" Grid.Column="2"  Grid.Row="0"/>
 
-					<Stepper x:Name="stpStepTime" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0"  Grid.Row="1"/>
-					<StackLayout Orientation="Horizontal" Grid.Column="1"  Grid.Row="1">
-						<Entry x:Name="entryStepTimeDays" Keyboard="Numeric" />
-						<Entry x:Name="entryStepTimeHours" Keyboard="Numeric" />
-						<Entry x:Name="entryStepTimeMinutes" Keyboard="Numeric" />
-					</StackLayout>
-					<Label Text="Hrs" Grid.Column="2"  Grid.Row="1"/>
+					<Grid Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="*"/>
+						</Grid.ColumnDefinitions>
+						<StackLayout Orientation="Horizontal" Grid.Column="0" HorizontalOptions="Fill">
+							<Entry x:Name="entryStepTimeDays" Keyboard="Numeric"  VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
+							<Label Text="day(s)" XAlign="Center" YAlign="Center"/>
+						</StackLayout>
+
+						<StackLayout Orientation="Horizontal" Grid.Column="1" HorizontalOptions="Fill">
+							<Entry x:Name="entryStepTimeHours" Keyboard="Numeric" VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
+							<Label Text="hr(s)"  XAlign="Center" YAlign="Center" HorizontalOptions="End"/>
+						</StackLayout>
+
+						<StackLayout Orientation="Horizontal" Grid.Column="2" HorizontalOptions="Fill">
+							<Entry x:Name="entryStepTimeMinutes" Keyboard="Numeric" Placeholder="0" VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
+							<Label Text="min(s)"  XAlign="Center" YAlign="Center"/>
+						</StackLayout>
+					</Grid>
 
 					<Stepper x:Name="stpEndTemp" Minimum="0" Maximum="100" Increment="0.5" Grid.Column="0"  Grid.Row="2"/>
-					<Entry x:Name="entryEndTemp" Keyboard="Numeric" Grid.Column="1"  Grid.Row="2"/>
-					<Label Text="F" Grid.Column="2"  Grid.Row="2"/>
+					<Entry x:Name="entryEndTemp" Keyboard="Numeric" HorizontalOptions="FillAndExpand" Grid.Column="1"  Grid.Row="2"/>
+					<Label Text="F" Grid.Column="2" Grid.Row="2"/>
 
-					<Button x:Name="btnAddStep" Text="Add" HorizontalOptions="CenterAndExpand"/>
+					<StackLayout Orientation="Horizontal" Grid.Row="3" Grid.ColumnSpan="2">
+						<Switch x:Name="isRamp" HorizontalOptions="Start"></Switch>
+						<Label Text="Ramp"/>
+					</StackLayout>
+
+					<Button x:Name="btnAddStep" Text="Add Step" HorizontalOptions="CenterAndExpand" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"/>
 				</Grid>
-
-
-				<Button x:Name="btnCommitStep" Text="Commit profile" HorizontalOptions="EndAndExpand"/>
 			</StackLayout>
 
-			<ListView x:Name="lstStepDescriptions" Grid.Row="2"></ListView>
+			<ListView x:Name="lstStepDescriptions" Grid.Row="2" VerticalOptions="Fill">
+				<ListView.ItemTemplate>
+					<DataTemplate>
+<!--					<TextCell Text="{Binding StepDescription}"/>-->
+						<ViewCell>
+          					<ViewCell.View>
+	          					<StackLayout Orientation="Horizontal" Spacing="1">
+	          						<Button x:Name="btnDeleteStep" Command="{Binding DeleteStep}" HorizontalOptions="Start" VerticalOptions="Center"/>
+	          						<Button x:Name="btnEditStep" Command="{Binding EditStep}" HorizontalOptions="Center" VerticalOptions="Center"/>
+	          						<Label x:Name="lblStepDesciption" Text="{Binding StepDescription}" HorizontalOptions="FillAndExpand" XAlign="Start" YAlign="Center"/>
+	          					</StackLayout>
+<!--          					<Page>
+          						<rui:ViewModelViewHost ViewModel="{Binding}"/>
+          					</Page>-->
+							</ViewCell.View>
+						</ViewCell>			
+					</DataTemplate>
+				</ListView.ItemTemplate>
+			</ListView>
+
+			<Button x:Name="btnCommitProfile" Text="Commit" HorizontalOptions="FillAndExpand" VerticalOptions="End" Grid.Row="3"/>
 		</Grid>
 
-			
-	
-
-
-
-	</ContentPage.Content>
-</ContentPage>
+	</rui:ReactiveContentPage.Content>
+</rui:ReactiveContentPage>

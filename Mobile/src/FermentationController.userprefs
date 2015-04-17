@@ -1,6 +1,11 @@
-﻿<Properties StartupItem="FermentationController.csproj">
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench />
+﻿<Properties StartupItem="Droid\FermentationController.Droid.csproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="Android.API_21_ARM" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="CreateProfileView.xaml.cs">
+    <Files>
+      <File FileName="CreateProfileView.xaml" Line="48" Column="7" />
+      <File FileName="CreateProfileView.xaml.cs" Line="21" Column="4" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>

@@ -20,6 +20,7 @@ namespace FermentationController
 			this.BindCommand (ViewModel, vm => vm.GetStatus, v => v.btnStatus);
 
 			this.BindCommand (ViewModel, vm => vm.NavigateToCreateProfilePage, v => v.btnCreateProfile);
+			this.BindCommand (ViewModel, vm => vm.NavigateToPreferencesPage, v => v.btnPreferences);
 
 			UserError.RegisterHandler (async (arg) => {
 				 await DisplayAlert (arg.ErrorMessage, arg.ErrorCauseOrResolution, "Cancel");

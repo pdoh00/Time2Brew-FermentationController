@@ -74,10 +74,10 @@ namespace FermentationController
             return (Task<string>) methodImpls["GetProfile"](Client, arguments);
         }
 
-        public virtual Task Profile(string profileName,string payload,int offset)
+        public virtual Task StoreProfile(string profileName,byte[] payload,int offset)
         {
             var arguments = new object[] { profileName,payload,offset };
-            return (Task) methodImpls["Profile"](Client, arguments);
+            return (Task) methodImpls["StoreProfile"](Client, arguments);
         }
 
         public virtual Task ExecuteProfile(string profileName,int offset)

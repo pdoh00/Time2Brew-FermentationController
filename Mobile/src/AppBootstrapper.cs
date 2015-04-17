@@ -6,6 +6,7 @@ using Xamarin.Forms;
 using Refit;
 using System.Net.Http;
 using ModernHttpClient;
+using Akavache;
 
 namespace FermentationController
 {
@@ -22,6 +23,11 @@ namespace FermentationController
 			Locator.CurrentMutable.RegisterConstant (this, typeof(IScreen));
 			Locator.CurrentMutable.Register (() => new MainPageView (), typeof(IViewFor<MainPageViewModel>));
 			Locator.CurrentMutable.Register (() => new CreateProfileView (), typeof(IViewFor<CreateProfileViewModel>));
+			Locator.CurrentMutable.Register (() => new ProfileStepTileView(), typeof(IViewFor<ProfileStepTileViewModel>));
+			Locator.CurrentMutable.Register (() => new PreferencesPageView (), typeof(IViewFor<PreferencesPageViewModel>));
+
+			BlobCache.ApplicationName = "Time2BrewFermController";
+			BlobCache.EnsureInitialized ();
 
 			var fermApi = RestService.For<IFermentationControllerAPI> (new HttpClient (new NativeMessageHandler ())
 				{

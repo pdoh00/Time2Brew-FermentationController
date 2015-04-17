@@ -3,124 +3,76 @@ using ReactiveUI;
 using System.Reactive.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
+using System.Reactive;
 
 namespace FermentationController
 {
+	
 	public class CreateProfileViewModel :ReactiveObject, IRoutableViewModel
 	{
-		public CreateProfileViewModel (IScreen hostScreen)
+		public CreateProfileViewModel (IScreen hostScreen, IFermentationControllerAPI api)
 		{
-			
 			HostScreen = hostScreen;
 
-			AddStep = ReactiveCommand.Create ();
+			AllSteps = new ReactiveList<StepData> ();
 
-			//Days
-			IncrementTimeDays = ReactiveCommand.CreateAsyncTask (x => {
-				return Task.FromResult (this.SelectedDays + 1);
-			});
+			StepTiles = AllSteps.CreateDerivedCollection (x => new ProfileStepTileViewModel (x.StepId, x));
 
-			IncrementTimeDays
-				.StartWith (0)
-				.Where (x => x >= 0)
-				.ToProperty (this, x => x.SelectedDays, out _SelectedDays);
-
-			DecrementTimeDays = ReactiveCommand.CreateAsyncTask (x => {
-				return Task.FromResult (this.SelectedDays - 1);
-			});
-
-			DecrementTimeDays
-				.Where (x => x >= 0)
-				.ToProperty (this, x => x.SelectedDays, out _SelectedDays);
-
-			//Hours
-			IncrementTimeHours = ReactiveCommand.CreateAsyncTask (x => {
-				return Task.FromResult (this.SelectedHours + 1);
-			});
-
-			IncrementTimeHours
-				.StartWith (0)
-				.Where (x => x >= 0)
-				.ToProperty (this, x => x.SelectedHours, out _SelectedHours);
-
-			DecrementTimeHours = ReactiveCommand.CreateAsyncTask (x => {
-				return Task.FromResult (this.SelectedHours - 1);
-			});
-
-			DecrementTimeHours
-				.Where (x => x >= 0)
-				.ToProperty (this, x => x.SelectedHours, out _SelectedHours);
-
-			//Mins
-			IncrementTimeMins = ReactiveCommand.CreateAsyncTask (x => {
-				return Task.FromResult ((int)x);
-			});
-
-			IncrementTimeMins
-				.StartWith (0)
-				.Where (x => x >= 0)
-				.ToProperty (this, x => x.SelectedMins, out _SelectedMins);
-
-
-
-			AddStep = ReactiveCommand.Create ();
+			var canAddStep = this.WhenAnyValue (x => x.StepDays, x => x.StepHours, x => x.StepMins)
+				.Select (x => x.Item1 > 0 || x.Item2 > 0 || x.Item3 > 0);
+			
+			AddStep = ReactiveCommand.Create (canAddStep);
 			AddStep
-				.Select (x => new StepData (ConvertToCelcius (this.StartingTemp), ConvertToCelcius (this.EndingTemp), new TimeSpan (this.SelectedDays, this.SelectedHours, this.SelectedMins, 0).TotalSeconds))
-				.Subscribe (x => {
-				//add to steps here
-			});
+				.ObserveOn(RxApp.MainThreadScheduler)
+				.Select(x=> new StepData (TemperatureConvert.ConvertToCelsius (StartingTemp), 
+					TemperatureConvert.ConvertToCelsius (EndingTemp), 
+					new TimeSpan (StepDays, 
+						StepHours, 
+						StepMins, 
+						0),
+					AllSteps.Count + 1,
+					IsRampStep))
+				.Subscribe (AllSteps.Add);
+
+			var canCommit = this.WhenAnyValue (x => x.Name, x => x.AllSteps).Select (x => !string.IsNullOrWhiteSpace (x.Item1) && x.Item2.Count > 0);
+			CommitProfile = ReactiveCommand.CreateAsyncTask (canCommit, (x, ct) => {
+				//TODO: create the profile dto
+				return api.StoreProfile(Name, new byte[0]);
+			}, RxApp.MainThreadScheduler);
+
+			//on non-ramp steps the starting and ending temp are the same
+			this.WhenAnyValue (x => x.StartingTemp, y => y.IsRampStep)
+				.Where (x => !x.Item2)
+				.Subscribe (x => EndingTemp = StartingTemp);
+			
 		}
 
 		public ReactiveCommand<object> AddStep { get; protected set; }
 
 		public ReactiveCommand<object> RemoveStep { get; protected set; }
 
-		public ReactiveCommand<object> SaveProfile { get; protected set; }
+		public ReactiveCommand<Unit> CommitProfile { get; protected set; }
 
-		public ReactiveCommand<int> IncrementTimeDays { get; protected set; }
+		ReactiveList<StepData> AllSteps { get; set; }
+	
+		public IReactiveDerivedList<ProfileStepTileViewModel> StepTiles { get; private set; }
 
-		public ReactiveCommand<int> IncrementTimeHours { get; protected set; }
-
-		public ReactiveCommand<int> IncrementTimeMins { get; protected set; }
-
-		public ReactiveCommand<int> DecrementTimeDays { get; protected set; }
-
-		public ReactiveCommand<int> DecrementTimeHours { get; protected set; }
-
-		public ReactiveCommand<int> DecrementTimeMins { get; protected set; }
-
-
-		private ObservableAsPropertyHelper<int> _SelectedDays;
-
+		private string _Name;
 		[DataMember]
-		public int SelectedDays { 
-			get { return _SelectedDays.Value; }
+		public string Name { 
+			get { return _Name; }
+			set { this.RaiseAndSetIfChanged (ref _Name, value); }	
 		}
-
-		private ObservableAsPropertyHelper<int> _SelectedHours;
-
-		[DataMember]
-		public int SelectedHours { 
-			get { return _SelectedHours.Value; }
-		}
-
-		private ObservableAsPropertyHelper<int> _SelectedMins;
-
-		[DataMember]
-		public int SelectedMins { 
-			get { return _SelectedMins.Value; }
-		}
-
 
 		private double _StartingTemp;
-
+		[DataMember]
 		public double StartingTemp { 
 			get { return _StartingTemp; }
 			set { this.RaiseAndSetIfChanged (ref _StartingTemp, value); }	
 		}
 
 		private double _EndingTemp;
-
+		[DataMember]
 		public double EndingTemp { 
 			get { return _EndingTemp; }
 			set { this.RaiseAndSetIfChanged (ref _EndingTemp, value); }	
@@ -140,19 +92,20 @@ namespace FermentationController
 			set { this.RaiseAndSetIfChanged (ref _StepHours, value); }	
 		}
 
-		private int _StepMinutes;
+		private int _StepMins;
 
-		public int StepMinutes { 
-			get { return _StepMinutes; }
-			set { this.RaiseAndSetIfChanged (ref _StepMinutes, value); }	
+		public int StepMins { 
+			get { return _StepMins; }
+			set { this.RaiseAndSetIfChanged (ref _StepMins, value); }	
 		}
 
 		private bool _IsRampStep;
-
+		[DataMember]
 		public bool IsRampStep { 
 			get { return _IsRampStep; }
 			set { this.RaiseAndSetIfChanged (ref _IsRampStep, value); }	
 		}
+
 
 		public string UrlPathSegment {
 			get {
@@ -162,10 +115,7 @@ namespace FermentationController
 
 		public IScreen HostScreen { get; protected set; }
 
-		static double ConvertToCelcius (double farenheit)
-		{
-			return (farenheit - 32.0) * (5.0 / 9.0);
-		}
+
 
 	}
 }

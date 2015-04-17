@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<rui:ReactiveContentPage x:TypeArguments="local:ProfileStepTileViewModel"
+			 xmlns="http://xamarin.com/schemas/2014/forms" 
+			 xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" 
+			 xmlns:rui="clr-namespace:ReactiveUI.XamForms;assembly=ReactiveUI.XamForms"
+			 xmlns:local="clr-namespace:FermentationController; assembly=FermentationController"
+			 x:Class="FermentationController.ProfileStepTileView">
+
+	<rui:ReactiveContentPage.Content>
+		<StackLayout Orientation="Horizontal" VerticalOptions="FillAndExpand">
+			<Button x:Name="btnEditStep" Text="E" HorizontalOptions="Start"/>
+			<Button x:Name="btnDeleteStep" Text="D" HorizontalOptions="Center"/>
+			<Label x:Name="lblStepDescription" HorizontalOptions="End"/>
+		</StackLayout>
+	</rui:ReactiveContentPage.Content>
+</rui:ReactiveContentPage>

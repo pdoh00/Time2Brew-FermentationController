@@ -29,7 +29,7 @@ namespace FermentationController
 		//*offset if not provided defaults to zero (0).  Used in case of profiles longer than 512 bytes.
 		//Request BODY=application/octet-stream (*See Profile Data Structure)
 		[Put ("/profile?name={profileName}&offset={offset}")]
-		Task Profile (string profileName, [Body]string payload, int offset = 0);
+		Task StoreProfile (string profileName, [Body]byte[] payload, int offset = 0);
 
 		[Put ("/executeProfile?name={profileName}")]
 		Task ExecuteProfile (string profileName, int offset = 0);

@@ -14,6 +14,9 @@
 
 
 			<Button x:Name="btnCreateProfile" Text="New Profile" VerticalOptions="Center"/>
+
+			<Button x:Name="btnPreferences" Text="Preferences" VerticalOptions="Center"/>
+
 		</StackLayout>
 	</ContentPage.Content>
 </ContentPage>
