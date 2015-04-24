@@ -1,0 +1,34 @@
+{
+  "name": "WebRx",
+  "version": "0.9.64",
+  "description": "Dynamic JavaScript UIs with ReactiveX",
+  "homepage": "http://webrxjs.org",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/WebRxJs/WebRx.git"
+  },
+  "authors": [
+    "Oliver Weichhold <oliver@weichhold.com>"
+  ],
+  "license": "MIT",
+  "private": false,
+  "main": [
+    "dist/web.rx.js"
+  ],
+  "ignore": [
+    "src",
+    "test",
+    "vs",
+    "nuget",
+    ".travis.yml",
+    ".inch.yml",
+    "package.json",
+    ".npmignore",
+    ".gitignore",
+    ".gitattributes",
+    "Gruntfile.js"
+  ],
+  "devDependencies": {
+    "rxjs": "~2.4.7"
+  }
+}
