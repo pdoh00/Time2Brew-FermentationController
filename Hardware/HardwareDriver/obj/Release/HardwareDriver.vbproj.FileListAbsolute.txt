@@ -1,0 +1,6 @@
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Release\HardwareDriver.dll
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Release\HardwareDriver.pdb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Release\HardwareDriver.xml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Release\HardwareDriver.dll
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Release\HardwareDriver.xml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Release\HardwareDriver.pdb

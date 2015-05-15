@@ -1,0 +1,199 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+HardwareDriver
+</name>
+</assembly>
+<members>
+<member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.GetStatus">
+	<summary>
+ Returns the STATUS of the controller.  Can be called any time. Does not require authentication.
+ </summary>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.GetTime">
+	<summary>
+ Returns the RTC Time on the controller. Can be called any time. Does not require authentication.
+ </summary>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.SetTime(System.DateTime)">
+	<summary>
+ Sets the RTC time on the controller to the provided value. Can be called any time. Requires Authentication.
+ </summary>
+	<param name="NewTime"></param>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.EchoGet(System.String)">
+	<summary>
+ ECHO test. Will return whatever data is provided. Can be called any time. Does not require authentication.
+ </summary>
+	<param name="msg"></param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.EchoPut(System.String)">
+	<summary>
+ ECHO test. Will return whatever data is provided. Can be called any time. Does not require authentication.
+ </summary>
+	<param name="msg"></param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.GetProfileListing">
+	<summary>
+ Returns a listing of all profiles which are on the controller. Can be called any time. Does not require authentication.
+ </summary>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.DownloadProfile(System.String)">
+	<summary>
+ Downloads the given profile from the controller.  The profile must exist otherwise an exception will be thrown.
+ For a list of profiles see the GetProfileListing command. Can be called any time. Does not require authentication.
+ </summary>
+	<param name="profileName"></param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.UploadProfile(System.String,System.Collections.Generic.List{FermentationControllerHardwareDriver.PROFILE_STEP})">
+	<summary>
+ Uploads a temperature profile to the controller.  If the profile already exists it will be overwritten without warning.
+ Can be called any time. Requires Authentication.
+ </summary>
+	<param name="profileName"></param>
+	<param name="profileSteps"></param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.ExecuteProfile(System.String)">
+	<summary>
+ Starts the given profile.  The controller must be in manual mode before executing this command otherwise an exception will be thrown.
+ Requires authentication.
+ </summary>
+	<param name="profileName"></param>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.TerminateProfile">
+	<summary>
+ Stops execution of the currently running profile and returns the controller to manual setpoint mode.
+ Requires authentication.
+ </summary>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.TruncateProfile(System.Collections.Generic.List{FermentationControllerHardwareDriver.PROFILE_STEP})">
+	<summary>
+ This will stop the currently running profile, truncate any remaining steps, and then append the provided steps.  A profile must be executing otherwise an exception will be thrown.
+ Requires authentication.
+ </summary>
+	<param name="profileSteps">A list of profile steps that should be appened to the currently running profile after trucnation.</param>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.GetInstanceListing(System.String)">
+	<summary>
+ Returns a listing of instances of the given profile name.
+ For a list of profiles see the GetProfileListing command.
+ Can be called anytime. Does not require authentication.
+ </summary>
+	<param name="profileName"></param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.DownloadInstance(System.String,System.DateTime)">
+	<summary>
+ Downloads the actual profile that was executed for the given profile and given instance of that profile. This will reflect any truncations or early terminations of the profile.
+ For a list of profiles see the GetProfileListing command.
+ For a list of instances of a profile see the GetInstanceListing command
+ Can be called anytime. Does not require authentication.
+ </summary>
+	<param name="profileName"></param>
+	<param name="Instance"></param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.DownloadTrendData(System.String,System.DateTime)">
+	<summary>
+ Downloads the temperare trend for a given instance of a given profile.  Both the profile name and instance must be provided.  
+ For a list of profiles see the GetProfileListing command.
+ For a list of instances of a profile see the GetInstanceListing command
+ Can be called anytime. Does not require authentication.
+ </summary>
+	<param name="profileName"></param>
+	<param name="Instance"></param>
+	<returns>A list of trend records originating from Instance Date/Time, one sample every minute</returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.GetTemperature(System.Int32)">
+	<summary>
+ Gets the current temperature of either temperature probe.
+ Can be called anytime. Does not require authentication.
+ </summary>
+	<param name="ProbeID">0 or 1</param>
+	<returns>The probe temperature in degrees C</returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.SetManualMode(System.Double)">
+	<summary>
+ Sets the manual mode temperature setpoint.  Only possible if the controller is not running a temperature profile otherwise an exception will be thrown.
+ </summary>
+	<param name="SetPoint_C">Setpoint in degrees C</param>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.GetEquipmentProfileListing">
+	<summary>
+ Returns a list of equipment profile names.
+ Can be called anytime. Does not require authentication.
+ </summary>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.DownloadEquipmentProfile(System.String)">
+	<summary>
+ Downloads and equipment profile from the controller.  For a listing of equipment profiles see the GetEquipmentProfileListing command.
+ If the profile does not exist a FermCtrlCommsException will be thrown.
+ Can be called anytime. Does not require authentication.
+ </summary>
+	<param name="equipmentProfileName">Up to 63 characters are allowed.</param>
+	<returns></returns>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.UploadEquipmentProfile(System.String,FermentationControllerHardwareDriver.EQUIPMENT_PROFILE)">
+	<summary>
+ Uploads an equipment profile to the controller.  If the profile already exists it will be overwritten without warning.
+ Can be called anytime. Requires authentication.
+ </summary>
+	<param name="equipmentProfileName">Up to 63 characters are allowed.</param>
+	<param name="equipmentProfile"></param>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.SetEquipmentProfile(System.String)">
+	<summary>
+ Makes the named equipment profile active.  Any running or future temperature profiles, or manual mode, will run under this equipment profile after this command.
+ If the profile does not exist a FermCtrlCommsException will be thrown.
+ Can be called anytime. Requires authentication.
+ </summary>
+	<param name="equipmentProfileName">Name of the equipment profile.  For a listing of profiles see GetEquipmentProfileListing command</param>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.WipeAndFactoryDefault">
+	<summary>
+ A very big deal!  This will format the internal storage and reset everything back to the factory default state...
+ This command is only possible when the controller is in 'Configuration Mode'.  See the 'RebootInConfigMode' command.
+ </summary>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.UpdateSecurityCredentials(System.String,System.String)">
+	<summary>
+ Updates the security username and password which is requried for access to restricted commands.  
+ This command is only possible when the controller is in 'Configuration Mode'.  See the 'RebootInConfigMode' command.
+ </summary>
+	<param name="Username">Up to 63 characters are allowed.</param>
+	<param name="Password">Up to 63 characters are allowed.</param>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.Reboot">
+	<summary>
+ Reboot the fermentation controller.  Upon restart the controller will attempt to recover any running activity.
+ Can be called anytime. Requires authentication.
+ </summary>
+	<remarks></remarks>
+</member><member name="M:FermentationControllerHardwareDriver.FermentationControllerDevice.UpdateWifiConfig(FermentationControllerHardwareDriver.WIFI_OP_MODES,System.Int32,FermentationControllerHardwareDriver.WIFI_ENCRYPTION_MODES,System.String,System.String,System.String)">
+	<summary>
+ This will update the WiFi configuration.  This command is only possible when the controller is in 'Configuration Mode'.  See the 'RebootInConfigMode' command.
+ </summary>
+	<param name="opMode">The Operating Mode for the controller.  STATION means it will attemp to join an existing wireless network.  SOFT_AP will create its own network.</param>
+	<param name="channel">WiFi Channel to transmit on. Only applicable when opMode=SOFT_AP</param>
+	<param name="encryption">WiFi Encryption Mode. Only applicable when opMode=SOFT_AP. When acting as a station it will determine the encryption used from the wireless AP.</param>
+	<param name="deviceName">This is the name of the fermentation controller on the network and impacts the mDNS name as well as what name appears in Network Devices when browsing the SSDP.
+ Up to 63 characters are allowed.</param>
+	<param name="Wifi_Password">In SOFT_AP mode this sets the network password that any clients will have to know.  
+ In STATION mode this is the password to the wireless network the controller will be trying to join.
+ Up to 31 characters are allowed.</param>
+	<param name="Wifi_SSID">In SOFT_AP mode this sets the name of the wireless network that clients will connect to.  
+ In STATION mode this sets the name of the wireless network that the controller will try to join.
+ Up to 31 characters are allowed.</param>
+	<remarks></remarks>
+</member>
+</members>
+</doc>
