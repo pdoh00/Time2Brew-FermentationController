@@ -1,0 +1,18 @@
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.dll
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.pdb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.xml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.dll
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.xml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.pdb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.dll
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.xml
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.pdb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.dll
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.pdb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.xml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.dll
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.pdb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\bin\Debug\HardwareDriver.xml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.dll
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.xml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\HardwareDriver\obj\Debug\HardwareDriver.pdb

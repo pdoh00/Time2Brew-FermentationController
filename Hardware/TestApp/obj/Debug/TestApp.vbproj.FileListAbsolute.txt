@@ -1,0 +1,69 @@
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.exe.config
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.exe
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.pdb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.xml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.dll
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.pdb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.xml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.vbprojResolveAssemblyReference.cache
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\MainWindow.baml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\MainWindow.g.vb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\Application.g.vb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp_MarkupCompile.cache
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.g.resources
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.Resources.resources
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.vbproj.GenerateResource.Cache
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.exe
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.xml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.pdb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\EquipmentEditor.baml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\EquipmentEditor.g.vb
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\InstanceSelector.baml
+C:\git\users\demolitron\Time2Brew_FermentationController\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\InstanceSelector.g.vb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.exe.config
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.exe
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.xml
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.pdb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.vbprojResolveAssemblyReference.cache
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\EquipmentEditor.baml
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\InstanceSelector.baml
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\MainWindow.baml
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\EquipmentEditor.g.vb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\InstanceSelector.g.vb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\MainWindow.g.vb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\Application.g.vb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp_MarkupCompile.cache
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.g.resources
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.Resources.resources
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.vbproj.GenerateResource.Cache
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.exe
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.pdb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.xml
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.dll
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.pdb
+C:\Users\aaron\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.xml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.exe.config
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.exe
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.xml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.pdb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.exe
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.pdb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\TestApp.xml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.dll
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.pdb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\HardwareDriver.xml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.vbprojResolveAssemblyReference.cache
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\EquipmentEditor.baml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\InstanceSelector.baml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\MainWindow.baml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\EquipmentEditor.g.vb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\InstanceSelector.g.vb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\MainWindow.g.vb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\Application.g.vb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp_MarkupCompile.cache
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.g.resources
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.Resources.resources
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\TestApp.vbproj.GenerateResource.Cache
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\ProfileSelector.baml
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\obj\Debug\ProfileSelector.g.vb
+C:\Users\THORAXIUM\Dropbox\VS Projects\Time2Brew-FermentationController\HardwareDriver\TestApp\bin\Debug\SSDP.Library.dll

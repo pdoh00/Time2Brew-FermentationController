@@ -1,0 +1,6 @@
+﻿Public Enum WIFI_ENCRYPTION_MODES
+    AUTH_OPEN
+    AUTH_WPA_PSK
+    AUTH_WPA2_PSK
+End Enum
+
