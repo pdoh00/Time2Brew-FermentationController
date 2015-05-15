@@ -187,3 +187,43 @@ FakesAssemblies/
 
 #SQLite Dbs
 *.s3db
+
+#Firmware ignore
+# Object files
+*.o
+*.o.d
+*.o.tmp
+*.ko
+*.obj
+*.elf
+*.map
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+
+#log
+*.log.inx
