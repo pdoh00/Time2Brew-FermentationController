@@ -1,0 +1,17 @@
+MCU to WIFI Commands
+0x00 - Queued TX Start + Channel ID
+0x01 - Queued TX Data End + Channel ID
+0x02 - Queued TX Data Accepted and Starting to Transmit  + Channel ID
+0x03 - Queued TX Data Rejected + Chanel ID + Error Number
+0x04 - Queued TX Data Rejected Becuase Overflow + Channel ID
+0x05 - Queued TX Data Transmit Complete + Channel ID
+0x06 - Channel Opened + Channel ID
+0x07 - Channel Closed + Channel ID
+0x08 - Channel Reconnect + Channel ID + Error Number
+0x09 - Request All Status Data
+0x0A - Sending All Status Data + STATUS BYTES (Status Struct)
+0x0B - RX Data Start + ChannelID
+0x0C - RX Data End + Channel ID
+0x0D - Sending Configuration + CONFIG BYTES (Config Structure)
+
+

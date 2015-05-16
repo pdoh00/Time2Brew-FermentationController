@@ -1,0 +1,14 @@
+﻿<Window x:Class="ProfileSelector"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="ProfileSelector" Height="300" Width="300">
+    <Grid>
+        <StackPanel Orientation="Vertical">
+            <ListBox Name="lstProfiles"></ListBox>
+            <StackPanel Orientation="Horizontal">
+                <Button Margin="5" Name="cmdOK">OK</Button>
+                <Button Margin="5" Name="cmdCancel">Cancel</Button>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
