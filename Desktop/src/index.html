@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" type="css" href="./app.css">
+  <link rel="stylesheet" type="css" href="./bower_components/fontawesome/css/font-awesome.min.css">
+</head>
+
+<body>
+  <div class="shell">
+
+    <div class="flex-container-col flex1">
+      <div class="title flex1">
+        <h1>Profiles <i class="fa fa-plus-circle icon-white" onclick="updateStatus()"></i></h1>
+      </div>
+
+      <nav class="navigator flex4">
+
+        <ul class="profiles">
+
+        </ul>
+      </nav>
+
+      <div class="title flex3">
+        <h3>Active Profile</h3>
+        <p id="activeProfileName"></p>
+        <h3>Current Step</h3>
+        <p id="currentStepIndex"></p>
+        <h3>Current Temperature</h3>
+        <p id="currentStepTemp"></p>
+        <h3>Remaining Time</h3>
+        <p id="currentStepRemainingSeconds"></p>
+
+      </div>
+    </div>
+
+    <div class="flex-container-col flex4">
+      <!-- <canvas id="myChart" width="400px " height="400px "></canvas> -->
+      <div class="flex1">
+        <h3>System Time </h3>
+        <p id="systemTime"></p>
+        <h3>Probe 1 Temperature </h3>
+        <p id="probe0Temp"></p>
+        <h3>Probe 2 Temperature </h3>
+        <p id="probe1Temp"></p>
+        <h3>Heat Relay Status </h3>
+        <p id="heatRelayStatus"></p>
+        <h3>Cool Relay Status </h3>
+        <p id="coolRelayStatus"></p>
+
+        <p id="equipmentStatus">
+
+        </p>
+      </div>
+
+      <!-- <div class="flex4" id="detailArea" style="background-color: black">
+
+      </div> -->
+
+    </div>
+  </div>
+
+  <script src="./promisify.js "></script>
+  <script src="./chartMethods.js "></script>
+  <script src="./menu.js"></script>
+  <script src="./fermentationAPI.js">
+  </script>
+
+  <script>
+    function updateStatus() {
+      getStatus().then(function(status) {
+        document.getElementById("systemTime").innerText = status.systemTime.toString();
+        document.getElementById("probe0Temp").innerText = Math.round(CelciusToFahrenheit(status.probe0Temp / 10.0) * 100) / 100;
+        document.getElementById("probe1Temp").innerText = Math.round(CelciusToFahrenheit(status.probe1Temp / 10.0) * 100) / 100;
+        document.getElementById("heatRelayStatus").innerText = status.heatRelayOn ? "On" : "Off";
+        document.getElementById("coolRelayStatus").innerText = status.coolRelayOn ? "On" : "Off";
+
+        document.getElementById("activeProfileName").innerText = status.activeProfileName;
+        document.getElementById("currentStepIndex").innerText = status.currentStepIndex;
+        document.getElementById("currentStepTemp").innerText = Math.round(CelciusToFahrenheit(status.currentStepTemp / 10.0) * 100) / 100;
+        document.getElementById("currentStepRemainingSeconds").innerText = status.currentStepRemainingSeconds + "s";
+      });
+    };
+
+    function updateProfiles() {
+      getAllProfiles().then(function(profileData) {
+        alert(profileData);
+        var entry = document.createElement('li');
+        entry.appendChild(document.createTextNode(profileData));
+
+        //TODO:Need to clear the list
+        var profileList = document.getElementById('profiles');
+
+        profileList.appendChild(entry);
+      });
+    };
+
+    function onWindowLoad(){
+      updateProfiles();
+      updateStatus();
+    };
+
+    window.onload = onWindowLoad();
+  </script>
+
+</body>
+
+</html>
