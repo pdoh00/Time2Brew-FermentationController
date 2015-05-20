@@ -126,16 +126,17 @@
         });
     };
 
-//instanceId is a Date
+    //instanceId is a Date
     function getTrendDataForInstance(profileName, instanceId) {
-      
-      var numericInstanceId = (instanceId - epoch).totalSeconds();
 
-      getTrendData(profileName, instanceId)
+      var millisecFromEpoch = instanceId.getTime();
+      var convInstanceId = Math.round(millisecFromEpoch / 1000);
+
+      getTrendData(profileName, convInstanceId)
         .then(function(trendData) {
           console.log(JSON.stringify(trendData));
         }).catch(function(error) {
-          alert(error);
+          console.log(error)
         });
     }
 

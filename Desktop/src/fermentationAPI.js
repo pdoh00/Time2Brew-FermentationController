@@ -1,4 +1,5 @@
 var baseApiAddress = 'http://10.10.1.148/api/';
+var epoch = new Date('1 January 1970 00:00:00 UTC');
 
 function getStatus() {
   var newPromise = get(baseApiAddress + 'status', 'arraybuffer')

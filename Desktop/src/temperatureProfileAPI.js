@@ -67,7 +67,7 @@ function deleteProfileInstance(profileName, profileInstanceDate) {
 
 //profileInstance is num seconds since epoch
 function getTrendData(profileName, profileInstance) {
-  var url = baseApiAddress + 'temperaturetrend?=' +
+  var url = baseApiAddress + 'temperaturetrend?name=' +
     profileName + '&instance=' + profileInstance;
 
   var newPromise = get(url, 'arraybuffer').then(function(response) {
