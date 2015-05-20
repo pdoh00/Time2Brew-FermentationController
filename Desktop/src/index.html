@@ -4,6 +4,7 @@
 <head>
   <link rel="stylesheet" type="css" href="./app.css">
   <link rel="stylesheet" type="css" href="./bower_components/fontawesome/css/font-awesome.min.css">
+  <link rel="stylesheet" type="css" href="./bower_components/chartist/dist/chartist.min.css">
 </head>
 
 <body>
@@ -38,6 +39,9 @@
 
     <div class="flex-container-col flex4">
       <!-- <canvas id="myChart" width="400px " height="400px "></canvas> -->
+
+      <div class="ct-chart .ct-perfect-fourth"></div>
+
       <div class="flex1">
         <h3>System Time </h3>
         <p id="systemTime"></p>
@@ -49,15 +53,11 @@
         <p id="heatRelayStatus"></p>
         <h3>Cool Relay Status </h3>
         <p id="coolRelayStatus"></p>
-
         <p id="equipmentStatus">
 
         </p>
       </div>
 
-      <!-- <div class="flex4" id="detailArea" style="background-color: black">
-
-      </div> -->
 
     </div>
   </div>
@@ -70,7 +70,7 @@
   <script src="./equipmentProfileAPI.js"></script>
   <script src="./fermentationAPI.js"></script>
   <script src="./temperatureProfileAPI.js"></script>
-
+  <script src="./bower_components/chartist/dist/chartist.min.js"></script>
 
 
   <script>
@@ -129,12 +129,95 @@
     //instanceId is a Date
     function getTrendDataForInstance(profileName, instanceId) {
 
-      var millisecFromEpoch = instanceId.getTime();
-      var convInstanceId = Math.round(millisecFromEpoch / 1000);
 
-      getTrendData(profileName, convInstanceId)
+      var secondsFromEpoch = Math.round(instanceId.getTime() / 1000);
+
+      getTrendData(profileName, secondsFromEpoch)
         .then(function(trendData) {
-          console.log(JSON.stringify(trendData));
+          // console.log(JSON.stringify(trendData));
+
+          var probe0Temps = [];
+          var probe1Temps = [];
+          var setpointTemps = [];
+          var outputPercentages = [];
+          var labels = [];
+          var seconds = 0;
+
+          for (var i = 0; i < trendData.records.length; i++) {
+            probe0Temps.push(trendData.records[i].probe0Temp);
+            probe1Temps.push(trendData.records[i].probe1Temp);
+            setpointTemps.push(trendData.records[i].setpointTemp);
+            outputPercentages.push(trendData.records[i].outputPercent);
+            instanceId.setSeconds(seconds)
+            labels.push(instanceId.toISOString());
+            seconds += 60;
+          }
+
+          // var datasets = [{
+          //   label: "Probe 0 degF",
+          //   fillColor: "rgba(220,220,220,0.2)",
+          //   strokeColor: "rgba(220,220,220,1)",
+          //   pointColor: "rgba(220,220,220,1)",
+          //   pointStrokeColor: "#fff",
+          //   pointHighlightFill: "#fff",
+          //   pointHighlightStroke: "rgba(220,220,220,1)",
+          //   data: probe0Temps
+          // }];
+          // , {
+          //   label: "Probe 1 degF",
+          //   fillColor: "rgba(151,187,205,0.2)",
+          //   strokeColor: "rgba(151,187,205,1)",
+          //   pointColor: "rgba(151,187,205,1)",
+          //   pointStrokeColor: "#fff",
+          //   pointHighlightFill: "#fff",
+          //   pointHighlightStroke: "rgba(151,187,205,1)",
+          //   data: probe1Temps
+          // }, {
+          //   label: "Setpoint degF",
+          //   fillColor: "rgba(81,100,196,0.2)",
+          //   strokeColor: "rgba(81,100,196,1)",
+          //   pointColor: "rgba(81,100,196,1)",
+          //   pointStrokeColor: "#fff",
+          //   pointHighlightFill: "#fff",
+          //   pointHighlightStroke: "rgba(81,100,196,1)",
+          //   data: setPointTemps
+          // }
+
+          // var chartCanvas = document.getElementById('myChart');
+          // loadChart(chartCanvas, labels, datasets);
+          var data = {
+            labels: labels,
+            series: [probe0Temps, setpointTemps]
+          };
+
+          var options = {
+            // Don't draw the line chart points
+            showPoint: false,
+            // Disable line smoothing
+            lineSmooth: false,
+            // X-Axis specific configuration
+            axisX: {
+              // We can disable the grid for this axis
+              showGrid: false //,
+                // and also don't show the label
+                //showLabel: false
+            },
+            // Y-Axis specific configuration
+            axisY: {
+              // Lets offset the chart a bit from the labels
+              offset: 30,
+              // The label interpolation function enables you to modify the values
+              // used for the labels on each axis. Here we are converting the
+              // values into million pound.
+              // labelInterpolationFnc: function(value) {
+              //   return '$' + value + 'm';
+              // }
+            }
+          };
+
+          new Chartist.Line('.ct-chart', data, options);
+          // loadChartist({labels: labels, series:[probe0Temps]});
+
         }).catch(function(error) {
           console.log(error)
         });

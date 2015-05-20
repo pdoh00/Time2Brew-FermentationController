@@ -86,35 +86,26 @@ function parseTrendData(response) {
   trendData.records = [];
 
   for (var i = 0; i < response.byteLength / 8; i++) {
-    var probe0Temp = dv.getInt16(aryOffset, true);
+    var record = {};
+    record.probe0Temp = Math.round(CelciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
     aryOffset += 2;
 
-    var probe1Temp = dv.getInt16(aryOffset, true);
+    record.probe1Temp = Math.round(CelciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
     aryOffset += 2;
 
-    var setpointTemp = dv.getInt16(aryOffset, true);
+    record.setpointTemp = Math.round(CelciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
     aryOffset += 2;
 
-    var outputPercent = dv.getInt8(aryOffset, true);
-    outputPercent = outputPercent >= 0 && outputPercent <= 100 ? outputPercent * 0.01 : (outputPercent - 256) * 0.01;
+    var tempOutputPercent = dv.getInt8(aryOffset, true);
+    record.outputPercent = tempOutputPercent >= 0 && tempOutputPercent <= 100 ?
+      tempOutputPercent * 0.01 :
+      (tempOutputPercent - 256) * 0.01;
     aryOffset += 1;
 
-    var dummy = dv.getInt8(aryOffset, true);
+    //var dummy = dv.getInt8(aryOffset, true);
     aryOffset += 1;
 
-    var trendRecord = {
-      probe0Temp: probe0Temp,
-      probe1Temp: probe1Temp,
-      setpointTemp: setpointTemp,
-      outputPercent: outputPercent
-    };
-
-    console.log('Probe0: ' + Math.round(CelciusToFahrenheit(probe0Temp / 10.0) * 100) / 100);
-    console.log('Probe1: ' + Math.round(CelciusToFahrenheit(probe1Temp / 10.0) * 100) / 100);
-    console.log('SetPoint temp: ' + Math.round(CelciusToFahrenheit(setpointTemp / 10.0) * 100) / 100);
-
-
-    trendData.records.push(trendRecord);
+    trendData.records.push(record);
   }
   return trendData;
 }
