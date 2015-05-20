@@ -1,12 +1,14 @@
+var baseApiAddress = 'http://10.10.1.148/api/';
+
 function getStatus() {
-  var newPromise = get('http://10.10.1.148/api/status', 'arraybuffer')
+  var newPromise = get(baseApiAddress + 'status', 'arraybuffer')
     .then(function(response) {
       return parseStatusReponse(response);
     }).catch(function(error) {
       alert(error);
     });
 
-    return newPromise;
+  return newPromise;
 }
 
 function parseStatusReponse(response) {
@@ -92,91 +94,6 @@ function readUTF8String(responseData, offset, length) {
     }
   }
   return retString;
-}
-
-function getAllProfiles() {
-  var newPromise = get('http://10.10.1.148/api/profile', 'text').then(function(response) {
-
-    //CR/LF is delimeter
-
-      var profileName = response;
-      //TODO: handle multiple profiles.
-      return profileName;
-    }).catch(function(error) {
-      alert(error);
-    });
-    return newPromise;
-}
-
-function getProfileInstances(profileName) {
-  var newPromise = get('http://10.10.1.148/api/runhistory?name=' + profileName, 'text').then(function(response) {
-    //CR/LF is delimeter
-    //seconds from epoch in hex
-
-    var instances = response;
-    alert(instances);
-    return instances;
-  }).catch(function(error) {
-    alert(error);
-  });
-
-  return newPromise;
-}
-
-//profileInstance should be hex encoded string
-function getTrendData(profileName, profileInstance) {
-  var url = 'http://10.10.1.148/api/runhistory?temperaturetrend?=' + profileName + '&instance=' + profileInstance;
-  var newPromise = get(url, 'arraybuffer').then(function(response) {
-    var trendData = parseTrendData(response);
-    alert(trendData);
-  }).catch(function(error) {
-    alert(error);
-  });
-  return newPromise;
-}
-
-function parseTrendData(response) {
-  var dv = new DataView(response);
-  var aryOffset = 0;
-
-  var trendData = {};
-  trendData.records = [];
-
-  for (var i = 0; i < response.length / 8; i++) {
-    var probe0Temp = dv.getInt16(aryOffset, true);
-    aryOffset += 2;
-
-    var probe1Temp = dv.getInt16(aryOffset, true);
-    aryOffset += 2;
-
-    var setpointTemp = dv.getInt16(aryOffset, true);
-    aryOffset += 2;
-
-    var outputPercent = dv.getInt8(aryOffset, true);
-    outputPercent = outputPercent >= 0 && outputPercent <= 100 ? outputPercent * 0.01 : (outputPercent - 256) * 0.01;
-    aryOffset += 1;
-
-    var dummy = dv.getInt8(aryOffset, true);
-    aryOffset += 1;
-
-    var trendRecord = {
-      probe0Temp: probe0Temp,
-      probe1Temp: probe1Temp,
-      setpointTemp: setpointTemp,
-      outputPercent: outputPercent
-    };
-
-    trendData.records.push(trendRecord);
-  }
-  return trendData;
-}
-
-function getEquipmentProfile() {
-  //binary data
-}
-
-function setEquipmentProfile() {
-
 }
 
 function CelciusToFahrenheit(degreesC) {

@@ -15,10 +15,12 @@
       </div>
 
       <nav class="navigator flex4">
+        <button onclick="updateProfiles()">refresh profiles</button>
 
-        <ul class="profiles">
+        <ul id="profiles">
 
         </ul>
+
       </nav>
 
       <div class="title flex3">
@@ -63,8 +65,13 @@
   <script src="./promisify.js "></script>
   <script src="./chartMethods.js "></script>
   <script src="./menu.js"></script>
-  <script src="./fermentationAPI.js">
-  </script>
+  <script src="./checksum.js"></script>
+  <script src="./deviceAPI.js"></script>
+  <script src="./equipmentProfileAPI.js"></script>
+  <script src="./fermentationAPI.js"></script>
+  <script src="./temperatureProfileAPI.js"></script>
+
+
 
   <script>
     function updateStatus() {
@@ -79,24 +86,61 @@
         document.getElementById("currentStepIndex").innerText = status.currentStepIndex;
         document.getElementById("currentStepTemp").innerText = Math.round(CelciusToFahrenheit(status.currentStepTemp / 10.0) * 100) / 100;
         document.getElementById("currentStepRemainingSeconds").innerText = status.currentStepRemainingSeconds + "s";
+      }).catch(function(error) {
+        alert(error);
       });
     };
 
     function updateProfiles() {
-      getAllProfiles().then(function(profileData) {
-        alert(profileData);
-        var entry = document.createElement('li');
-        entry.appendChild(document.createTextNode(profileData));
+      getAllProfiles()
+        .then(function(profileData) {
 
-        //TODO:Need to clear the list
-        var profileList = document.getElementById('profiles');
+          var profileList = document.getElementById('profiles');
+          //Clear the list
+          while (profileList.firstChild) {
+            profileList.removeChild(profileList.firstChild);
+          }
 
-        profileList.appendChild(entry);
-      });
+          for (var i = 0; i < profileData.length; i++) {
+            var entry = document.createElement('li');
+            entry.appendChild(document.createTextNode(profileData[i]));
+
+            getProfileInstances(profileData[i])
+              .then(function(instanceData) {
+                var instanceList = document.createElement('ol');
+                entry.appendChild(instanceList);
+
+                for (var i = 0; i < instanceData.length; i++) {
+                  var instanceEntry = document.createElement('li');
+                  instanceEntry.appendChild(document.createTextNode(instanceData[i].toISOString()));
+                  instanceList.appendChild(instanceEntry);
+                  getTrendDataForInstance(profileData[i], instanceData[i]);
+                }
+
+              }).then(function() {
+                profileList.appendChild(entry);
+              });
+          }
+        }).catch(function(error) {
+          alert(error);
+        });
     };
 
-    function onWindowLoad(){
-      updateProfiles();
+//instanceId is a Date
+    function getTrendDataForInstance(profileName, instanceId) {
+      
+      var numericInstanceId = (instanceId - epoch).totalSeconds();
+
+      getTrendData(profileName, instanceId)
+        .then(function(trendData) {
+          console.log(JSON.stringify(trendData));
+        }).catch(function(error) {
+          alert(error);
+        });
+    }
+
+    function onWindowLoad() {
+      // updateProfiles();
       updateStatus();
     };
 
