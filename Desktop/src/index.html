@@ -5,12 +5,36 @@
   <link rel="stylesheet" type="css" href="./app.css">
   <link rel="stylesheet" type="css" href="./bower_components/fontawesome/css/font-awesome.min.css">
   <link rel="stylesheet" type="css" href="./bower_components/chartist/dist/chartist.min.css">
+  <link rel="stylesheet" href="./bower_components/bootstrap/dist/css/bootstrap.min.css">
 </head>
 
 <body>
-  <div class="shell">
+  <nav class="navbar navbar-inverse navbar-default">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          <i class="fa fa-beer icon-white"></i>
+        </a>
+      </div>
+      <div class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li><a href="status.html">Device Status</a></li>
+          <li><a href="http://www.google.com">Fermentation Profiles</a></li>
+          <li><a href="http://www.google.com">Equipment Profiles</a></li>
+          <li><a href="http://www.google.com">Device</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
 
-    <div class="flex-container-col flex1">
+  <div id="page-wrapper" class="container">
+    <h1>Welcome to the Time2Brew Fermentation Controller</h1>
+    <!-- <div class="flex-container-col flex1">
       <div class="title flex1">
         <h1>Profiles <i class="fa fa-plus-circle icon-white" onclick="updateStatus()"></i></h1>
       </div>
@@ -35,62 +59,34 @@
         <p id="currentStepRemainingSeconds"></p>
 
       </div>
-    </div>
+    </div> -->
 
-    <div class="flex-container-col flex4">
-      <!-- <canvas id="myChart" width="400px " height="400px "></canvas> -->
+    <!-- <canvas id="myChart" width="400px " height="400px "></canvas> -->
 
-      <div class="ct-chart .ct-perfect-fourth"></div>
+    <!-- <div class="ct-chart .ct-perfect-fourth"></div> -->
 
-      <div class="flex1">
-        <h3>System Time </h3>
-        <p id="systemTime"></p>
-        <h3>Probe 1 Temperature </h3>
-        <p id="probe0Temp"></p>
-        <h3>Probe 2 Temperature </h3>
-        <p id="probe1Temp"></p>
-        <h3>Heat Relay Status </h3>
-        <p id="heatRelayStatus"></p>
-        <h3>Cool Relay Status </h3>
-        <p id="coolRelayStatus"></p>
-        <p id="equipmentStatus">
+    <!-- Status Page -->
 
-        </p>
-      </div>
+    <!-- End Status Page -->
 
-
-    </div>
   </div>
 
+  <script src="./configureApp.js "></script>
   <script src="./promisify.js "></script>
   <script src="./chartMethods.js "></script>
   <script src="./menu.js"></script>
   <script src="./checksum.js"></script>
   <script src="./deviceAPI.js"></script>
   <script src="./equipmentProfileAPI.js"></script>
-  <script src="./fermentationAPI.js"></script>
+  <!-- <script src="./statusAPI.js"></script> -->
   <script src="./temperatureProfileAPI.js"></script>
+  <script src="./bower_components/rxjs/dist/rx.lite.js"></script>
   <script src="./bower_components/chartist/dist/chartist.min.js"></script>
+
+  <script src="./bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
 
 
   <script>
-    function updateStatus() {
-      getStatus().then(function(status) {
-        document.getElementById("systemTime").innerText = status.systemTime.toString();
-        document.getElementById("probe0Temp").innerText = Math.round(CelciusToFahrenheit(status.probe0Temp / 10.0) * 100) / 100;
-        document.getElementById("probe1Temp").innerText = Math.round(CelciusToFahrenheit(status.probe1Temp / 10.0) * 100) / 100;
-        document.getElementById("heatRelayStatus").innerText = status.heatRelayOn ? "On" : "Off";
-        document.getElementById("coolRelayStatus").innerText = status.coolRelayOn ? "On" : "Off";
-
-        document.getElementById("activeProfileName").innerText = status.activeProfileName;
-        document.getElementById("currentStepIndex").innerText = status.currentStepIndex;
-        document.getElementById("currentStepTemp").innerText = Math.round(CelciusToFahrenheit(status.currentStepTemp / 10.0) * 100) / 100;
-        document.getElementById("currentStepRemainingSeconds").innerText = status.currentStepRemainingSeconds + "s";
-      }).catch(function(error) {
-        alert(error);
-      });
-    };
-
     function updateProfiles() {
       getAllProfiles()
         .then(function(profileData) {
@@ -225,7 +221,7 @@
 
     function onWindowLoad() {
       // updateProfiles();
-      updateStatus();
+
     };
 
     window.onload = onWindowLoad();

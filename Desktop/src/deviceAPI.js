@@ -4,6 +4,13 @@ function setCredentials(userName, password) {
   return newPromise;
 }
 
+function setTime(time){
+  var totalSecondsFromEpoch = Math.round(time.getTime() / 1000);
+  var url = baseAddress + '/api/time?time=' + totalSecondsFromEpoch;
+  var newPromise = put(url);
+  return newPromise;
+}
+
 function trimFileSystem() {
   var url = baseAddress + 'trimfilesystem';
   return put(url);

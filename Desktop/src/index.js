@@ -29,11 +29,12 @@ app.on('ready', function(){
 
 var devToolsOpen = false;
 function toggleDevTools(){
+  var focusedWindow = BrowswerWindow.getFocusedWindow();
   if (devToolsOpen)
   {
-    mainWindow.closeDevTools();
+    focusedWindow.closeDevTools();
   }else{
-    mainWindow.openDevTools({
+    focusedWindow.openDevTools({
       detach: false
     });
   }
