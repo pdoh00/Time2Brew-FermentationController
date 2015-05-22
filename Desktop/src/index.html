@@ -24,9 +24,9 @@
       <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
           <li><a href="status.html">Device Status</a></li>
-          <li><a href="http://www.google.com">Fermentation Profiles</a></li>
-          <li><a href="http://www.google.com">Equipment Profiles</a></li>
-          <li><a href="http://www.google.com">Device</a></li>
+          <li><a href="temperatureProfiles.html">Fermentation Profiles</a></li>
+          <li><a href="equipmentProfiles.html">Equipment Profiles</a></li>
+          <li><a href="device.html">Device</a></li>
         </ul>
       </div>
     </div>
@@ -42,9 +42,7 @@
       <nav class="navigator flex4">
         <button onclick="updateProfiles()">refresh profiles</button>
 
-        <ul id="profiles">
-
-        </ul>
+        
 
       </nav>
 
@@ -65,9 +63,6 @@
 
     <!-- <div class="ct-chart .ct-perfect-fourth"></div> -->
 
-    <!-- Status Page -->
-
-    <!-- End Status Page -->
 
   </div>
 
@@ -87,40 +82,6 @@
 
 
   <script>
-    function updateProfiles() {
-      getAllProfiles()
-        .then(function(profileData) {
-
-          var profileList = document.getElementById('profiles');
-          //Clear the list
-          while (profileList.firstChild) {
-            profileList.removeChild(profileList.firstChild);
-          }
-
-          for (var i = 0; i < profileData.length; i++) {
-            var entry = document.createElement('li');
-            entry.appendChild(document.createTextNode(profileData[i]));
-
-            getProfileInstances(profileData[i])
-              .then(function(instanceData) {
-                var instanceList = document.createElement('ol');
-                entry.appendChild(instanceList);
-
-                for (var i = 0; i < instanceData.length; i++) {
-                  var instanceEntry = document.createElement('li');
-                  instanceEntry.appendChild(document.createTextNode(instanceData[i].toISOString()));
-                  instanceList.appendChild(instanceEntry);
-                  getTrendDataForInstance(profileData[i], instanceData[i]);
-                }
-
-              }).then(function() {
-                profileList.appendChild(entry);
-              });
-          }
-        }).catch(function(error) {
-          alert(error);
-        });
-    };
 
     //instanceId is a Date
     function getTrendDataForInstance(profileName, instanceId) {
