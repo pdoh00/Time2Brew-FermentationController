@@ -1,5 +1,4 @@
-﻿Imports FermentationControllerHardwareDriver
-Imports System.Net
+﻿Imports System.Net
 Imports System.IO
 Imports Microsoft.Win32
 
@@ -462,12 +461,15 @@ Class MainWindow
 
     End Sub
 
-
     Private Sub cmdTogglePolling_Click(sender As Object, e As RoutedEventArgs) Handles cmdTogglePolling.Click
         poll.Enabled = Not poll.Enabled
     End Sub
 
-   
+    Private Sub cmdUploadFile_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadFile.Click
+        Dim dlg As New OpenFileDialog
+        dlg.ShowDialog()
+
+    End Sub
 End Class
 
 Public Class HttpCommsProviderWebClient
