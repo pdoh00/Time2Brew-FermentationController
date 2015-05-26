@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" type="css" href="./app.css">
+  <link rel="stylesheet" type="css" href="./bower_components/fontawesome/css/font-awesome.min.css">
+  <link rel="stylesheet" type="css" href="./bower_components/chartist/dist/chartist.min.css">
+  <link rel="stylesheet" type="css" href="./bower_components/bootstrap/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+  <nav class="navbar navbar-inverse navbar-default">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html"><i class="fa fa-beer icon-white" onclick="updateStatus()"></i></a>
+      </div>
+      <div class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li><a href="status.html">Device Status</a></li>
+          <li class="active"><a href="temperatureProfiles.html">Fermentation Profiles</a></li>
+          <li><a href="equipmentProfiles.html">Equipment Profiles</a></li>
+          <li><a href="device.html">Device</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+
+  <div id="page-wrapper" class="container">
+    <div class="flex-container-col" style="width: 100%">
+
+      <h1>Temperature Profiles</h1>
+
+      <div class="panel-group" id="accordion">
+
+      </div>
+
+    </div>
+  </div>
+  <script src="./configureApp.js"></script>
+  <script src="./promisify.js "></script>
+  <script src="./chartMethods.js "></script>
+  <script src="./temperatureProfileAPI.js"></script>
+  <script src="./bower_components/mustache/mustache.min.js"></script>
+  <script src="./bower_components/chartist/dist/chartist.min.js"></script>
+  <script src="./bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+  <script id="profilePanelTemplate" type="x-tmpl-mustache">
+
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <p data-toggle="collapse" data-target="#{{collapseId}}">{{profileName}}</p>
+        <h4>
+    </div>
+    <div id="{{collapseId}}" class="panel-collapse collapse in">
+      <div class="panel-body" id="{{bodyId}}">
+
+      </div>
+    </div>
+
+  </script>
+
+  <script id="profileStepsPanelTemplate" type="x-tmpl-mustache">
+
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <p data-toggle="collapse" data-target="#{{collapseId}}">Profile Steps</p>
+        <h4>
+    </div>
+    <div id="{{collapseId}}" class="panel-collapse collapse in">
+      <div class="panel-body">
+        <ol id="{{stepListId}}">
+
+        </ol>
+      </div>
+    </div>
+
+  </script>
+
+  <script id="profileInstancesPanelTemplate" type="x-tmpl-mustache">
+
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <p data-toggle="collapse" data-target="#{{collapseId}}">Profile Runs</p>
+        <h4>
+    </div>
+    <div id="{{collapseId}}" class="panel-collapse collapse in">
+      <div class="panel-body">
+
+        <ul id="{{instanceListId}}"></ul>
+
+      </div>
+    </div>
+
+  </script>
+
+  <script id="instanceDataPanelTemplate" type="x-tmpl-mustache">
+
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <p data-toggle="collapse" data-target="#{{collapseId}}"><i class="fa fa-line-chart"></i> {{date}}</p>
+        <h4>
+    </div>
+    <div id="{{collapseId}}" class="panel-collapse collapse in">
+      <div class="panel-body">
+        <div class="ct-chart .ct-perfect-fourth" id="{{chartId}}"></div>
+      </div>
+    </div>
+
+  </script>
+
+  <script>
+    function updateProfiles() {
+      getAllProfiles()
+        .then(function(profileData) {
+
+          var profileList = document.getElementById('profiles');
+          //Clear the list
+          while (profileList.firstChild) {
+            profileList.removeChild(profileList.firstChild);
+          }
+
+          for (var i = 0; i < profileData.length; i++) {
+            var entry = document.createElement('li');
+            entry.appendChild(document.createTextNode(profileData[i]));
+
+            getProfileInstances(profileData[i])
+              .then(function(instanceData) {
+                var instanceList = document.createElement('ol');
+                entry.appendChild(instanceList);
+
+                // for (var i = 0; i < instanceData.length; i++) {
+                //   var instanceEntry = document.createElement('li');
+                //   instanceEntry.appendChild(document.createTextNode(instanceData[i].toISOString()));
+                //   instanceList.appendChild(instanceEntry);
+                //   getTrendDataForInstance(profileData[i], instanceData[i]);
+                // }
+
+              }).then(function() {
+                profileList.appendChild(entry);
+              });
+          }
+        }).catch(function(error) {
+          alert(error);
+        });
+    };
+
+    function createProfilePanel(profileName) {
+
+      var div = document.createElement('div');
+      div.setAttribute('class', 'panel panel-default');
+
+      var collapseId = 'collapse' + profileName.replace(/\s+/g, '');
+      var bodyId = 'body' + profileName.replace(/\s+/g, '');
+
+      var htmlTemplate = document.getElementById('profilePanelTemplate').innerHTML;
+      Mustache.parse(htmlTemplate);
+
+      var profilePanel = Mustache.render(htmlTemplate, {
+        profileName: profileName,
+        collapseId: collapseId,
+        bodyId: bodyId
+      });
+
+      div.innerHTML = profilePanel;
+
+      var stepsElem = div.querySelector('#' + bodyId);
+      stepsElem.appendChild(createStepsPanel(profileName));
+
+      var instPnlElem = div.querySelector('#' + bodyId);
+      instPnlElem.appendChild(createInstancePanel(profileName));
+
+      return div;
+    }
+
+    function createStepsPanel(profileName) {
+      var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Steps';
+      var stepListId = profileName.replace(/\s+/g, '') + 'StepList';
+      var div = document.createElement('div');
+      div.setAttribute('class', 'panel panel-default');
+
+      var htmlTemplate = document.getElementById('profileStepsPanelTemplate').innerHTML;
+      Mustache.parse(htmlTemplate);
+
+      var stepsPanel = Mustache.render(htmlTemplate, {
+        collapseId: collapseId,
+        stepListId: stepListId
+      });
+      div.innerHTML = stepsPanel;
+
+      var stepList = div.querySelector('#' + stepListId);
+      for (var i = 0; i < 5; i++) {
+        var entry = document.createElement('li');
+        var stepData = document.createTextNode("Some step data.");
+        entry.appendChild(stepData);
+        stepList.appendChild(entry);
+      }
+      return div;
+    }
+
+    function createInstancePanel(profileName) {
+      var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Instances';
+      var instanceListId = profileName.replace(/\s+/g, '') + 'InstanceList';
+      var div = document.createElement('div');
+      div.setAttribute('class', 'panel panel-default');
+
+      var htmlTemplate = document.getElementById('profileInstancesPanelTemplate').innerHTML;
+      Mustache.parse(htmlTemplate);
+
+      var instancePanel = Mustache.render(htmlTemplate, {
+        collapseId: collapseId,
+        instanceListId: instanceListId
+      });
+
+      div.innerHTML = instancePanel;
+
+      for (var i = 0; i < 3; i++) {
+        var data = {
+          labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          series: [
+            [12, 9, 7, 8, 5],
+            [2, 1, 3.5, 7, 3],
+            [1, 3, 4, 5, 6]
+          ]
+        };
+
+        var options = {
+          fullWidth: true,
+          chartPadding: {
+            right: 30
+          },
+          // Don't draw the line chart points
+          showPoint: false,
+          // Disable line smoothing
+          lineSmooth: false,
+          // X-Axis specific configuration
+          axisX: {
+            // We can disable the grid for this axis
+            showGrid: false //,
+              // and also don't show the label
+              //showLabel: false
+          },
+          // Y-Axis specific configuration
+          axisY: {
+            // Lets offset the chart a bit from the labels
+            offset: 30,
+            // The label interpolation function enables you to modify the values
+            // used for the labels on each axis. Here we are converting the
+            // values into million pound.
+            // labelInterpolationFnc: function(value) {
+            //   return '$' + value + 'm';
+            // }
+          }
+        };
+        //createInstanceDataPanel(i, 'abc', instanceListId, i + '/14/2015', data, options);
+        var chartId = 'chart' + i;
+        var collapseId = 'collapse' + i;
+        var div2 = document.createElement('div');
+        div2.setAttribute('class', 'panel panel-default');
+
+        var htmlTemplate = document.getElementById('instanceDataPanelTemplate').innerHTML;
+        Mustache.parse(htmlTemplate);
+
+        var entry = document.createElement('li');
+        entry.innerHTML = Mustache.render(htmlTemplate, {
+          collapseId: collapseId,
+          chartId: chartId,
+          date: i + '/14/2015'
+        });
+
+        var list = div.querySelector('#' + instanceListId);
+        list.appendChild(entry);
+
+        //new Chartist.Line('#' + chartId, data, options);
+
+      }
+      return div;
+    }
+
+    function createInstanceDataPanel(panelIndex, instanceId, selectorId, date, data, options) {
+
+
+    }
+
+    window.onload = function() {
+
+      var profilePanel = createProfilePanel("British Ale Yeast");
+
+      var profilePanelParent = document.getElementById('accordion');
+      profilePanelParent.appendChild(profilePanel);
+
+      // var data = {
+      //   labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      //   series: [
+      //     [12, 9, 7, 8, 5],
+      //     [2, 1, 3.5, 7, 3],
+      //     [1, 3, 4, 5, 6]
+      //   ]
+      // };
+      //
+      // var options = {
+      //   fullWidth: true,
+      //   chartPadding: {
+      //     right: 30
+      //   },
+      //   // Don't draw the line chart points
+      //   showPoint: false,
+      //   // Disable line smoothing
+      //   lineSmooth: false,
+      //   // X-Axis specific configuration
+      //   axisX: {
+      //     // We can disable the grid for this axis
+      //     showGrid: false //,
+      //       // and also don't show the label
+      //       //showLabel: false
+      //   },
+      //   // Y-Axis specific configuration
+      //   axisY: {
+      //     // Lets offset the chart a bit from the labels
+      //     offset: 30,
+      //     // The label interpolation function enables you to modify the values
+      //     // used for the labels on each axis. Here we are converting the
+      //     // values into million pound.
+      //     // labelInterpolationFnc: function(value) {
+      //     //   return '$' + value + 'm';
+      //     // }
+      //   }
+      // };
+      // createInstanceDataPanel(1, 'abc', 'instanceDataList', '1/14/2015', data, options);
+      // createInstanceDataPanel(2, 'abc', 'instanceDataList', '3/18/2015', data, options);
+      // createInstanceDataPanel(3, 'abc', 'instanceDataList', '4/10/2015', data, options);
+      // createInstanceDataPanel(4, 'abc', 'instanceDataList', '8/25/2015', data, options);
+    };
+  </script>
+</body>
+
+</html>

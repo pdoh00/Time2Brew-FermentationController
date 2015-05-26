@@ -1,0 +1,11 @@
+{
+  "name": "helloWorld",
+  "version": "0.1.0",
+  "description": "Electron sandbox application",
+  "main": "index.js",
+  "scripts": {
+    "start": "/usr/lib/node_modules/electron-prebuilt/dist/electron ./"
+  },
+  "author": "phil cleveland",
+  "license": "MIT"
+}
