@@ -880,7 +880,7 @@ void Process_GET_File(HTTP_REQUEST * req) {
     Process_GET_File_ex(req, 0, 0);
 }
 
-void Process_GET_File_ex(HTTP_REQUEST * req, int start, unsigned long length) {
+void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long length) {
     ff_File Handle, Test;
     ff_File *handle = &Handle;
 

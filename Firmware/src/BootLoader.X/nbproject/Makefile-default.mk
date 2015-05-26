@@ -45,17 +45,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=LoadLatch.s bootloaderMain.c FlashFS.c SystemConfiguration.c circularPrintF.c FIFO.c fletcherChecksum_1.c
+SOURCEFILES_QUOTED_IF_SPACED=LoadLatch.s bootloaderMain.c FlashFS.c SystemConfiguration.c circularPrintF.c FIFO.c fletcherChecksum_1.c ESP_Flash.c pack.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/LoadLatch.o ${OBJECTDIR}/bootloaderMain.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/fletcherChecksum_1.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/LoadLatch.o.d ${OBJECTDIR}/bootloaderMain.o.d ${OBJECTDIR}/FlashFS.o.d ${OBJECTDIR}/SystemConfiguration.o.d ${OBJECTDIR}/circularPrintF.o.d ${OBJECTDIR}/FIFO.o.d ${OBJECTDIR}/fletcherChecksum_1.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/LoadLatch.o ${OBJECTDIR}/bootloaderMain.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/fletcherChecksum_1.o ${OBJECTDIR}/ESP_Flash.o ${OBJECTDIR}/pack.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/LoadLatch.o.d ${OBJECTDIR}/bootloaderMain.o.d ${OBJECTDIR}/FlashFS.o.d ${OBJECTDIR}/SystemConfiguration.o.d ${OBJECTDIR}/circularPrintF.o.d ${OBJECTDIR}/FIFO.o.d ${OBJECTDIR}/fletcherChecksum_1.o.d ${OBJECTDIR}/ESP_Flash.o.d ${OBJECTDIR}/pack.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/LoadLatch.o ${OBJECTDIR}/bootloaderMain.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/fletcherChecksum_1.o
+OBJECTFILES=${OBJECTDIR}/LoadLatch.o ${OBJECTDIR}/bootloaderMain.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/fletcherChecksum_1.o ${OBJECTDIR}/ESP_Flash.o ${OBJECTDIR}/pack.o
 
 # Source Files
-SOURCEFILES=LoadLatch.s bootloaderMain.c FlashFS.c SystemConfiguration.c circularPrintF.c FIFO.c fletcherChecksum_1.c
+SOURCEFILES=LoadLatch.s bootloaderMain.c FlashFS.c SystemConfiguration.c circularPrintF.c FIFO.c fletcherChecksum_1.c ESP_Flash.c pack.c
 
 
 CFLAGS=
@@ -150,6 +150,20 @@ ${OBJECTDIR}/fletcherChecksum_1.o: fletcherChecksum_1.c  nbproject/Makefile-${CN
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o 
 	@${FIXDEPS} "${OBJECTDIR}/fletcherChecksum_1.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/fletcherChecksum_1.o.d" -o ${OBJECTDIR}/fletcherChecksum_1.o fletcherChecksum_1.c    
 	
+${OBJECTDIR}/ESP_Flash.o: ESP_Flash.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/ESP_Flash.o.d 
+	@${RM} ${OBJECTDIR}/ESP_Flash.o.ok ${OBJECTDIR}/ESP_Flash.o.err 
+	@${RM} ${OBJECTDIR}/ESP_Flash.o 
+	@${FIXDEPS} "${OBJECTDIR}/ESP_Flash.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/ESP_Flash.o.d" -o ${OBJECTDIR}/ESP_Flash.o ESP_Flash.c    
+	
+${OBJECTDIR}/pack.o: pack.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/pack.o.d 
+	@${RM} ${OBJECTDIR}/pack.o.ok ${OBJECTDIR}/pack.o.err 
+	@${RM} ${OBJECTDIR}/pack.o 
+	@${FIXDEPS} "${OBJECTDIR}/pack.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/pack.o.d" -o ${OBJECTDIR}/pack.o pack.c    
+	
 else
 ${OBJECTDIR}/bootloaderMain.o: bootloaderMain.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
@@ -192,6 +206,20 @@ ${OBJECTDIR}/fletcherChecksum_1.o: fletcherChecksum_1.c  nbproject/Makefile-${CN
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o.ok ${OBJECTDIR}/fletcherChecksum_1.o.err 
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o 
 	@${FIXDEPS} "${OBJECTDIR}/fletcherChecksum_1.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/fletcherChecksum_1.o.d" -o ${OBJECTDIR}/fletcherChecksum_1.o fletcherChecksum_1.c    
+	
+${OBJECTDIR}/ESP_Flash.o: ESP_Flash.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/ESP_Flash.o.d 
+	@${RM} ${OBJECTDIR}/ESP_Flash.o.ok ${OBJECTDIR}/ESP_Flash.o.err 
+	@${RM} ${OBJECTDIR}/ESP_Flash.o 
+	@${FIXDEPS} "${OBJECTDIR}/ESP_Flash.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/ESP_Flash.o.d" -o ${OBJECTDIR}/ESP_Flash.o ESP_Flash.c    
+	
+${OBJECTDIR}/pack.o: pack.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/pack.o.d 
+	@${RM} ${OBJECTDIR}/pack.o.ok ${OBJECTDIR}/pack.o.err 
+	@${RM} ${OBJECTDIR}/pack.o 
+	@${FIXDEPS} "${OBJECTDIR}/pack.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/pack.o.d" -o ${OBJECTDIR}/pack.o pack.c    
 	
 endif
 

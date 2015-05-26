@@ -29,8 +29,65 @@ static BYTE xchg_spi(BYTE dat) {
     return (BYTE) FLASH_SPI_PORT;
 }
 
+BYTE diskReadStatus1() {
+    BYTE ret;
+    FLASH_ASSERT_CS;
+    xchg_spi(0x05); //Secure Register Read
+    ret = xchg_spi(0xFF);
+    FLASH_RELEASE_CS;
+    return ret;
+}
+
+BYTE diskReadStatus2() {
+    BYTE ret;
+    FLASH_ASSERT_CS;
+    xchg_spi(0x35); //Secure Register Read
+    ret = xchg_spi(0xFF);
+    FLASH_RELEASE_CS;
+    return ret;
+}
+
+void diskReadMFID(unsigned char *mfId, unsigned char *devId) {
+    FLASH_ASSERT_CS;
+    xchg_spi(0x90);
+    xchg_spi(0x0);
+    xchg_spi(0x0);
+    xchg_spi(0x0);
+    *mfId = xchg_spi(0xFF);
+    *devId = xchg_spi(0xFF);
+    FLASH_RELEASE_CS;
+}
+
+int diskReadUniqueID(unsigned char *out) {
+    FLASH_ASSERT_CS;
+    xchg_spi(0x4B);
+    xchg_spi(0x0);
+    xchg_spi(0x0);
+    xchg_spi(0x0);
+    xchg_spi(0x0);
+    out[0] = xchg_spi(0xFF);
+    out[1] = xchg_spi(0xFF);
+    out[2] = xchg_spi(0xFF);
+    out[3] = xchg_spi(0xFF);
+    out[4] = xchg_spi(0xFF);
+    out[5] = xchg_spi(0xFF);
+    out[6] = xchg_spi(0xFF);
+    out[7] = xchg_spi(0xFF);
+    FLASH_RELEASE_CS;
+    return FR_OK;
+}
+
+BYTE diskReadStatus3() {
+    BYTE ret;
+    FLASH_ASSERT_CS;
+    xchg_spi(0x15); //Secure Register Read
+    ret = xchg_spi(0xFF);
+    FLASH_RELEASE_CS;
+    return ret;
+}
+
 int diskReadSecure(char sector, unsigned char *out) {
-    if (LoggingOn) Log("       diskReadSecure: Address=%b bCount=%i\r\n", sector);
+    //if (LoggingOn) Log("       diskReadSecure: Address=%b bCount=%i\r\n", sector);
     FLASH_ASSERT_CS;
     xchg_spi(0x48); //Secure Register Read
     xchg_spi(0x00); //Address
@@ -47,7 +104,7 @@ int diskReadSecure(char sector, unsigned char *out) {
 }
 
 int diskWriteSecure(char sector, unsigned char *data) {
-    if (LoggingOn) Log("         diskWriteSecure: sector=%b\r\n", sector);
+    //if (LoggingOn) Log("         diskWriteSecure: sector=%b\r\n", sector);
 
     BYTE status;
 
@@ -82,7 +139,7 @@ int diskWriteSecure(char sector, unsigned char *data) {
 }
 
 int diskEraseSecure(char sector) {
-    Log("      diskEraseSecure: sector=%b...", sector);
+    //Log("      diskEraseSecure: sector=%b...", sector);
     BYTE status;
 
     FLASH_ASSERT_CS;
@@ -109,7 +166,7 @@ int diskEraseSecure(char sector) {
 }
 
 int diskRead(uint32_t address, int bCount, BYTE * out) {
-    if (LoggingOn) Log("       diskRead: Address=%xl bCount=%i\r\n", address, bCount);
+    //Log("       diskRead: Address=%xl bCount=%i\r\n", address, bCount);
     FLASH_ASSERT_CS;
     xchg_spi(0x03);
     xchg_spi((address & 0xFF0000) >> 16);
@@ -167,7 +224,6 @@ int diskRead_StreamToWifi(uint32_t address, int bCount) {
 
 int diskWritePage(uint32_t address, int bCount, BYTE *data) {
     //Log("         diskWritePage: Address=%xl Count=%i...\r\n", address, bCount);
-
     BYTE status;
 
     FLASH_ASSERT_CS;
@@ -189,12 +245,10 @@ int diskWritePage(uint32_t address, int bCount, BYTE *data) {
     xchg_spi(0x05); //Read Status Register 1
     while (1) {
         status = xchg_spi(0xFF);
-        while (FIFO_HasChars(logFIFO));
         status &= 0x01;
         if (status == 0) break;
     }
     FLASH_RELEASE_CS;
-    //Log("OK\r\n");
     return 1;
 }
 
@@ -370,11 +424,11 @@ int GetNextSector(uint32_t sector, uint32_t *nextSector) {
     unsigned int nxtSect;
     uint32_t lTemp = CAT_Address + (sector * 2);
     diskRead(lTemp, 2, (BYTE*) & nxtSect);
-    (*nextSector) = nxtSect;
+    (*nextSector) = (uint32_t) nxtSect;
 
     if (nxtSect == 0x7FFF) return FR_EOF;
     if (nxtSect > SECTORCOUNT || nxtSect < 4) {
-        Log("   GetNextSector: FAIL Corrupted...Origin=%xl, Next=%xl\r\n", sector, nxtSect);
+        Log("   GetNextSector: FAIL Corrupted...Origin=%xl, Next=%xi\r\n", sector, nxtSect);
         return FR_CORRUPTED;
     }
     //Log("   GetNextSector: OK Next=%xl\r\n", (*nextSector));
@@ -513,7 +567,7 @@ int CreateFile(const char *filename, ff_File *file) {
 int EraseSectorChain(uint32_t OriginSector) {
     int ret;
     uint16_t val = 0;
-    if (LoggingOn) Log("   EraseSectorChain: OringSector=%xl\r\n", OriginSector);
+    Log("   EraseSectorChain: ");
     uint32_t nextSector, currentSector;
     currentSector = OriginSector;
     while (1) {
@@ -521,12 +575,13 @@ int EraseSectorChain(uint32_t OriginSector) {
         if (ret == FR_EOF) return FR_OK;
         if (ret != FR_OK) return ret;
         ret = diskEraseSector(currentSector << 12);
+        Log("%xi->", (unsigned int) currentSector);
         if (ret != FR_OK) return ret;
         diskWrite(CAT_Address + (currentSector * 2), 2, (BYTE*) & val);
         if (nextSector == 0x7FFF) return FR_OK;
         currentSector = nextSector;
     }
-    if (LoggingOn) Log("   EraseSectorChain: OK\r\n");
+    Log(" Done\r\n");
 }
 
 void SetSPIBaudRate(long targetBaud) {
@@ -556,7 +611,7 @@ void SetSPIBaudRate(long targetBaud) {
                 }
                 SPI1CON1bits.SPRE = 8 - (BYTE) (y);
                 SPI1STATbits.SPIEN = 1;
-
+                Log("SPI Speed Set X=%i Y=%i...", x, y);
                 return;
             }
             y++;
@@ -564,6 +619,7 @@ void SetSPIBaudRate(long targetBaud) {
         x *= 4;
         y = 1;
     }
+    Log("SPI Speed Set - Unable to find speed setting...");
 }
 
 void ff_SPI_initialize() {
@@ -576,21 +632,16 @@ void ff_SPI_initialize() {
     SPI1STATbits.SPIROV = 0;
     SPI1CON1bits.SMP = 0; //Data is sampled in the middle of the clock
     //Setup for mode 11
-    SPI1CON1bits.CKE = 0;
-    SPI1CON1bits.CKP = 1;
+    SPI1CON1bits.CKE = 1;
+    SPI1CON1bits.CKP = 0;
     SPI1CON1bits.SSEN = 0; //SS is GPIO
-
-    SPI1CON1bits.PPRE = 0b00;
-    SPI1CON1bits.SPRE == 0b000;
-
-    SPI1STATbits.SPIEN = 1; //Enable the module
 
     FLASH_CS_TRIS = 0;
     SET_FLASH_CS(1);
     FLASH_CS_LAT = 1;
     FLASH_CS_PORT = 1;
 
-    SetSPIBaudRate(25000000);
+    SetSPIBaudRate(30000000); //30Mhz Clock Speed
     Delay(0.25);
 }
 
@@ -1129,11 +1180,6 @@ int ff_Trim() {
     FET.Position = 0;
     FET.SectorOffset = 0;
 
-    //Now Tombstone the old File Entry Table
-    Log("Timbstone Original FileEntryTable\r\n");
-    res = EraseSectorChain(FET.OriginSector);
-    if (res != FR_OK) return res;
-
     Log("Erase OLD CAT\r\n");
     diskEraseSector(oldSAT);
     diskEraseSector(oldSAT + 0x1000);
@@ -1323,7 +1369,7 @@ int ff_CheckFS() {
             //Erased entry... do nothing with it
         } else if (buff[0] == 0xFF) {
             //This is the EOF record
-            Log("File Check Complete!\r\n");
+            Log("File Check Complete! FileCount=%i\r\n", fCount);
             return FR_OK;
         } else if (buff[0] < 125) {
             fCount++;
@@ -1369,14 +1415,16 @@ int ff_CheckFS() {
     }
 }
 
+
+
 #ifdef FF_TEST
 #define VERIFY_NON_ZERO(z,a) {\
-    for(x=0; x < a; x++){ fftest_buffer[x]=x%255;}\
+    for(x=0; x < a; x++){ fftest_buffer[x]=x % 255;}\
     diskWrite((z), a, fftest_buffer);\
     diskRead((z), a, fftest_buffer);\
     for (x = 0; x < a; x++) {\
         if (fftest_buffer[x] != x % 255) {\
-            Log("Failure to Verify CORRECT at address:%xl Size:%i\r\n", (z) + x),a;\
+            Log("Failure to Verify CORRECT at offset:%i Actual=%xb, Expected=%xb\r\n", x,fftest_buffer[x],x % 255);\
             while (1);\
         }\
     }\
@@ -1388,7 +1436,7 @@ int ff_CheckFS() {
     diskRead((z), a, fftest_buffer);\
     for (x = 0; x < a; x++) {\
         if (fftest_buffer[x] != 0) {\
-            Log("Failure to Verify ZERO at address:%xl Size:%i\r\n", (z) + x),a;\
+            Log("Failure to Verify ZERO at address:%xl Size:%i\r\n", (z) + x,a);\
             while (1);\
         }\
     }\
@@ -1398,7 +1446,7 @@ int ff_CheckFS() {
     diskRead((z), a, fftest_buffer);\
     for (x = 0; x < a; x++) {\
         if (fftest_buffer[x] != 0xFF) {\
-            Log("Failure to Verify EMPTY at address:%xl Size:%i\r\n", (z) + x),a;\
+            Log("Failure to Verify EMPTY at address:%xl Size:%i\r\n", (z) + x,a);\
             while (1);\
         }\
     }\
@@ -1917,7 +1965,7 @@ void fftest_HighLevel() {
         sprintf(fname, "%d.test", x);
         ret = ff_Delete(fname);
         if (ret != FR_OK) {
-            Log("ff_Delete Error: '%s' Res=%i", fname, ret);
+            Log("ff_Delete Error: '%s' Res=%i '%s'", fname, ret, Translate_DRESULT(ret));
             while (1);
         }
     }
@@ -2136,8 +2184,63 @@ void fftest_HighLevel() {
         }
         Log("OK\r\n");
     }
-    Log("OK\r\n");
 
+    Log("Starting Seek Testing to 1Mb\r\n");
+
+    uint32_t seekPos = 0;
+    ff_File seekHandle;
+    ff_OpenByFileName(&seekHandle, "seekTest.dat", 1);
+
+    Log("8 Byte Writing Seek File:\r\n");
+    for (seekPos = 0; seekPos < 0x40000; seekPos += 8) {
+        if ((seekPos & 0x7FF) == 0) Log("\r\n%xl: ", seekPos);
+        ff_Seek(&seekHandle, seekPos, ff_SeekMode_Absolute);
+        ff_Append(&seekHandle, (BYTE *) & seekPos, 4, &bWritten);
+        ff_Append(&seekHandle, (BYTE *) & seekPos, 4, &bWritten);
+        if ((seekPos & 0b1111) == 0) Log(".");
+    }
+
+    uint32_t seekCheck, seekCheck2;
+    Log("Done\r\n8 Byte Checking Seek File:\r\n");
+    for (seekPos = 0; seekPos < 0x40000; seekPos += 8) {
+        if ((seekPos & 0x7FF) == 0) Log("\r\n%xl: ", seekPos);
+        ff_Seek(&seekHandle, seekPos, ff_SeekMode_Absolute);
+        ff_Read(&seekHandle, (BYTE *) & seekCheck, 4, &bWritten);
+        ff_Read(&seekHandle, (BYTE *) & seekCheck2, 4, &bWritten);
+        if (seekCheck == seekPos && seekCheck == seekCheck2) {
+            if ((seekPos & 0b1111) == 0) Log(".");
+        } else {
+            Log("Error: Expected=%xl Actual1=%xl Actual2=%xl", seekPos, seekCheck, seekCheck2);
+            while (1);
+        }
+    }
+    Log("Done\r\n");
+
+    Log("Repair & Trim File SYstem\r\n");
+    ff_RepairFS();
+
+    Log("Re-Open File\r\n");
+    ret = ff_OpenByFileName(&seekHandle, "seekTest.dat", 0);
+    if (ret != FR_OK) {
+        Log("ff_OpenByFileName Error Res=%i", Translate_DRESULT(ret));
+        while (1);
+    }
+
+    Log("8 Byte Checking Seek File:\r\n");
+    for (seekPos = 0; seekPos < 0x40000; seekPos += 8) {
+        if ((seekPos & 0x7FF) == 0) Log("\r\n%xl: ", seekPos);
+        ff_Seek(&seekHandle, seekPos, ff_SeekMode_Absolute);
+        ff_Read(&seekHandle, (BYTE *) & seekCheck, 4, &bWritten);
+        if (seekCheck == seekPos) {
+            if ((seekPos & 0b1111) == 0) Log(".");
+        } else {
+            Log("Error: Expected=%xl Actual=%xl", seekPos, seekCheck);
+            while (1);
+        }
+    }
+    Log("Done\r\n");
+
+    Log("High Level FS Test Complete\r\n");
 }
 
 #endif

@@ -8,17 +8,17 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("HEX_Flatten")> 
+<Assembly: AssemblyTitle("SerialFirmwareFlash")> 
 <Assembly: AssemblyDescription("")> 
 <Assembly: AssemblyCompany("")> 
-<Assembly: AssemblyProduct("HEX_Flatten")> 
+<Assembly: AssemblyProduct("SerialFirmwareFlash")> 
 <Assembly: AssemblyCopyright("Copyright ©  2015")> 
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(False)>
 
 'The following GUID is for the ID of the typelib if this project is exposed to COM
-<Assembly: Guid("4bce7738-52fb-4280-9e8f-469136937608")> 
+<Assembly: Guid("72dac378-6682-4f83-8280-155692fe2f89")> 
 
 ' Version information for an assembly consists of the following four values:
 '

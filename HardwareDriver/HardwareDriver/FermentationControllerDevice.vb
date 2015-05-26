@@ -206,7 +206,7 @@ Public Class FermentationControllerDevice
                 While (rdr.EndOfStream = False)
                     Dim token = rdr.ReadLine
                     Dim timeOffset As UInt32
-                    If UInt32.TryParse(token, Globalization.NumberStyles.HexNumber, Nothing, timeOffset) Then
+                    If UInt32.TryParse(token, timeOffset) Then
                         ret.Add(EPOCH.AddSeconds(timeOffset).ToLocalTime)
                     End If
                 End While

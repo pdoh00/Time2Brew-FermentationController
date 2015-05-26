@@ -34,7 +34,7 @@ _FGS(GWRP_OFF & GCP_OFF); //Turn off Code Protect
 
 const char *WiFiConfigFilename = "secure.wificonfig";
 
-const char *Version = "0.1.2";
+const char *Version = "0.1.5";
 
 unsigned long Timer500Hz;
 
@@ -182,6 +182,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
     _T2IF = 0;
     T2CONbits.TON = 0;
     TMR2 = 0;
+    BYTE accum;
     switch (ONEWIRE_ISR_STATE) {
             //..........................................
             //WRITE 1
@@ -263,20 +264,47 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
             break;
         case ONEWIRE_ISR_STATE_READ_E:
             if (OneWireISR_Probe) {
-                if (PROBE1_PORT) {
+                accum = 0;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (accum > 7) {
                     OneWireISR_ReadResult = 1;
-                } else {
+                } else if (accum < 3) {
                     OneWireISR_ReadResult = 0;
+                } else {
+                    OneWireISR_ReadResult = -1;
                 }
             } else {
-                if (PROBE0_PORT) {
+                //Sample 10 times over ~2us
+                accum = 0;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (accum > 7) {
                     OneWireISR_ReadResult = 1;
-                } else {
+                } else if (accum < 3) {
                     OneWireISR_ReadResult = 0;
+                } else {
+                    OneWireISR_ReadResult = -1;
                 }
             }
             ONEWIRE_ISR_STATE = ONEWIRE_ISR_STATE_READ_F;
-            PR2 = 3300;
+            PR2 = 3200;
             T2CONbits.TON = 1;
             break;
         case ONEWIRE_ISR_STATE_READ_F:
@@ -308,20 +336,46 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
             break;
         case ONEWIRE_ISR_STATE_RESET_I:
             if (OneWireISR_Probe) {
-                if (PROBE1_PORT) {
+                accum = 0;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (PROBE1_PORT) accum++;
+                if (accum > 7) {
                     OneWireISR_Prescence = 1;
-                } else {
+                } else if (accum < 3) {
                     OneWireISR_Prescence = 0;
+                } else {
+                    OneWireISR_Prescence = -1;
                 }
             } else {
-                if (PROBE0_PORT) {
+                accum = 0;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (PROBE0_PORT) accum++;
+                if (accum > 7) {
                     OneWireISR_Prescence = 1;
-                } else {
+                } else if (accum < 3) {
                     OneWireISR_Prescence = 0;
+                } else {
+                    OneWireISR_Prescence = -1;
                 }
             }
             ONEWIRE_ISR_STATE = ONEWIRE_ISR_STATE_RESET_J;
-            PR2 = 24600;
+            PR2 = 24500;
             T2CONbits.TON = 1;
             break;
         case ONEWIRE_ISR_STATE_RESET_J:
@@ -352,12 +406,11 @@ int main(int argc, char** argv) {
     Setup_ADC();
     MakeSafe();
     Setup_Interrupts();
-    RTC_Initialize();
 
-    Log("Diag Delay...LATEST VERSION!!!!");
+    Log("RTC Initializing...\r\n");
+    RTC_Initialize();
     Delay(1);
 
-    ff_SPI_initialize();    
     TriggerConfigReset = 0;
 
     if (GlobalStartup(0) != FR_OK) {

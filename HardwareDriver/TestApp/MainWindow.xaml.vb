@@ -6,12 +6,34 @@ Imports Microsoft.Win32
 Class MainWindow
     Private Controller As FermentationControllerDevice
     Private coms As IHttpCommsProvider
+    Private poll As New Timers.Timer(1000)
+    Private pollTick As Integer = 0
     Private Sub MainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         Dim ssdp As New Discovery.SSDP.Agents.ClientAgent()
         coms = New HttpCommsProviderWebClient
         Dim IPAddress As String = InputBox("Controller IP Address:", "", "192.168.0.109")
 
         Controller = New FermentationControllerDevice(coms, "http://" & IPAddress)
+
+        AddHandler poll.Elapsed, Async Sub()
+                                     Try
+                                         Dim temp1 = Await Controller.GetTemperature(0)
+                                         Dim temp2 = Await Controller.GetTemperature(1)
+                                         pollTick += 1
+                                         Using fs As New StreamWriter("C:\poll.csv", True)
+                                             fs.WriteLine(pollTick & "," & temp1 & "," & temp2)
+                                         End Using
+                                         Dispatcher.Invoke(Sub()
+                                                               Me.Title = pollTick & ":  Probe0=" & temp1 & "C  Probe1=" & temp2 & "C"
+                                                           End Sub)
+                                     Catch ex As Exception
+
+                                     End Try
+                                     'poll.Enabled = False
+
+                                     'poll.Enabled = True
+                                 End Sub
+
     End Sub
 
     Private Async Sub cmdGetTemp_Click(sender As Object, e As RoutedEventArgs) Handles cmdGetTemp.Click
@@ -442,6 +464,13 @@ Class MainWindow
 
 
     End Sub
+
+
+    Private Sub cmdTogglePolling_Click(sender As Object, e As RoutedEventArgs) Handles cmdTogglePolling.Click
+        poll.Enabled = Not poll.Enabled
+    End Sub
+
+   
 End Class
 
 Public Class HttpCommsProviderWebClient
