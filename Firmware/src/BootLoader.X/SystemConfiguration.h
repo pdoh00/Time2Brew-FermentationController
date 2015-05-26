@@ -15,9 +15,9 @@ extern FIFO_BUFFER *logFIFO;
 
 /*Constants*/
 #define FCY                         60000000
-#define MCU_WIFI_BAUD               115200
+#define MCU_WIFI_BAUD               230400
 #define DEBUG_BAUD                  460800
-#define WIFI_BRGVAL                 ((FCY/MCU_WIFI_BAUD)/16)-1
+#define WIFI_BRGVAL                 ((FCY/MCU_WIFI_BAUD)/4)-1
 #define DEBUG_BRGVAL                ((FCY/DEBUG_BAUD)/4)-1
 #define MES_TICK_FREQUENCY          500
 #define SYSTEM_TIMER_FREQ           500
