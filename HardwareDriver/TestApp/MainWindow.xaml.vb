@@ -433,21 +433,18 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdFirmware_Click(sender As Object, e As RoutedEventArgs) Handles cmdFirmware.Click
-        Dim dlg As New OpenFileDialog
-        dlg.Filter = "HEX Firmware (*.hex)|*.hex"
+        Dim dlg As New Forms.FolderBrowserDialog
         dlg.ShowDialog()
         Try
-            Using rawFirmware = dlg.OpenFile
-                response.Text = "--"
-                Try
-                    Using binFirmware = HEX_FirmwareProcessor.GetBinary(rawFirmware, &H27800)
-                        Await Controller.uploadfirmware(binFirmware)
-                        response.Text = "OK"
-                    End Using
-                Catch ex As Exception
-                    response.Text = "Error:" & ex.ToString
-                End Try
-            End Using
+            response.Text = "--"
+            Try
+                Using binFirmware = HEX_FirmwareProcessor.GenerateMasterBIN(dlg.SelectedPath)
+                    Await Controller.uploadfirmware(binFirmware)
+                    response.Text = "OK"
+                End Using
+            Catch ex As Exception
+                response.Text = "Error:" & ex.ToString
+            End Try
 
         Catch ex As Exception
 

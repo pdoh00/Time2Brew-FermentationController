@@ -63,7 +63,6 @@
     <Compile Include="DataStructures\WIFI_OP_MODES.vb" />
     <Compile Include="FermentationControllerDevice.vb" />
     <Compile Include="FletcherChecksum16.vb" />
-    <Compile Include="HEX_FirmwareProcessor.vb" />
     <Compile Include="ICommunicationLayer.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="DataStructures\PROBE_ASSIGNMENT.vb" />

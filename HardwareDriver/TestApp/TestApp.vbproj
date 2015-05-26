@@ -59,6 +59,7 @@
     <Reference Include="System.IO" />
     <Reference Include="System.Runtime" />
     <Reference Include="System.Threading.Tasks" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System" />
@@ -76,6 +77,19 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="DataStructures\CONTROLLER_STATUS.vb" />
+    <Compile Include="DataStructures\EQUIPMENT_CONFIG.vb" />
+    <Compile Include="DataStructures\PROBE_ASSIGNMENT.vb" />
+    <Compile Include="DataStructures\PROFILE_STEP.vb" />
+    <Compile Include="DataStructures\REGULATIONMODE.vb" />
+    <Compile Include="DataStructures\SYSTEMMODE.vb" />
+    <Compile Include="DataStructures\TREND_RECORD.vb" />
+    <Compile Include="DataStructures\WIFI_ENCRYPTION_MODES.vb" />
+    <Compile Include="DataStructures\WIFI_OP_MODES.vb" />
+    <Compile Include="FermentationControllerDevice.vb" />
+    <Compile Include="FletcherChecksum16.vb" />
+    <Compile Include="HEX_FirmwareProcessor.vb" />
+    <Compile Include="ICommunicationLayer.vb" />
     <Compile Include="ProfileSelector.xaml.vb">
       <DependentUpon>ProfileSelector.xaml</DependentUpon>
     </Compile>
@@ -158,12 +172,6 @@
     </None>
     <AppDesigner Include="My Project\" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HardwareDriver\HardwareDriver.vbproj">
-      <Project>{1650cf8d-3060-4f05-8860-fcdf4cf0c3dc}</Project>
-      <Name>HardwareDriver</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>
