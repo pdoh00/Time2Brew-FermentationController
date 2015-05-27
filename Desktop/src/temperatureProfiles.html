@@ -46,12 +46,12 @@
   <script src="./promisify.js "></script>
   <script src="./chartMethods.js "></script>
   <script src="./temperatureProfileAPI.js"></script>
+  <script src="./bower_components/rxjs/dist/rx.all.js"></script>
   <script src="./bower_components/mustache/mustache.min.js"></script>
   <script src="./bower_components/chartist/dist/chartist.min.js"></script>
   <script src="./bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
 
   <script id="profilePanelTemplate" type="x-tmpl-mustache">
-
     <div class="panel-heading">
       <h4 class="panel-title">
         <p data-toggle="collapse" data-target="#{{collapseId}}">{{profileName}}</p>
@@ -59,10 +59,7 @@
     </div>
     <div id="{{collapseId}}" class="panel-collapse collapse in">
       <div class="panel-body" id="{{bodyId}}">
-
       </div>
-    </div>
-
   </script>
 
   <script id="profileStepsPanelTemplate" type="x-tmpl-mustache">
@@ -74,9 +71,7 @@
     </div>
     <div id="{{collapseId}}" class="panel-collapse collapse in">
       <div class="panel-body">
-        <ol id="{{stepListId}}">
-
-        </ol>
+        <ol id="{{stepListId}}"></ol>
       </div>
     </div>
 
@@ -116,69 +111,79 @@
 
   <script>
     function updateProfiles() {
-      getAllProfiles()
-        .then(function(profileData) {
+        // var loadProfileSteps = function(profileName) {
+        //   return getProfileSteps(profileName);
+        // };
+        // var loadProfileInstances = function(profileName) {
+        //   return getProfileInstances(profileName);
+        // };
 
-          var profileList = document.getElementById('profiles');
-          //Clear the list
-          while (profileList.firstChild) {
-            profileList.removeChild(profileList.firstChild);
-          }
+        var profileList = document.getElementById('accordion');
+        //clear the list
+        while (profileList.firstChild) {
+          profileList.removeChild(profileList.firstChild);
+        }
 
-          for (var i = 0; i < profileData.length; i++) {
-            var entry = document.createElement('li');
-            entry.appendChild(document.createTextNode(profileData[i]));
+        temperatureProfileAPI.getAllProfiles()
+          .selectMany(
+            function(profile) {
+              return profile;
+            })
+          .subscribe(
+            function(p) {
 
-            getProfileInstances(profileData[i])
-              .then(function(instanceData) {
-                var instanceList = document.createElement('ol');
-                entry.appendChild(instanceList);
+              var sub = Rx.Observable.forkJoin(
+                Rx.Observable.return(p),
+                temperatureProfileAPI.getProfileSteps(p.name),
+                temperatureProfileAPI.getProfileInstances(p.name));
 
-                // for (var i = 0; i < instanceData.length; i++) {
-                //   var instanceEntry = document.createElement('li');
-                //   instanceEntry.appendChild(document.createTextNode(instanceData[i].toISOString()));
-                //   instanceList.appendChild(instanceEntry);
-                //   getTrendDataForInstance(profileData[i], instanceData[i]);
-                // }
+              sub
+                .subscribe(function(x) {
+                  var profile = x[0];
+                  profile.steps = x[1];
+                  profile.instances = x[2];
+                  profileList.appendChild(createProfilePanel(profile));
+                });
+            },
+            function(err) {
+              console.log('Error: ' + err);
+            },
+            function() {
+              console.log('Complete');
+            });
 
-              }).then(function() {
-                profileList.appendChild(entry);
-              });
-          }
-        }).catch(function(error) {
-          alert(error);
-        });
-    };
+      }
 
-    function createProfilePanel(profileName) {
+    function createProfilePanel(profile) {
 
       var div = document.createElement('div');
       div.setAttribute('class', 'panel panel-default');
 
-      var collapseId = 'collapse' + profileName.replace(/\s+/g, '');
-      var bodyId = 'body' + profileName.replace(/\s+/g, '');
+      var collapseId = 'collapse' + profile.name.replace(/\s+/g, '');
+      var bodyId = 'body' + profile.name.replace(/\s+/g, '');
 
       var htmlTemplate = document.getElementById('profilePanelTemplate').innerHTML;
       Mustache.parse(htmlTemplate);
 
-      var profilePanel = Mustache.render(htmlTemplate, {
-        profileName: profileName,
+      div.innerHTML = Mustache.render(htmlTemplate, {
+        profileName: profile.name,
         collapseId: collapseId,
         bodyId: bodyId
       });
 
-      div.innerHTML = profilePanel;
+      var stepsDiv = createStepsPanel(profile.name, profile.steps);
+      var instDiv = createInstancePanel(profile.name, profile.instances);
 
       var stepsElem = div.querySelector('#' + bodyId);
-      stepsElem.appendChild(createStepsPanel(profileName));
+      stepsElem.appendChild(stepsDiv);
 
       var instPnlElem = div.querySelector('#' + bodyId);
-      instPnlElem.appendChild(createInstancePanel(profileName));
+      instPnlElem.appendChild(instDiv);
 
       return div;
     }
 
-    function createStepsPanel(profileName) {
+    function createStepsPanel(profileName, steps) {
       var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Steps';
       var stepListId = profileName.replace(/\s+/g, '') + 'StepList';
       var div = document.createElement('div');
@@ -187,23 +192,22 @@
       var htmlTemplate = document.getElementById('profileStepsPanelTemplate').innerHTML;
       Mustache.parse(htmlTemplate);
 
-      var stepsPanel = Mustache.render(htmlTemplate, {
+      div.innerHTML = Mustache.render(htmlTemplate, {
         collapseId: collapseId,
         stepListId: stepListId
-      });
-      div.innerHTML = stepsPanel;
+      });;
 
       var stepList = div.querySelector('#' + stepListId);
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < steps.length; i++) {
         var entry = document.createElement('li');
-        var stepData = document.createTextNode("Some step data.");
+        var stepData = document.createTextNode("Start at: " + steps[i].startTemp + " End at: " + steps[i].endTemp + " Duration: " + steps[i].duration);
         entry.appendChild(stepData);
         stepList.appendChild(entry);
       }
       return div;
     }
 
-    function createInstancePanel(profileName) {
+    function createInstancePanel(profileName, instances) {
       var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Instances';
       var instanceListId = profileName.replace(/\s+/g, '') + 'InstanceList';
       var div = document.createElement('div');
@@ -219,7 +223,7 @@
 
       div.innerHTML = instancePanel;
 
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < instances.length; i++) {
         var data = {
           labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
           series: [
@@ -270,7 +274,7 @@
         entry.innerHTML = Mustache.render(htmlTemplate, {
           collapseId: collapseId,
           chartId: chartId,
-          date: i + '/14/2015'
+          date: instances[i]
         });
 
         var list = div.querySelector('#' + instanceListId);
@@ -288,11 +292,11 @@
     }
 
     window.onload = function() {
-
-      var profilePanel = createProfilePanel("British Ale Yeast");
-
-      var profilePanelParent = document.getElementById('accordion');
-      profilePanelParent.appendChild(profilePanel);
+      updateProfiles();
+      // var profilePanel = createProfilePanel("British Ale Yeast");
+      //
+      // var profilePanelParent = document.getElementById('accordion');
+      // profilePanelParent.appendChild(profilePanel);
 
       // var data = {
       //   labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
