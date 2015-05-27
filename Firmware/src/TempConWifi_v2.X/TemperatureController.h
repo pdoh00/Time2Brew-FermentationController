@@ -9,16 +9,17 @@
 #define	TEMPERATURECONTROLLER_H
 
 #include "PID.h"
-
+#include "FlashFS.h"
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
     typedef enum {
-        SYSTEMMODE_SensorOnly = 0,
+        SYSTEMMODE_IDLE = 0,
         SYSTEMMODE_Manual = 1,
-        SYSTEMMODE_Profile = 2
+        SYSTEMMODE_Profile = 2,
+        SYSTEMMODE_ProfileEnded = 3
     } SYSTEMMODE;
 
     typedef enum {
@@ -40,6 +41,7 @@ extern "C" {
         int Probe1;
         int SetPoint;
         char Output;
+        unsigned char Relay;
     } TREND_RECORD;
 
     typedef struct {
@@ -96,6 +98,7 @@ extern "C" {
     } MACHINE_STATE;
 
     extern MACHINE_STATE globalstate;
+    extern ff_File ProfileTrendFile;
 
     int ExecuteProfile(const char *fname, char *msg);
     int LoadEquipmentProfile(const char *FileName, char *msg, EQUIPMENT_PROFILE *dest);

@@ -1,4 +1,5 @@
 ﻿Imports System.IO
+Imports System.IO.Ports
 
 Module Module1
     Const ACK As Byte = &HF1
@@ -14,26 +15,15 @@ Module Module1
     Const CMD_FLASH_BACKUP As Byte = &H7
     Const CMD_FLASH_PRIMARY As Byte = &H8
     Const CMD_SEND_PRIMARY As Byte = &HA
+    Const CMD_WIPE_CHIP As Byte = &HB
     Const CMD_SEND_BACKUP As Byte = &H9
-    Const CMD_WIPE As Byte = &HB
+    Const CMD_SET_SECURITY As Byte = &HE
 
+    Const ESP_BLOCK_SIZE As Integer = 256
+    Const FirmwareInstructionCount = &H13C00
 
-    Const FirmwareLength = &H27800
-
-    Sub Main()
-        Dim args = Environment.GetCommandLineArgs()
-
-        If args.Count <> 3 Then
-            Console.WriteLine("Args are not good!")
-            Return
-        End If
-
-        If File.Exists(args(1)) = False Then
-            Console.WriteLine("Unable to find the HEX file...")
-            Return
-        End If
-
-        Dim programArea((FirmwareLength * 2) - 1) As Byte
+    Function Build_MCU_FirmwareBIN(inp As Stream) As Stream
+        Dim programArea((FirmwareInstructionCount * 4) - 1) As Byte 'Each Instruction is 4 bytes long
         Dim x As Integer
 
         For x = 0 To programArea.Length - 1
@@ -42,8 +32,7 @@ Module Module1
 
         Dim SegmentAddressOffset As UInt32 = 0
         Dim LinearAddressOffset As UInt32 = 0
-
-        Using hexfile As New StreamReader(args(1))
+        Using hexfile As New StreamReader(inp)
             While 1
                 Dim line = hexfile.ReadLine
                 If line.Substring(0, 1) <> ":" Then Throw New ApplicationException("Corrupted Hex File")
@@ -77,19 +66,36 @@ Module Module1
 
         x = 0
         ms.WriteByte(&HAA)
+        Dim FirmwareBinLength As UInt32 = (FirmwareInstructionCount * 3) 'We only need to store 24-bits per instruction the last byte is always blank
+        ms.Write(BitConverter.GetBytes(FirmwareBinLength), 0, 4)
         While (x < programArea.Length)
             ms.Write(programArea, x, 3)
             x += 4
         End While
         ms.Position = 0
+        Return ms
+    End Function
 
-        Dim com As New IO.Ports.SerialPort(args(2), 460800, Ports.Parity.None, 8, Ports.StopBits.One)
+    Function Build_ESP_FirmwareBIN(inp As Stream, Offset As UInt32) As Stream
+        Dim num_blocks As UInt32 = Math.Ceiling(inp.Length / ESP_BLOCK_SIZE)
+        Dim BIN_Length = num_blocks * ESP_BLOCK_SIZE
+
+        Dim rawBuffer(BIN_Length - 1) As Byte
+        For idx As Integer = 0 To BIN_Length - 1
+            rawBuffer(idx) = &HE0
+        Next
+
+        Dim ms As New MemoryStream
+        ms.Write(BitConverter.GetBytes(Offset), 0, 4)
+        ms.Write(BitConverter.GetBytes(BIN_Length), 0, 4)
+        inp.Read(rawBuffer, 0, rawBuffer.Length)
+        ms.Write(rawBuffer, 0, rawBuffer.Length)
+        Return ms
+    End Function
+
+    Function Connect(com As SerialPort) As Boolean
         Dim resp As Integer
-        com.Open()
-        com.ReadTimeout = 100
-        com.WriteTimeout = 100
-
-        Console.WriteLine("Connecting...")
+        Console.Write("Connecting...")
         While (1)
             com.Write(New Byte() {CMD_ECHO}, 0, 1)
             If com.BytesToRead > 0 Then
@@ -99,12 +105,15 @@ Module Module1
             While com.BytesToWrite
             End While
         End While
+        Console.WriteLine("OK")
+        Return True
+    End Function
 
-        Console.WriteLine("Connected OK")
-
-        Console.WriteLine("WIPE CHIP...")
+    Function WipeChip(com As SerialPort) As Boolean
+        Dim resp As Integer
+        Console.WriteLine("Wipe Chip...")
         com.ReadExisting()
-        com.Write(New Byte() {CMD_WIPE}, 0, 1)
+        com.Write(New Byte() {CMD_WIPE_CHIP}, 0, 1)
         resp = com.ReadByte
         If resp <> RQ_CONFIRM Then
             Console.WriteLine("Oops: Rx=" & resp)
@@ -118,26 +127,70 @@ Module Module1
             Console.ReadLine()
         End If
         Console.WriteLine("ACK Wait recieved...polling for ack")
-        com.ReadTimeout = 90000
+        com.ReadTimeout = 90000 '90 Second timeout
 
-        resp = com.ReadByte
+        Try
+            resp = com.ReadByte
+        Catch ex As Exception
+            Console.WriteLine("Error: Ex=" & ex.ToString)
+            Return False
+        End Try
+
         If resp <> ACK Then
             Console.WriteLine("ACK not received...instead Rx=" & resp)
             Console.ReadLine()
         End If
-        Console.WriteLine("ACK Recieved!")
+        Console.WriteLine("Wipe Chip Complete")
+        Return True
+    End Function
 
-        Dim tick As Integer = 0
+    Function EraseBackup(com As SerialPort) As Boolean
+        Dim resp As Integer
+        Console.WriteLine("Erase Backup...")
+        com.ReadExisting()
+        com.Write(New Byte() {CMD_ERASE_BACKUP}, 0, 1)
+        resp = com.ReadByte
+        If resp <> RQ_CONFIRM Then
+            Console.WriteLine("Oops: Rx=" & resp)
+            Console.ReadLine()
+        End If
+        Console.WriteLine("Request For Confirmation...")
+        com.Write(New Byte() {CMD_CONFIRM}, 0, 1)
+        resp = com.ReadByte
+        If resp <> ACK_WAIT Then
+            Console.WriteLine("Oops: Rx=" & resp)
+            Console.ReadLine()
+        End If
+        Console.WriteLine("ACK Wait recieved...polling for ack")
+        com.ReadTimeout = 10000 '10 second timeout
 
+        Try
+            resp = com.ReadByte
+        Catch ex As Exception
+            Console.WriteLine("Error: Ex=" & ex.ToString)
+            Return False
+        End Try
 
-        ms.Position = 0
-        While ms.Position < ms.Length
+        If resp <> ACK Then
+            Console.WriteLine("ACK not received...instead Rx=" & resp)
+            Console.ReadLine()
+        End If
+        Console.WriteLine("Erase Backup Complete")
+        Return True
+    End Function
+
+    Function UploadBackupFirmware(com As SerialPort, MS As Stream) As Boolean
+        Dim resp As Integer
+        Dim tick As Integer
+
+        MS.Position = 0
+        While MS.Position < MS.Length
             Using tx As New MemoryStream
-                Dim offset As UInt32 = ms.Position
+                Dim offset As UInt32 = MS.Position
                 tx.Write(BitConverter.GetBytes(offset), 0, 4)
-                Dim buff(192) As Byte
-                ms.Read(buff, 0, 192)
-                tx.Write(buff, 0, 192)
+                Dim buff(255) As Byte
+                MS.Read(buff, 0, 256)
+                tx.Write(buff, 0, 256)
                 tx.Position = 0
                 Dim chkSum As UInt16 = FletcherChecksum.Fletcher16(tx.ToArray, 0, tx.Length)
                 tx.Position = tx.Length
@@ -150,14 +203,13 @@ Module Module1
                         tick += 1
                         If (tick > 10) Then
                             tick = 0
-                            Console.WriteLine("Sending Data. MS.Position=" & ms.Position)
+                            Console.WriteLine("Sending Data. MS.Position=" & MS.Position)
                         End If
                         com.Write(tx.ToArray, 0, tx.Length)
                         resp = com.ReadByte
                         If (resp <> ACK) Then
                             Console.WriteLine("FAIL: ACK not Received: Rx=" & resp)
-                            Console.ReadLine()
-                            Environment.Exit(-1)
+                            Return False
                         Else
                             Exit While
                         End If
@@ -167,26 +219,97 @@ Module Module1
             End Using
         End While
         Console.WriteLine("Upload Complete!!!")
+        Return True
+    End Function
 
-        Console.WriteLine("Flashing Firware")
+    Function FlashBackupFirmware(com As SerialPort) As Boolean
+        Dim resp As Integer
+
+        Console.WriteLine("Flashing Backup Firware")
         com.Write(New Byte() {CMD_FLASH_BACKUP}, 0, 1)
         resp = com.ReadByte
         If resp <> RQ_CONFIRM Then
             Console.WriteLine("Oops: Rx=" & resp)
-            Console.ReadLine()
+            Return False
         End If
         Console.WriteLine("Request For Confirmation...")
         com.Write(New Byte() {CMD_CONFIRM}, 0, 1)
+        Console.WriteLine("Complete")
+        Return True
+    End Function
+
+    Sub Main()
+        Dim args = Environment.GetCommandLineArgs()
+
+        If args.Count <> 4 Then
+            Console.WriteLine("Usage: SerialFirmwareFlash.exe Firmware_Set_Directory COM_PORT_NAME  BAUD_RATE")
+            Environment.Exit(-1)
+        End If
+
+        If Directory.Exists(args(1)) = False Then
+            Console.WriteLine("Unable to find the Firwmare Set Directory...")
+            Return
+        End If
+
+        Dim Master As New MemoryStream
+
+        Try
+            Using MCU_FirmwareBin = Build_MCU_FirmwareBIN(New FileStream(args(1) & "\mcu_firmware.hex", FileMode.Open, FileAccess.Read))
+                MCU_FirmwareBin.Position = 0
+                MCU_FirmwareBin.CopyTo(Master)
+            End Using
+        Catch ex As Exception
+            Console.WriteLine("Error: Unable to Process the mcu_firmware.hex file...Ex=" & ex.ToString)
+            Environment.Exit(-1)
+        End Try
+
+        For Each fname In Directory.GetFiles(args(1), "*.bin")
+            Try
+                Dim offset As UInt32 = Path.GetFileNameWithoutExtension(fname).Replace("0x", "&h")
+                Using fs As New FileStream(fname, FileMode.Open, FileAccess.Read)
+                    Using bin = Build_ESP_FirmwareBIN(fs, offset)
+                        bin.Position = 0
+                        bin.CopyTo(Master)
+                    End Using
+                End Using
+            Catch ex As Exception
+                Console.WriteLine("Error: Unable to Process the esp firmware bin file: " & fname & " : Ex=" & ex.ToString)
+                Environment.Exit(-1)
+            End Try
+
+        Next
+
+        Dim com As New IO.Ports.SerialPort(args(2), args(3), Ports.Parity.None, 8, Ports.StopBits.One)
+        Try
+            com.Open()
+        Catch ex As Exception
+            Console.WriteLine("Unable to Open COM Port: " & ex.ToString)
+            Environment.Exit(-5)
+        End Try
+
+        com.ReadTimeout = 100
+        com.WriteTimeout = 100
+
+        If (Connect(com) = False) Then
+            Environment.Exit(-1)
+        End If
+
+        If EraseBackup(com) = False Then
+            Environment.Exit(-2)
+        End If
+
+        If UploadBackupFirmware(com, Master) = False Then
+            Environment.Exit(-3)
+        End If
+
+        If FlashBackupFirmware(com) = False Then
+            Environment.Exit(-4)
+        End If
 
         While (1)
-            If com.BytesToRead > 0 Then
-                Console.Write(com.ReadExisting)
-            End If
+            Dim token = com.ReadExisting()
+            Console.Write(token)
         End While
-
-
-        Console.ReadLine()
-
 
     End Sub
 

@@ -63,6 +63,11 @@ extern "C" {
     int diskReadSecure(char sector, unsigned char * out);
     int diskWriteSecure(char sector, unsigned char * in);
     int diskEraseSecure(char sector);
+    void diskReadMFID(unsigned char *mfId, unsigned char *devId);
+    unsigned char diskReadStatus1();
+    unsigned char diskReadStatus2();
+    unsigned char diskReadStatus3();
+    int diskReadUniqueID(unsigned char *out);
 
     void ff_SPI_initialize();
 

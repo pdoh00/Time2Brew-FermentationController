@@ -7,14 +7,17 @@
             <TextBlock Name="response"></TextBlock>
             <StackPanel Orientation="Horizontal">
                 <StackPanel Orientation="Vertical">
-                    <Button Margin="5" Name="cmdGetTemp">Get Temperature</Button>
-                    <Button Margin="5" Name="cmdGetStats">Get Status</Button>
                     <Button Margin="5" Name="cmdTrimFS">Trim File System</Button>
                     <Button Margin="5" Name="cmdFormatFS">Format File System</Button>
                     <Button Margin="5" Name="cmdRestart">Restart</Button>
                     <Button Margin="5" Name="cmdFirmware">Upload Firmware</Button>
-                    <Button Margin="5" Name="cmdVersion">Get Version
- Firmware</Button>
+                    <Button Margin="5" Name="cmdVersion" Content="Firmware Version"/>
+                    <Button Margin="5" Name="cmdUploadFile" Content="Upload File"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical">
+                    <Button Margin="5" Name="cmdGetTemp">Get Temperature</Button>
+                    <Button Margin="5" Name="cmdTogglePolling">Poll Temperature</Button>
+                    <Button Margin="5" Name="cmdGetStats">Get Status</Button>                    
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <Button Margin="5" Name="cmdGetEquipmentProfileListing">Get Equipment Profile Listing</Button>

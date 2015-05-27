@@ -36,8 +36,8 @@ extern "C" {
     extern volatile char OneWireISR_ReadResult, OneWireISR_Prescence;
 
     int OneWireReset(int ProbeId);
-    void OneWireWrite(int ProbeId, unsigned char dat);
-    unsigned char OneWireRead(int ProbeId);
+    void OneWireWriteByte(int ProbeId, unsigned char dat);
+    int OneWireReadByte(int ProbeId, unsigned char *retV);
 
 #ifdef	__cplusplus
 }

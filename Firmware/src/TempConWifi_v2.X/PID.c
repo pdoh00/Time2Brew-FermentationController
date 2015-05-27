@@ -31,14 +31,14 @@ void PID_Initialize(PID_CTX *ctx) {
 
 void PID_Compute(PID_CTX *ctx) {
     /*Compute all the working error variables*/
-    float error = ctx->Setpoint - ctx->Input;
-    ctx->ITerm += (ctx->ki * error);
+    ctx->error = ctx->Setpoint - ctx->Input;
+    ctx->ITerm += (ctx->ki * ctx->error);
     if (ctx->ITerm > ctx->outMax) ctx->ITerm = ctx->outMax;
     else if (ctx->ITerm < ctx->outMin) ctx->ITerm = ctx->outMin;
     float dInput = (ctx->Input - ctx->lastInput);
 
     /*Compute PID Output*/
-    ctx->Output = (ctx->kp * error) + (ctx->ITerm) - ctx->kd * dInput;
+    ctx->Output = (ctx->kp * ctx->error) + (ctx->ITerm) - ctx->kd * dInput;
     if (ctx->Output > ctx->outMax) ctx->Output = ctx->outMax;
     else if (ctx->Output < ctx->outMin) ctx->Output = ctx->outMin;
 

@@ -255,7 +255,7 @@ void PUT_profile(HTTP_REQUEST *req, const char *urlParameter) {
 }
 
 void PUT_executeProfile(HTTP_REQUEST *req, const char *urlParameter) {
-    if (globalstate.SystemMode != SYSTEMMODE_SensorOnly) {
+    if (globalstate.SystemMode != SYSTEMMODE_IDLE) {
         sprintf(msg, "Controller is not IDLE");
         Send500_InternalServerError(req, msg);
         return;
@@ -335,15 +335,10 @@ void PUT_truncateProfile(HTTP_REQUEST *req, const char *urlParameter) {
 void GET_runHistory(HTTP_REQUEST *req, const char *urlParameter) {
     char profileName[64];
     char strInstance[14];
-    unsigned long instance;
 
     if (url_queryParse2(urlParameter, "name", profileName, 63)) {
         if (url_queryParse2(urlParameter, "instance", strInstance, 13)) {
-            if (sscanf(strInstance, "%lu", &instance) != 1) {
-                Send500_InternalServerError(req, "instance parameter is incorrect");
-                return;
-            }
-            sprintf(req->Resource, "/inst.%s.%08lx", profileName, instance);
+            sprintf(req->Resource, "/inst.%s.%s", profileName, strInstance);
             req->ETag = NULL;
             req->ContentLength = 0;
             Log("Passing to Get_File Resource=%s\r\n", req->Resource);
@@ -373,19 +368,22 @@ void GET_runHistory(HTTP_REQUEST *req, const char *urlParameter) {
 void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
     char profileName[64];
     char strInstance[14];
-    unsigned long instance;
 
     if (url_queryParse2(urlParameter, "name", profileName, 63)) {
         if (url_queryParse2(urlParameter, "instance", strInstance, 13)) {
-            if (sscanf(strInstance, "%lu", &instance) != 1) {
-                Send500_InternalServerError(req, "instance parameter is incorrect");
-                return;
+            unsigned long sendLength = ProfileTrendFile.Length;
+            sprintf(req->Resource, "trnd.%s.%s", profileName, strInstance);
+            if ((globalstate.SystemMode == SYSTEMMODE_Profile) &&
+                    (strcmp(ProfileTrendFile.FileName, req->Resource) == 0)) {
+                unsigned long et = globalstate.SystemTime - globalstate.ProfileStartTime;
+                et /= 60;
+                sendLength = et * 8;
             }
-            sprintf(req->Resource, "/trnd.%s.%08lx", profileName, instance);
+            sprintf(req->Resource, "/trnd.%s.%s", profileName, strInstance);
             req->ETag = NULL;
             req->ContentLength = 0;
             Log("Passing to Get_File Resource=%s\r\n", req->Resource);
-            Process_GET_File(req);
+            Process_GET_File_ex(req, 0, sendLength);
         } else {
             //No Instance provided so send a list of instances
             sprintf(req->Resource, "prflinstlisting.%s", profileName);
@@ -436,12 +434,16 @@ void GET_status(HTTP_REQUEST *req, const char *urlParameter) {
     unsigned int len = 64;
 
     unsigned char *packedData = req->rawbuffer;
-    unsigned char *cursour = Pack(packedData, "lbbbIbIbbaiIlIla", temp.SystemTime, temp.SystemMode,
+    unsigned char *cursour = Pack(packedData, "lbbbIbIbbaiIlIlallllBffffll", temp.SystemTime, temp.SystemMode,
             temp.equipmentConfig.RegulationMode, temp.equipmentConfig.Probe0Assignment, temp.Probe0Temperature,
             temp.equipmentConfig.Probe1Assignment, temp.Probe1Temperature, temp.HeatRelay,
             temp.CoolRelay, temp.ActiveProfileName, len, temp.StepIdx,
             temp.StepTemperature, temp.StepTimeRemaining,
-            temp.ManualSetPoint, temp.ProfileStartTime, temp.EquipmentName, len);
+            temp.ManualSetPoint, temp.ProfileStartTime, temp.EquipmentName, len,
+            temp.CoolWhenCanTurnOff, temp.CoolWhenCanTurnOn, temp.HeatWhenCanTurnOff, temp.HeatWhenCanTurnOn,
+            temp.Output, temp.ProcessPID.ITerm, temp.ProcessPID.error,
+            temp.TargetPID.ITerm, temp.TargetPID.error,
+            temp.ProfileStartTime, temp.TimeTurnedOn);
     //sprintf_Base64(msg, packedData, (unsigned int) cursour - (unsigned int) packedData);
     //Send200_OK_SmallMsg(req, msg);
     Send200_OK_Data(req, packedData, (unsigned int) cursour - (unsigned int) packedData);
@@ -832,23 +834,25 @@ void PUT_trimFileSystem(HTTP_REQUEST *req, const char *urlParameter) {
 void PUT_deleteProfileInstance(HTTP_REQUEST *req, const char *urlParameter) {
     char profileName[64];
     char strInstance[14];
-    unsigned long instance;
     int res;
 
     if (url_queryParse2(urlParameter, "name", profileName, 63)) {
         if (url_queryParse2(urlParameter, "instance", strInstance, 13)) {
-            if (sscanf(strInstance, "%lu", &instance) != 1) {
-                Send500_InternalServerError(req, "instance parameter is incorrect");
+            sprintf(req->Resource, "trnd.%s.%s", profileName, strInstance);
+            if ((globalstate.SystemMode == SYSTEMMODE_Profile) &&
+                    (strcmp(ProfileTrendFile.FileName, req->Resource) == 0)) {
+                Send500_InternalServerError(req, "Error: Unable to delete the currently running profile's instance");
                 return;
             }
-            sprintf(msg, "trnd.%s.%08lx", profileName, instance);
+
+            sprintf(msg, "trnd.%s.%s", profileName, strInstance);
             res = ff_Delete(msg);
             if (res != FR_OK) {
                 sprintf(msg, "Error: Unable to delete Trend Record: res='%s'", Translate_DRESULT(res));
                 Send500_InternalServerError(req, msg);
                 return;
             }
-            sprintf(msg, "inst.%s.%08lx", profileName, instance);
+            sprintf(msg, "inst.%s.%s", profileName, strInstance);
             res = ff_Delete(msg);
             if (res != FR_OK) {
                 sprintf(msg, "Error: Unable to delete Instance Record: res='%s'", Translate_DRESULT(res));
@@ -873,6 +877,14 @@ void PUT_deleteProfile(HTTP_REQUEST *req, const char *urlParameter) {
     if (url_queryParse2(urlParameter, "name", profileName, 64) == 0) {
         sprintf(msg, "Error: 'name' is requried");
         Send500_InternalServerError(req, msg);
+        return;
+    }
+
+    sprintf(req->Resource, ".%s.", profileName);
+
+    if ((globalstate.SystemMode == SYSTEMMODE_Profile) &&
+            (strstr(ProfileTrendFile.FileName, req->Resource) != NULL)) {
+        Send500_InternalServerError(req, "Error: Unable to delete the currently running profile.");
         return;
     }
 
@@ -910,6 +922,7 @@ void PUT_deleteProfile(HTTP_REQUEST *req, const char *urlParameter) {
 
     BuildProfileListing(); //rebuild the profile listing
     Send200_OK_Simple(req);
+
     return;
 }
 
@@ -924,6 +937,10 @@ void PUT_deleteEquipmentProfile(HTTP_REQUEST *req, const char *urlParameter) {
     }
 
     sprintf(req->Resource, "equip.%s", equipName);
+    if (strcmp(globalstate.EquipmentName, req->Resource) == 0) {
+        Send500_InternalServerError(req, "Error: Unable to delete the active Equipment Profile");
+        return;
+    }
     res = ff_Delete(req->Resource);
     if (res != FR_OK) {
         sprintf(msg, "Error Deleting Equipment Profile res='%s'", Translate_DRESULT(res));
@@ -933,6 +950,7 @@ void PUT_deleteEquipmentProfile(HTTP_REQUEST *req, const char *urlParameter) {
 
     BuildEquipmentProfileListing();
     Send200_OK_Simple(req);
+
     return;
 }
 
@@ -998,8 +1016,7 @@ void PUT_uploadfirmware(HTTP_REQUEST *req, const char *urlParameter) {
     }
 
 
-    unsigned long limit = FIRMWARE_SIZE;
-    limit *= 3;
+    unsigned long limit = FIRMWARE_RESERVED_SIZE;
 
     if (offset + ContentLength > limit) {
         Send500_InternalServerError(req, "Firmware Length exceeds allowable size...");
@@ -1008,12 +1025,12 @@ void PUT_uploadfirmware(HTTP_REQUEST *req, const char *urlParameter) {
 
     unsigned long baseAddress;
     if (Overwrite) {
-        for (baseAddress = FIRMWARE_BLOCK_ADDRESS; baseAddress < (FIRMWARE_BLOCK_ADDRESS + limit); baseAddress += 4096) {
+        for (baseAddress = FIRMWARE_PRIMARY_ADDRESS; baseAddress < (FIRMWARE_PRIMARY_ADDRESS + limit); baseAddress += 4096) {
             diskEraseSector(baseAddress);
         }
     }
 
-    baseAddress = FIRMWARE_BLOCK_ADDRESS;
+    baseAddress = FIRMWARE_PRIMARY_ADDRESS;
     baseAddress += offset;
     diskWrite(baseAddress, ContentLength, ContentData);
 
@@ -1021,12 +1038,137 @@ void PUT_uploadfirmware(HTTP_REQUEST *req, const char *urlParameter) {
     Send200_OK_Simple(req);
 }
 
+void PUT_uploadFile(HTTP_REQUEST *req, const char *urlParameter) {
+    char temp[32];
+    char fname[64];
+    unsigned long offset;
+    char *b64_Content;
+    BYTE *ContentData;
+    int ContentLength;
+    int b64_ContentLength;
+    unsigned int chkSum;
+    ff_File handle;
+    int ret;
+
+    if (url_queryParse2(urlParameter, "fname", fname, 63) == 0) {
+        Send500_InternalServerError(req, "parameter 'fname' is required");
+        return;
+    }
+
+    if (url_queryParse2(urlParameter, "overwrite", temp, 2)) {
+        if (temp[0] == 'y') ff_Delete(fname);
+        ret = ff_OpenByFileName(&handle, fname, 1);
+        if (ret != FR_OK) {
+            sprintf(msg, "Error: Unable to open/create file: res='%s'", Translate_DRESULT(ret));
+            Send500_InternalServerError(req, msg);
+            return;
+        }
+    } else {
+        Send500_InternalServerError(req, "parameter 'overwrite' is required");
+        return;
+    }
+
+    if (url_queryParse2(urlParameter, "offset", temp, 12)) {
+        if (sscanf(temp, "%lu", &offset) != 1) {
+            sprintf(msg, "Error Offset was invalid: offset=\"%s\"", temp);
+            Send500_InternalServerError(req, msg);
+            return;
+        }
+    } else {
+        Send500_InternalServerError(req, "parameter 'offset' is required");
+        return;
+    }
+
+    if (url_queryParse2(urlParameter, "chksum", temp, 6)) {
+        if (sscanf(temp, "%u", &chkSum) != 1) {
+            sprintf(msg, "Error chksum could not parse: chksum=\"%s\"", temp);
+            Send500_InternalServerError(req, msg);
+            return;
+        }
+    } else {
+        Send500_InternalServerError(req, "Query Parameter 'chksum' was not provided.");
+        return;
+    }
+
+    if (url_queryParse(urlParameter, "content", &b64_Content, &b64_ContentLength) == 0) {
+        Send500_InternalServerError(req, "Parameter 'content' is required");
+        return;
+    }
+
+    if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
+
+    ContentData = (BYTE *) b64_Content;
+    ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
+    if (ContentLength < 0) {
+        Send500_InternalServerError(req, "Unable to decode base64 Content...");
+        return;
+    }
+
+    unsigned int calcChkSum = fletcher16(ContentData, ContentLength);
+    if (calcChkSum != chkSum) {
+        sprintf(msg, "Checksums Do NOT match: Actual=%u Expected=%u", calcChkSum, chkSum);
+        Send500_InternalServerError(req, msg);
+        return;
+    }
+
+    ret = ff_Seek(&handle, offset, ff_SeekMode_Absolute);
+    if (ret != FR_OK) {
+        sprintf(msg, "Error: Unable to seek file: res='%s'", Translate_DRESULT(ret));
+        Send500_InternalServerError(req, msg);
+        return;
+    }
+
+    int bWritten;
+    ret = ff_Append(&handle, ContentData, ContentLength, &bWritten);
+    if (ret != FR_OK) {
+        sprintf(msg, "Error: Unable to append file: res='%s'", Translate_DRESULT(ret));
+        Send500_InternalServerError(req, msg);
+        return;
+    }
+
+    if (url_queryParse2(urlParameter, "finalize", temp, 2)) {
+        if (temp[0] == 'y') {
+            ret = ff_UpdateLength(&handle);
+            if (ret != FR_OK) {
+                sprintf(msg, "Error: Unable to finalize file: res='%s'", Translate_DRESULT(ret));
+                Send500_InternalServerError(req, msg);
+                return;
+            }
+        }
+    }
+
+    Log("UploadFile: '%s' Offset=%ul OK\r\n", fname, offset);
+    Send200_OK_Simple(req);
+}
+
+void PUT_deleteFile(HTTP_REQUEST *req, const char *urlParameter) {
+    char fname[64];
+
+    if (url_queryParse2(urlParameter, "fname", fname, 63) == 0) {
+        Send500_InternalServerError(req, "parameter 'fname' is required");
+        return;
+    }
+
+    ff_Delete(fname);
+    Log("DeleteFile: '%s' OK\r\n", fname);
+    Send200_OK_Simple(req);
+}
+
 void GET_version(HTTP_REQUEST *req, const char *urlParameter) {
     Send200_OK_SmallMsg(req, Version);
+
     return;
 }
 
-#define API_INTERFACE_COUNT    23
+void GET_FlashStats(HTTP_REQUEST *req, const char *urlParameter) {
+
+    unsigned long FreeSpace, UsedSpace, TrimSpace;
+    ff_GetUtilization(&FreeSpace, &TrimSpace, &UsedSpace);
+    sprintf(msg, "%lu\r\n%lu\r\n%lu\r\n", FreeSpace, UsedSpace, TrimSpace);
+    Send200_OK_SmallMsg(req, msg);
+}
+
+#define API_INTERFACE_COUNT    26
 
 API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/echo", &GET_echo, 0, &PUT_echo, 0, 0},
@@ -1051,7 +1193,10 @@ API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/deleteprofile", NULL, 0, &PUT_deleteProfile, 0, 0},
     {"/api/deleteinstance", NULL, 0, &PUT_deleteProfileInstance, 0, 0},
     {"/api/uploadfirmware", NULL, 0, &PUT_uploadfirmware, 0, 0},
-    {"/api/version", &GET_version, 0, NULL, 0, 0}
+    {"/api/version", &GET_version, 0, NULL, 0, 0},
+    {"/api/flashstats", &GET_FlashStats, 0, NULL, 0, 0},
+    {"/api/uploadfile", NULL, 0, &PUT_uploadFile, 0, 0},
+    {"/api/deletefile", NULL, 0, &PUT_deleteFile, 0, 0}
 };
 
 API_INTERFACE * GetAPI(HTTP_REQUEST * req) {
