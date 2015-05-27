@@ -6,6 +6,7 @@
 #include "FlashFS.h"
 #include "FIFO.h"
 #include "SystemConfiguration.h"
+#include "ESP_Flash.h"
 
 #define RANDOM_TIMER TMR4
 #define FLASH_ASSERT_CS {SET_FLASH_CS(0);Nop();Nop();Nop();Nop();Nop();Nop();}
@@ -40,7 +41,6 @@ void SetSPIBaudRate(long targetBaud) {
                 }
                 SPI1CON1bits.SPRE = 8 - (BYTE) (y);
                 SPI1STATbits.SPIEN = 1;
-
                 return;
             }
             y++;
@@ -48,6 +48,7 @@ void SetSPIBaudRate(long targetBaud) {
         x *= 4;
         y = 1;
     }
+
 }
 
 static BYTE xchg_spi(BYTE dat) {
@@ -57,6 +58,7 @@ static BYTE xchg_spi(BYTE dat) {
 }
 
 int diskRead(uint32_t address, int bCount, BYTE * out) {
+    //Log("       diskRead: Address=%xl bCount=%i\r\n", address, bCount);
     FLASH_ASSERT_CS;
     xchg_spi(0x03);
     xchg_spi((address & 0xFF0000) >> 16);
@@ -71,6 +73,7 @@ int diskRead(uint32_t address, int bCount, BYTE * out) {
 }
 
 int diskWritePage(uint32_t address, int bCount, BYTE *data) {
+    //Log("         diskWritePage: Address=%xl Count=%i...\r\n", address, bCount);
     BYTE status;
 
     FLASH_ASSERT_CS;
@@ -92,16 +95,15 @@ int diskWritePage(uint32_t address, int bCount, BYTE *data) {
     xchg_spi(0x05); //Read Status Register 1
     while (1) {
         status = xchg_spi(0xFF);
-        while (FIFO_HasChars(logFIFO));
         status &= 0x01;
         if (status == 0) break;
     }
     FLASH_RELEASE_CS;
-    //Log("OK\r\n");
     return 1;
 }
 
 int diskWrite(uint32_t address, int bCount, BYTE * in) {
+    //Log("      diskWrite: Address=%xl bCount=%i\r\n", address, bCount);
     int pageOffset, bytesToWrite;
     while (bCount) {
         pageOffset = (address & 0xFF);
@@ -187,6 +189,7 @@ int diskEraseSecure(char sector) {
 }
 
 void ff_SPI_initialize() {
+
     SPI1STATbits.SPIEN = 0;
     SPI1CON1bits.DISSCK = 0; //Internal Serial Clock Enabled
     SPI1CON1bits.DISSDO = 0; //SDO is controlled by the moudle
@@ -195,24 +198,17 @@ void ff_SPI_initialize() {
     SPI1STATbits.SPIROV = 0;
     SPI1CON1bits.SMP = 0; //Data is sampled in the middle of the clock
     //Setup for mode 11
-    SPI1CON1bits.CKE = 0;
-    SPI1CON1bits.CKP = 1;
+    SPI1CON1bits.CKE = 1;
+    SPI1CON1bits.CKP = 0;
     SPI1CON1bits.SSEN = 0; //SS is GPIO
-
-    SPI1CON1bits.PPRE = 0b00;
-    SPI1CON1bits.SPRE == 0b000;
-
-    SPI1STATbits.SPIEN = 1; //Enable the module
 
     FLASH_CS_TRIS = 0;
     SET_FLASH_CS(1);
     FLASH_CS_LAT = 1;
     FLASH_CS_PORT = 1;
 
-    SetSPIBaudRate(25000000);
-
-    int x;
-    for (x = 0; x < 2380; x++)DELAY_105uS;
+    SetSPIBaudRate(30000000); //30Mhz Clock Speed
+    Delay(0.25);
 }
 
 int diskEraseChip() {

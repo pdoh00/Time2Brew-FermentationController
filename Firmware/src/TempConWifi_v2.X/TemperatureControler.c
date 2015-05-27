@@ -40,6 +40,7 @@ struct {
     unsigned long TimeTurnedOn;
     unsigned int signature;
     unsigned int chkSum;
+    unsigned int BootMode;
 } recovery_record;
 
 int rawReadTemp(int ProbeIDX) {
@@ -50,23 +51,27 @@ int rawReadTemp(int ProbeIDX) {
         unsigned char ub[2];
     } temp;
 
-    if (OneWireReset(ProbeIDX) == 0) {
-        OneWireWrite(ProbeIDX, 0xCC);
-        OneWireWrite(ProbeIDX, 0xBE);
-        temp.ub[0] = OneWireRead(ProbeIDX);
-        temp.ub[1] = OneWireRead(ProbeIDX);
+    int retry = 3;
+    ret = -32767;
+    while (retry--) {
+        if (OneWireReset(ProbeIDX) != 0) continue;
+        OneWireWriteByte(ProbeIDX, 0xCC);
+        OneWireWriteByte(ProbeIDX, 0xBE);
+        if (OneWireReadByte(ProbeIDX, &temp.ub[0]) != 1) continue;
+        if (OneWireReadByte(ProbeIDX, &temp.ub[1]) != 1) continue;
         ret = (int) ((float) temp.i * 0.625);
-    } else {
+        if (ret < 1250 && ret>-550) break;
         ret = -32767;
     }
+
+    //Send the command to start conversion...
     OneWireReset(ProbeIDX);
-    OneWireWrite(ProbeIDX, 0xCC);
-    OneWireWrite(ProbeIDX, 0x44);
+    OneWireWriteByte(ProbeIDX, 0xCC);
+    OneWireWriteByte(ProbeIDX, 0x44);
     return ret;
 }
 
 int ReadTemperature(MACHINE_STATE *dest) {
-
     dest->Probe0Temperature = rawReadTemp(0);
     dest->Probe1Temperature = rawReadTemp(1);
 
@@ -254,7 +259,7 @@ void InitializeRecoveryRecord() {
     recovery_record.ProcessPID_Output = 0;
     recovery_record.ProfileStartTime = 0;
     recovery_record.Profile_FileEntryAddress = 0;
-    recovery_record.SystemMode = SYSTEMMODE_SensorOnly;
+    recovery_record.SystemMode = SYSTEMMODE_IDLE;
     recovery_record.TargetPID_Output = 0;
     recovery_record.TimeTurnedOn = 0;
     recovery_record.signature = 0x1234;
@@ -412,9 +417,9 @@ int ExecuteProfile(const char *ProfileName, char *msg) {
     if (LoadProfile(scratch, msg, &globalstate) != 1) {
         return -1;
     }
-    sprintf(globalstate.ActiveProfileName, "inst.%s.%08lx", ProfileName, globalstate.SystemTime);
+    sprintf(globalstate.ActiveProfileName, "inst.%s.%lu", ProfileName, globalstate.SystemTime);
     SaveActiveProfile();
-    sprintf(scratch, "trnd.%s.%08lx", ProfileName, globalstate.SystemTime);
+    sprintf(scratch, "trnd.%s.%lu", ProfileName, globalstate.SystemTime);
     ff_Delete(scratch);
     ff_OpenByFileName(&ProfileTrendFile, scratch, 1);
     int idx;
@@ -445,22 +450,36 @@ int ExecuteProfile(const char *ProfileName, char *msg) {
 }
 
 int TerminateProfile(char *msg) {
-    if (globalstate.SystemMode == SYSTEMMODE_Profile) {
-        DISABLE_INTERRUPTS;
+    int idx;
+    unsigned long totalLength = 0;
+    BYTE OriginalMode = globalstate.SystemMode;
+    DISABLE_INTERRUPTS;
+    globalstate.SystemMode = SYSTEMMODE_IDLE;
+    ENABLE_INTERRUPTS;
+
+    if (OriginalMode == SYSTEMMODE_Profile) {
         PROFILE_STEP *current = &globalstate.ProfileSteps[globalstate.StepIdx];
         current->EndTemperature = globalstate.StepTemperature;
         current->Duration -= globalstate.StepTimeRemaining;
         globalstate.StepCount = globalstate.StepIdx + 1;
-        globalstate.SystemMode = SYSTEMMODE_SensorOnly;
-        ENABLE_INTERRUPTS;
+        for (idx = 0; idx < globalstate.StepCount; idx++) {
+            totalLength += globalstate.ProfileSteps[idx].Duration;
+        }
+        totalLength /= 60;
+        totalLength *= 8;
+        ProfileTrendFile.Length = totalLength;
+        ff_UpdateLength(&ProfileTrendFile);
         SaveActiveProfile();
-        WriteRecoveryRecord(&globalstate);
-    } else if (globalstate.SystemMode == SYSTEMMODE_Manual) {
-        DISABLE_INTERRUPTS;
-        globalstate.SystemMode = SYSTEMMODE_SensorOnly;
-        ENABLE_INTERRUPTS;
-        WriteRecoveryRecord(&globalstate);
     }
+
+    globalstate.ManualSetPoint = 0;
+    globalstate.ActiveProfileName[0] = 0;
+    globalstate.ProfileStartTime = 0;
+    globalstate.StepCount = 0;
+    globalstate.StepIdx = 0;
+
+    WriteRecoveryRecord(&globalstate);
+
     return 1;
 }
 
@@ -471,7 +490,7 @@ int SetManualMode(int Setpoint, char *msg) {
     }
 
     DISABLE_INTERRUPTS;
-    if (globalstate.SystemMode == SYSTEMMODE_SensorOnly) {
+    if (globalstate.SystemMode == SYSTEMMODE_IDLE) {
         PID_Initialize(&globalstate.ProcessPID);
         PID_Initialize(&globalstate.TargetPID);
         globalstate.SystemMode = SYSTEMMODE_Manual;
@@ -514,6 +533,10 @@ void TrendBufferCommitt() {
     int bytesWritten;
     unsigned long trendFileTargetPosition = 0;
     unsigned long now;
+
+
+    if (globalstate.SystemMode == SYSTEMMODE_ProfileEnded) TerminateProfile(scratch);
+
     while (1) {
         now = RTC_GetTime();
         DISABLE_INTERRUPTS;
@@ -531,15 +554,15 @@ void TrendBufferCommitt() {
                 current->Probe0,
                 current->Probe1,
                 current->SetPoint,
-                current->Output, 0);
-        Log("Record: 0=%i 1=%i Set=%i Out=%ub\r\n",
+                current->Output, current->Relay);
+        Log("Record: 0=%i 1=%i Set=%i Out=%ub Relay=%xb\r\n",
                 current->Probe0,
                 current->Probe1,
                 current->SetPoint,
-                current->Output);
+                current->Output, current->Relay);
 
         trendFileTargetPosition = current->time * 8;
-        if (ProfileTrendFile.Position != trendFileTargetPosition) ff_Seek(&ProfileTrendFile, trendFileTargetPosition, ff_SeekMode_Absolute);
+        ff_Seek(&ProfileTrendFile, trendFileTargetPosition, ff_SeekMode_Absolute);
         ff_Append(&ProfileTrendFile, (BYTE *) scratch, 8, &bytesWritten);
     }
     WriteRecoveryRecord(&globalstate);
@@ -550,14 +573,14 @@ void TemperatureController_Interrupt() {
     static unsigned long lastTimeMinutes = 0;
     if (isTemperatureController_Initialized == 0) return;
     int CommandedTemperature;
-
+    BYTE relay = 0;
     if (globalstate.SystemTime == lastTimeSeconds) return; //Nothign to do...
 
     lastTimeSeconds = globalstate.SystemTime;
 
     ReadTemperature(&globalstate);
 
-    if (globalstate.SystemMode == SYSTEMMODE_SensorOnly) {
+    if (globalstate.SystemMode == SYSTEMMODE_IDLE || globalstate.SystemMode == SYSTEMMODE_ProfileEnded) {
         CommandedTemperature = -32767;
         globalstate.Output = 0;
         globalstate.HeatRelay = 0;
@@ -599,13 +622,17 @@ void TemperatureController_Interrupt() {
             trendBuffer[trendBufferWrite].SetPoint = CommandedTemperature;
             trendBuffer[trendBufferWrite].Output = globalstate.Output;
             trendBuffer[trendBufferWrite].time = thisTimeMinutes;
+            relay = 0;
+            if (globalstate.HeatRelay) relay |= 0b01;
+            if (globalstate.CoolRelay) relay |= 0b10;
+            trendBuffer[trendBufferWrite].Relay = relay;
             trendBufferWrite++;
             if (trendBufferWrite >= TRENDBUFFER_SIZE) trendBufferWrite = 0;
         }
 
         if (ProfileComplete) {
             Log("Complete:");
-            globalstate.SystemMode = SYSTEMMODE_SensorOnly;
+            globalstate.SystemMode = SYSTEMMODE_ProfileEnded;
             CommandedTemperature = -32767;
             globalstate.Output = 0;
             goto OnExit;
@@ -639,11 +666,11 @@ void TemperatureController_Interrupt() {
             if (globalstate.Output > 0) {
                 globalstate.Output = 100;
                 //Heat until we are above the setpoint by the threshold delta
-                if (globalstate.ProcessPID.Input > (CommandedTemperature + globalstate.equipmentConfig.ThresholdDelta)) {
+                if (globalstate.ProcessPID.Input > (CommandedTemperature)) {
                     globalstate.Output = 0;
                 }
             } else if (globalstate.Output < 0) {
-                if (globalstate.ProcessPID.Input < (CommandedTemperature - globalstate.equipmentConfig.ThresholdDelta)) {
+                if (globalstate.ProcessPID.Input < (CommandedTemperature)) {
                     globalstate.Output = 0;
                 }
             } else {
@@ -660,22 +687,38 @@ void TemperatureController_Interrupt() {
             globalstate.TargetPID.Setpoint = CommandedTemperature;
             PID_Compute(&globalstate.TargetPID);
             Log("TarOut=%f1:", globalstate.TargetPID.Output);
-            if (globalstate.Output > 0) {
-                globalstate.Output = 100;
-                //Heat until we are above the setpoint by the threshold delta
-                if (globalstate.ProcessPID.Input > (globalstate.TargetPID.Output + globalstate.equipmentConfig.ThresholdDelta)) {
-                    globalstate.Output = 0;
-                }
-            } else if (globalstate.Output < 0) {
-                globalstate.Output = -100;
-                if (globalstate.ProcessPID.Input < (globalstate.TargetPID.Output - globalstate.equipmentConfig.ThresholdDelta)) {
-                    globalstate.Output = 0;
+
+            if (globalstate.TargetPID.error > 0) {
+                //The Target is too warm so we are in cooling mode...
+                if (globalstate.Output < 0) {
+                    //Cooling is on...so we need to look for when to turn it off
+                    if (globalstate.ProcessPID.Input < (globalstate.TargetPID.Output - globalstate.equipmentConfig.ThresholdDelta)) {
+                        globalstate.Output = 0;
+                    } else {
+                        globalstate.Output = -100;
+                    }
+                } else {
+                    if (globalstate.ProcessPID.Input > (globalstate.TargetPID.Output + globalstate.equipmentConfig.ThresholdDelta)) {
+                        globalstate.Output = -100;
+                    } else {
+                        globalstate.Output = 0;
+                    }
                 }
             } else {
-                if (globalstate.ProcessPID.Input > (globalstate.TargetPID.Output + globalstate.equipmentConfig.ThresholdDelta)) {
-                    globalstate.Output = -100;
-                } else if (globalstate.ProcessPID.Input < (globalstate.TargetPID.Output - globalstate.equipmentConfig.ThresholdDelta)) {
-                    globalstate.Output = 100;
+                //The Target is too cold so we are in heating mode...
+                if (globalstate.Output > 0) {
+                    //Heating is on...so we need to look for when to turn it off
+                    if (globalstate.ProcessPID.Input > (globalstate.TargetPID.Output + globalstate.equipmentConfig.ThresholdDelta)) {
+                        globalstate.Output = 0;
+                    } else {
+                        globalstate.Output = 100;
+                    }
+                } else {
+                    if (globalstate.ProcessPID.Input < (globalstate.TargetPID.Output - globalstate.equipmentConfig.ThresholdDelta)) {
+                        globalstate.Output = 100;
+                    } else {
+                        globalstate.Output = 0;
+                    }
                 }
             }
             Log("Out=%f1:", globalstate.Output);
@@ -710,7 +753,7 @@ void TemperatureController_Interrupt() {
                 Log("More:");
             }
         } else {
-            float EstOnTime = globalstate.equipmentConfig.HeatMinTimeOn;
+            float EstOnTime = globalstate.equipmentConfig.HeatMinTimeOn * 2;
             if (globalstate.Output < 99) {
                 EstOnTime = globalstate.equipmentConfig.HeatMinTimeOff / ((100 - globalstate.Output)*0.01);
             }
@@ -806,7 +849,7 @@ OnExit:
     SET_HEAT(globalstate.HeatRelay);
     SET_COOL(globalstate.CoolRelay);
 
-    if (globalstate.SystemMode != SYSTEMMODE_SensorOnly) {
+    if (globalstate.SystemMode != SYSTEMMODE_IDLE) {
         if (globalstate.HeatRelay) {
             Log("HEAT:\r\n");
         } else if (globalstate.CoolRelay) {

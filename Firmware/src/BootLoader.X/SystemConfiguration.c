@@ -92,7 +92,7 @@ void Setup_UART() {
     U1MODEbits.STSEL = 0; // 1-Stop bit
     U1MODEbits.PDSEL = 0; // No Parity, 8-Data bits
     U1MODEbits.ABAUD = 0; // Auto-Baud disabled
-    U1MODEbits.BRGH = 1; // Standard-Speed mode 16x Clock Mode
+    U1MODEbits.BRGH = 1; // High-Speed mode 4x Clock Mode
     U1BRG = WIFI_BRGVAL; //
     U1STAbits.UTXISEL1 = 1;
     U1STAbits.UTXISEL0 = 0; // Interrupt after the FIFO buffer is empty

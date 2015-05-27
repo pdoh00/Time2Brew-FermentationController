@@ -87,7 +87,7 @@ ${OBJECTDIR}/geterrorloc.o: geterrorloc.s  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/geterrorloc.o.d 
 	@${RM} ${OBJECTDIR}/geterrorloc.o.ok ${OBJECTDIR}/geterrorloc.o.err 
 	@${RM} ${OBJECTDIR}/geterrorloc.o 
-	@${FIXDEPS} "${OBJECTDIR}/geterrorloc.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_AS} $(MP_EXTRA_AS_PRE)  geterrorloc.s -o ${OBJECTDIR}/geterrorloc.o -omf=elf -p=$(MP_PROCESSOR_OPTION) --defsym=__MPLAB_BUILD=1 --defsym=__MPLAB_DEBUG=1 --defsym=__ICD2RAM=1 --defsym=__DEBUG=1 --defsym=__MPLAB_DEBUGGER_PK3=1 -g  -MD "${OBJECTDIR}/geterrorloc.o.d"$(MP_EXTRA_AS_POST)
+	@${FIXDEPS} "${OBJECTDIR}/geterrorloc.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_AS} $(MP_EXTRA_AS_PRE)  geterrorloc.s -o ${OBJECTDIR}/geterrorloc.o -omf=elf -p=$(MP_PROCESSOR_OPTION) --defsym=__MPLAB_BUILD=1 --defsym=__MPLAB_DEBUG=1 --defsym=__DEBUG=1  -g  -MD "${OBJECTDIR}/geterrorloc.o.d"$(MP_EXTRA_AS_POST)
 	
 else
 ${OBJECTDIR}/geterrorloc.o: geterrorloc.s  nbproject/Makefile-${CND_CONF}.mk
@@ -113,147 +113,147 @@ ${OBJECTDIR}/I2C.o: I2C.c  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/I2C.o.d 
 	@${RM} ${OBJECTDIR}/I2C.o.ok ${OBJECTDIR}/I2C.o.err 
 	@${RM} ${OBJECTDIR}/I2C.o 
-	@${FIXDEPS} "${OBJECTDIR}/I2C.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/I2C.o.d" -o ${OBJECTDIR}/I2C.o I2C.c    
+	@${FIXDEPS} "${OBJECTDIR}/I2C.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/I2C.o.d" -o ${OBJECTDIR}/I2C.o I2C.c    
 	
 ${OBJECTDIR}/OneWire.o: OneWire.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/OneWire.o.d 
 	@${RM} ${OBJECTDIR}/OneWire.o.ok ${OBJECTDIR}/OneWire.o.err 
 	@${RM} ${OBJECTDIR}/OneWire.o 
-	@${FIXDEPS} "${OBJECTDIR}/OneWire.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/OneWire.o.d" -o ${OBJECTDIR}/OneWire.o OneWire.c    
+	@${FIXDEPS} "${OBJECTDIR}/OneWire.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/OneWire.o.d" -o ${OBJECTDIR}/OneWire.o OneWire.c    
 	
 ${OBJECTDIR}/rtc.o: rtc.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/rtc.o.d 
 	@${RM} ${OBJECTDIR}/rtc.o.ok ${OBJECTDIR}/rtc.o.err 
 	@${RM} ${OBJECTDIR}/rtc.o 
-	@${FIXDEPS} "${OBJECTDIR}/rtc.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/rtc.o.d" -o ${OBJECTDIR}/rtc.o rtc.c    
+	@${FIXDEPS} "${OBJECTDIR}/rtc.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/rtc.o.d" -o ${OBJECTDIR}/rtc.o rtc.c    
 	
 ${OBJECTDIR}/ESP8266.o: ESP8266.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/ESP8266.o.d 
 	@${RM} ${OBJECTDIR}/ESP8266.o.ok ${OBJECTDIR}/ESP8266.o.err 
 	@${RM} ${OBJECTDIR}/ESP8266.o 
-	@${FIXDEPS} "${OBJECTDIR}/ESP8266.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/ESP8266.o.d" -o ${OBJECTDIR}/ESP8266.o ESP8266.c    
+	@${FIXDEPS} "${OBJECTDIR}/ESP8266.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/ESP8266.o.d" -o ${OBJECTDIR}/ESP8266.o ESP8266.c    
 	
 ${OBJECTDIR}/uPnP.o: uPnP.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/uPnP.o.d 
 	@${RM} ${OBJECTDIR}/uPnP.o.ok ${OBJECTDIR}/uPnP.o.err 
 	@${RM} ${OBJECTDIR}/uPnP.o 
-	@${FIXDEPS} "${OBJECTDIR}/uPnP.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/uPnP.o.d" -o ${OBJECTDIR}/uPnP.o uPnP.c    
+	@${FIXDEPS} "${OBJECTDIR}/uPnP.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/uPnP.o.d" -o ${OBJECTDIR}/uPnP.o uPnP.c    
 	
 ${OBJECTDIR}/mDNS.o: mDNS.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/mDNS.o.d 
 	@${RM} ${OBJECTDIR}/mDNS.o.ok ${OBJECTDIR}/mDNS.o.err 
 	@${RM} ${OBJECTDIR}/mDNS.o 
-	@${FIXDEPS} "${OBJECTDIR}/mDNS.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/mDNS.o.d" -o ${OBJECTDIR}/mDNS.o mDNS.c    
+	@${FIXDEPS} "${OBJECTDIR}/mDNS.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/mDNS.o.d" -o ${OBJECTDIR}/mDNS.o mDNS.c    
 	
 ${OBJECTDIR}/FIFO.o: FIFO.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/FIFO.o.d 
 	@${RM} ${OBJECTDIR}/FIFO.o.ok ${OBJECTDIR}/FIFO.o.err 
 	@${RM} ${OBJECTDIR}/FIFO.o 
-	@${FIXDEPS} "${OBJECTDIR}/FIFO.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/FIFO.o.d" -o ${OBJECTDIR}/FIFO.o FIFO.c    
+	@${FIXDEPS} "${OBJECTDIR}/FIFO.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/FIFO.o.d" -o ${OBJECTDIR}/FIFO.o FIFO.c    
 	
 ${OBJECTDIR}/circularPrintF.o: circularPrintF.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/circularPrintF.o.d 
 	@${RM} ${OBJECTDIR}/circularPrintF.o.ok ${OBJECTDIR}/circularPrintF.o.err 
 	@${RM} ${OBJECTDIR}/circularPrintF.o 
-	@${FIXDEPS} "${OBJECTDIR}/circularPrintF.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/circularPrintF.o.d" -o ${OBJECTDIR}/circularPrintF.o circularPrintF.c    
+	@${FIXDEPS} "${OBJECTDIR}/circularPrintF.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/circularPrintF.o.d" -o ${OBJECTDIR}/circularPrintF.o circularPrintF.c    
 	
 ${OBJECTDIR}/Base64.o: Base64.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/Base64.o.d 
 	@${RM} ${OBJECTDIR}/Base64.o.ok ${OBJECTDIR}/Base64.o.err 
 	@${RM} ${OBJECTDIR}/Base64.o 
-	@${FIXDEPS} "${OBJECTDIR}/Base64.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/Base64.o.d" -o ${OBJECTDIR}/Base64.o Base64.c    
+	@${FIXDEPS} "${OBJECTDIR}/Base64.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/Base64.o.d" -o ${OBJECTDIR}/Base64.o Base64.c    
 	
 ${OBJECTDIR}/MD5.o: MD5.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/MD5.o.d 
 	@${RM} ${OBJECTDIR}/MD5.o.ok ${OBJECTDIR}/MD5.o.err 
 	@${RM} ${OBJECTDIR}/MD5.o 
-	@${FIXDEPS} "${OBJECTDIR}/MD5.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/MD5.o.d" -o ${OBJECTDIR}/MD5.o MD5.c    
+	@${FIXDEPS} "${OBJECTDIR}/MD5.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/MD5.o.d" -o ${OBJECTDIR}/MD5.o MD5.c    
 	
 ${OBJECTDIR}/pack.o: pack.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/pack.o.d 
 	@${RM} ${OBJECTDIR}/pack.o.ok ${OBJECTDIR}/pack.o.err 
 	@${RM} ${OBJECTDIR}/pack.o 
-	@${FIXDEPS} "${OBJECTDIR}/pack.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/pack.o.d" -o ${OBJECTDIR}/pack.o pack.c    
+	@${FIXDEPS} "${OBJECTDIR}/pack.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/pack.o.d" -o ${OBJECTDIR}/pack.o pack.c    
 	
 ${OBJECTDIR}/fletcherChecksum.o: fletcherChecksum.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/fletcherChecksum.o.d 
 	@${RM} ${OBJECTDIR}/fletcherChecksum.o.ok ${OBJECTDIR}/fletcherChecksum.o.err 
 	@${RM} ${OBJECTDIR}/fletcherChecksum.o 
-	@${FIXDEPS} "${OBJECTDIR}/fletcherChecksum.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/fletcherChecksum.o.d" -o ${OBJECTDIR}/fletcherChecksum.o fletcherChecksum.c    
+	@${FIXDEPS} "${OBJECTDIR}/fletcherChecksum.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/fletcherChecksum.o.d" -o ${OBJECTDIR}/fletcherChecksum.o fletcherChecksum.c    
 	
 ${OBJECTDIR}/GOTHtraps.o: GOTHtraps.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/GOTHtraps.o.d 
 	@${RM} ${OBJECTDIR}/GOTHtraps.o.ok ${OBJECTDIR}/GOTHtraps.o.err 
 	@${RM} ${OBJECTDIR}/GOTHtraps.o 
-	@${FIXDEPS} "${OBJECTDIR}/GOTHtraps.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/GOTHtraps.o.d" -o ${OBJECTDIR}/GOTHtraps.o GOTHtraps.c    
+	@${FIXDEPS} "${OBJECTDIR}/GOTHtraps.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/GOTHtraps.o.d" -o ${OBJECTDIR}/GOTHtraps.o GOTHtraps.c    
 	
 ${OBJECTDIR}/FlashFS.o: FlashFS.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/FlashFS.o.d 
 	@${RM} ${OBJECTDIR}/FlashFS.o.ok ${OBJECTDIR}/FlashFS.o.err 
 	@${RM} ${OBJECTDIR}/FlashFS.o 
-	@${FIXDEPS} "${OBJECTDIR}/FlashFS.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/FlashFS.o.d" -o ${OBJECTDIR}/FlashFS.o FlashFS.c    
+	@${FIXDEPS} "${OBJECTDIR}/FlashFS.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/FlashFS.o.d" -o ${OBJECTDIR}/FlashFS.o FlashFS.c    
 	
 ${OBJECTDIR}/PID.o: PID.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/PID.o.d 
 	@${RM} ${OBJECTDIR}/PID.o.ok ${OBJECTDIR}/PID.o.err 
 	@${RM} ${OBJECTDIR}/PID.o 
-	@${FIXDEPS} "${OBJECTDIR}/PID.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/PID.o.d" -o ${OBJECTDIR}/PID.o PID.c    
+	@${FIXDEPS} "${OBJECTDIR}/PID.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/PID.o.d" -o ${OBJECTDIR}/PID.o PID.c    
 	
 ${OBJECTDIR}/Http_API.o: Http_API.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/Http_API.o.d 
 	@${RM} ${OBJECTDIR}/Http_API.o.ok ${OBJECTDIR}/Http_API.o.err 
 	@${RM} ${OBJECTDIR}/Http_API.o 
-	@${FIXDEPS} "${OBJECTDIR}/Http_API.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/Http_API.o.d" -o ${OBJECTDIR}/Http_API.o Http_API.c    
+	@${FIXDEPS} "${OBJECTDIR}/Http_API.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/Http_API.o.d" -o ${OBJECTDIR}/Http_API.o Http_API.c    
 	
 ${OBJECTDIR}/Settings.o: Settings.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/Settings.o.d 
 	@${RM} ${OBJECTDIR}/Settings.o.ok ${OBJECTDIR}/Settings.o.err 
 	@${RM} ${OBJECTDIR}/Settings.o 
-	@${FIXDEPS} "${OBJECTDIR}/Settings.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/Settings.o.d" -o ${OBJECTDIR}/Settings.o Settings.c    
+	@${FIXDEPS} "${OBJECTDIR}/Settings.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/Settings.o.d" -o ${OBJECTDIR}/Settings.o Settings.c    
 	
 ${OBJECTDIR}/SystemConfiguration.o: SystemConfiguration.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o.d 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o.ok ${OBJECTDIR}/SystemConfiguration.o.err 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o 
-	@${FIXDEPS} "${OBJECTDIR}/SystemConfiguration.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/SystemConfiguration.o.d" -o ${OBJECTDIR}/SystemConfiguration.o SystemConfiguration.c    
+	@${FIXDEPS} "${OBJECTDIR}/SystemConfiguration.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/SystemConfiguration.o.d" -o ${OBJECTDIR}/SystemConfiguration.o SystemConfiguration.c    
 	
 ${OBJECTDIR}/http_server.o: http_server.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/http_server.o.d 
 	@${RM} ${OBJECTDIR}/http_server.o.ok ${OBJECTDIR}/http_server.o.err 
 	@${RM} ${OBJECTDIR}/http_server.o 
-	@${FIXDEPS} "${OBJECTDIR}/http_server.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/http_server.o.d" -o ${OBJECTDIR}/http_server.o http_server.c    
+	@${FIXDEPS} "${OBJECTDIR}/http_server.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/http_server.o.d" -o ${OBJECTDIR}/http_server.o http_server.c    
 	
 ${OBJECTDIR}/main.o: main.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/main.o.d 
 	@${RM} ${OBJECTDIR}/main.o.ok ${OBJECTDIR}/main.o.err 
 	@${RM} ${OBJECTDIR}/main.o 
-	@${FIXDEPS} "${OBJECTDIR}/main.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/main.o.d" -o ${OBJECTDIR}/main.o main.c    
+	@${FIXDEPS} "${OBJECTDIR}/main.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/main.o.d" -o ${OBJECTDIR}/main.o main.c    
 	
 ${OBJECTDIR}/TemperatureControler.o: TemperatureControler.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/TemperatureControler.o.d 
 	@${RM} ${OBJECTDIR}/TemperatureControler.o.ok ${OBJECTDIR}/TemperatureControler.o.err 
 	@${RM} ${OBJECTDIR}/TemperatureControler.o 
-	@${FIXDEPS} "${OBJECTDIR}/TemperatureControler.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/TemperatureControler.o.d" -o ${OBJECTDIR}/TemperatureControler.o TemperatureControler.c    
+	@${FIXDEPS} "${OBJECTDIR}/TemperatureControler.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG  -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/TemperatureControler.o.d" -o ${OBJECTDIR}/TemperatureControler.o TemperatureControler.c    
 	
 else
 ${OBJECTDIR}/I2C.o: I2C.c  nbproject/Makefile-${CND_CONF}.mk
@@ -410,7 +410,7 @@ endif
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
 dist/${CND_CONF}/${IMAGE_TYPE}/TempConWifi_v2.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk    TempCon_p33EP256MC204.gld
 	@${MKDIR} dist/${CND_CONF}/${IMAGE_TYPE} 
-	${MP_CC} $(MP_EXTRA_LD_PRE)  -omf=elf -mcpu=$(MP_PROCESSOR_OPTION)  -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -o dist/${CND_CONF}/${IMAGE_TYPE}/TempConWifi_v2.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX} ${OBJECTFILES_QUOTED_IF_SPACED}         -Wl,--defsym=__MPLAB_BUILD=1,-Map="${DISTDIR}/${PROJECTNAME}.${IMAGE_TYPE}.map"$(MP_EXTRA_LD_POST)$(MP_LINKER_FILE_OPTION),--defsym=__ICD2RAM=1,--defsym=__MPLAB_DEBUG=1,--defsym=__DEBUG=1,--defsym=__MPLAB_DEBUGGER_PK3=1
+	${MP_CC} $(MP_EXTRA_LD_PRE)  -omf=elf -mcpu=$(MP_PROCESSOR_OPTION)  -D__DEBUG  -o dist/${CND_CONF}/${IMAGE_TYPE}/TempConWifi_v2.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX} ${OBJECTFILES_QUOTED_IF_SPACED}         -Wl,--defsym=__MPLAB_BUILD=1,-Map="${DISTDIR}/${PROJECTNAME}.${IMAGE_TYPE}.map"$(MP_EXTRA_LD_POST)$(MP_LINKER_FILE_OPTION),--defsym=__MPLAB_DEBUG=1,--defsym=__DEBUG=1
 else
 dist/${CND_CONF}/${IMAGE_TYPE}/TempConWifi_v2.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk   TempCon_p33EP256MC204.gld
 	@${MKDIR} dist/${CND_CONF}/${IMAGE_TYPE} 

@@ -12,6 +12,7 @@
 #include "FIFO.h"
 #include "SystemConfiguration.h"
 #include "circularPrintF.h"
+#include "ESP_Flash.h"
 #include <p33Exxxx.h>
 
 /** CONFIGURATION Bits **********************************************/
@@ -37,9 +38,9 @@ _FGS(GWRP_OFF & GCP_OFF); //Turn off Code Protect
 #define CMD_UPLOAD_PRIMARY      0x06
 #define CMD_FLASH_BACKUP        0x07
 #define CMD_FLASH_PRIMARY       0x08
-#define CMD_SEND_BACKUP         0x09
-#define CMD_SEND_PRIMARY        0x0A
 #define CMD_WIPE                0x0B
+#define CMD_ESP_DIRECT          0x0C
+#define CMD_TX_BLOCK            0x0D
 
 extern void DoubleWordWrite(unsigned int PageAddress, unsigned int OffsetAddress, unsigned int *data);
 extern void ErasePage(unsigned int PageAddress, unsigned int OffsetAddress);
@@ -64,8 +65,7 @@ void EraseProgram() {
     //Erase all pages that will be programmed
     Log("---EraseProgram...");
     currentAddress.ul = 0;
-    unsigned long firmwareAddressLimit = FIRMWARE_SIZE;
-    firmwareAddressLimit *= 2;
+    unsigned long firmwareAddressLimit = 0x27800;
     while (currentAddress.ul < firmwareAddressLimit) {
         ErasePage(currentAddress.ui[1], currentAddress.ui[0]);
         currentAddress.ul += 0x800;
@@ -73,7 +73,7 @@ void EraseProgram() {
     Log("Done\r\n");
 }
 
-BYTE buffer[256]; //3 bytes per instruction and 64 instructions per buffer
+BYTE buffer[262]; //3 bytes per instruction and 64 instructions per buffer
 
 #define RX_BYTE(x) {while (!U2STAbits.URXDA){if (U2STAbits.OERR) U2STAbits.OERR = 0;}(x)=U2RXREG;}
 #define TX_BYTE(x) {while(!U2STAbits.TRMT);U2TXREG=x;}
@@ -89,8 +89,7 @@ void ReadBytes(BYTE *dst, int bCount) {
 
 void Wipe(uint32_t base) {
     unsigned long offset = 0;
-    unsigned long limit = FIRMWARE_SIZE;
-    limit *= 3;
+    unsigned long limit = FIRMWARE_RESERVED_SIZE;
     for (offset = 0; offset < limit; offset += 4096) {
         diskEraseSector(base + offset);
     }
@@ -100,11 +99,11 @@ void SerialUploadBlock(uint32_t base) {
     uint16_t chksum, rxChecksum;
     uint32_t offset;
 
-    ReadBytes(buffer, 198);
-    chksum = fletcher16(buffer, 196);
-    rxChecksum = buffer[197];
+    ReadBytes(buffer, 262);
+    chksum = fletcher16(buffer, 260);
+    rxChecksum = buffer[261];
     rxChecksum <<= 8;
-    rxChecksum += buffer[196];
+    rxChecksum += buffer[260];
     if (rxChecksum != chksum) {
         TX_BYTE(NACK);
         return;
@@ -119,36 +118,25 @@ void SerialUploadBlock(uint32_t base) {
     offset += buffer[0];
 
     offset += base;
-    diskWrite(offset, 192, &buffer[4]);
+    diskWrite(offset, 256, &buffer[4]);
     TX_BYTE(ACK);
-
 }
 
-void SerialSendData(uint32_t base) {
-    unsigned long offset = 0;
-
-    union {
-        unsigned long ul;
-        unsigned char ub[4];
-    } length;
+void SerialTxBlock(uint32_t base) {
+    unsigned long bCount = FIRMWARE_RESERVED_SIZE;
+    unsigned long address = base;
     int x;
-    length.ul = FIRMWARE_SIZE;
-    length.ul *= 3;
-
-    TX_BYTE(length.ub[0]);
-    TX_BYTE(length.ub[1]);
-    TX_BYTE(length.ub[2]);
-    TX_BYTE(length.ub[3]);
-
-    for (offset = 0; offset < length.ul; offset += 192) {
-        diskRead(base + offset, 192, buffer);
-        for (x = 0; x < 192; x++) {
+    while (bCount) {
+        diskRead(address, 256, buffer);
+        address += 256;
+        bCount -= 256;
+        for (x = 0; x < 256; x++) {
             TX_BYTE(buffer[x]);
         }
     }
 }
 
-int serialFlash() {
+int serialInterface() {
     BYTE command;
 
     while (1) {
@@ -163,7 +151,7 @@ int serialFlash() {
                 RX_BYTE(command);
                 if (command == CMD_CONFIRM) {
                     TX_BYTE(ACK_WAIT);
-                    Wipe(FIRMWARE_BACKUP_BLOCK_ADDRESS);
+                    Wipe(FIRMWARE_BACKUP_ADDRESS);
                     TX_BYTE(ACK);
                 } else {
                     TX_BYTE(NACK);
@@ -174,7 +162,7 @@ int serialFlash() {
                 RX_BYTE(command);
                 if (command == CMD_CONFIRM) {
                     TX_BYTE(ACK_WAIT);
-                    Wipe(FIRMWARE_BLOCK_ADDRESS);
+                    Wipe(FIRMWARE_PRIMARY_ADDRESS);
                     TX_BYTE(ACK);
                 } else {
                     TX_BYTE(NACK);
@@ -182,11 +170,11 @@ int serialFlash() {
                 break;
             case CMD_UPLOAD_BACKUP:
                 TX_BYTE(ACK);
-                SerialUploadBlock(FIRMWARE_BACKUP_BLOCK_ADDRESS);
+                SerialUploadBlock(FIRMWARE_BACKUP_ADDRESS);
                 break;
             case CMD_UPLOAD_PRIMARY:
                 TX_BYTE(ACK);
-                SerialUploadBlock(FIRMWARE_BLOCK_ADDRESS);
+                SerialUploadBlock(FIRMWARE_PRIMARY_ADDRESS);
                 break;
             case CMD_FLASH_BACKUP:
                 TX_BYTE(RQ_CONFIRM);
@@ -208,9 +196,6 @@ int serialFlash() {
                     TX_BYTE(NACK);
                 }
                 break;
-            case CMD_SEND_BACKUP:
-                SerialSendData(FIRMWARE_BACKUP_BLOCK_ADDRESS);
-                break;
             case CMD_WIPE:
                 TX_BYTE(RQ_CONFIRM);
                 RX_BYTE(command);
@@ -225,9 +210,25 @@ int serialFlash() {
                     TX_BYTE(NACK);
                 }
                 break;
+            case CMD_ESP_DIRECT:
+                SET_WIFI_POWER(0);
+                SET_WIFI_PROG(1);
+                Delay(0.1);
+                SET_WIFI_POWER(1);
+                Delay(1);
+                TX_BYTE(ACK);
+                while (1) {
+                    if (U1STAbits.OERR) U1STAbits.OERR = 0;
+                    if (U2STAbits.OERR) U2STAbits.OERR = 0;
+                    if (U1STAbits.URXDA) U2TXREG = U1RXREG;
+                    if (U2STAbits.URXDA) U1TXREG = U2RXREG;
+                }
+                break;
+            case CMD_TX_BLOCK:
+                SerialTxBlock(FIRMWARE_BACKUP_ADDRESS);
+                break;
             default:
                 TX_BYTE(NACK);
-
                 break;
         }
     }
@@ -236,19 +237,23 @@ int serialFlash() {
 int fileFlash(char flashBackup) {
     Log("Flash Starting: flashBackup=%b\r\n", flashBackup);
     BYTE *cursor;
-    int x;
-    unsigned long fileAddress;
+    int x, ret;
+
+    unsigned long fileAddress, dspicFirmwareByteCount;
+
 
     if (flashBackup) {
-        fileAddress = FIRMWARE_BACKUP_BLOCK_ADDRESS;
+        fileAddress = FIRMWARE_BACKUP_ADDRESS;
         diskRead(fileAddress, 1, buffer);
         fileAddress++;
         if (buffer[0] != 0xAA) {
             Log("Backup Firmware: Signature Not Found! %xb", buffer[0]);
+            Delay(1.0);
             asm("reset");
         }
+
     } else {
-        fileAddress = FIRMWARE_BLOCK_ADDRESS;
+        fileAddress = FIRMWARE_PRIMARY_ADDRESS;
         diskRead(fileAddress, 1, buffer);
         fileAddress++;
         if (buffer[0] != 0xAA) {
@@ -260,10 +265,12 @@ int fileFlash(char flashBackup) {
     Log("-fileAddress=%xl", fileAddress);
 
     EraseProgram();
-
     currentAddress.ul = 0;
-    unsigned long FirmwareAddressLimit = FIRMWARE_SIZE;
-    FirmwareAddressLimit *= 2;
+
+    diskRead(fileAddress, 4, (BYTE *) & dspicFirmwareByteCount);
+    fileAddress += 4;
+
+    unsigned long FirmwareAddressLimit = 2 * (dspicFirmwareByteCount / 3);
     while (currentAddress.ul < FirmwareAddressLimit) {
         diskRead(fileAddress, 192, buffer);
         fileAddress += 192;
@@ -296,6 +303,49 @@ int fileFlash(char flashBackup) {
         Log("OK\r\n");
     }
     Log("Firmware Write Complete\r\n");
+
+    Log("Connecting to ESP...");
+    ret = espflash_connect();
+    if (ret < 0) {
+        Log("Failed\r\n");
+        Delay(1);
+        asm("reset");
+    }
+    Log("OK\r\n");
+
+    unsigned long espOffset, espLength;
+
+    while (1) {
+        diskRead(fileAddress, 4, (BYTE *) & espOffset);
+        fileAddress += 4;
+
+        if (espOffset > 0x80000ul) break;
+
+        diskRead(fileAddress, 4, (BYTE *) & espLength);
+        fileAddress += 4;
+        Log("Flashing ESP @ Offset = %xl Length=%xl\r\n", espOffset, espLength);
+        for (x = 0; x < 3; x++) {
+            ret = espflash_FlashFile(fileAddress, espLength, espOffset);
+            if (ret < 0) {
+                Log("RETRY: Flashing ESP @ Offset = %xl Length=%xl\r\n", espOffset, espLength);
+            } else {
+                break;
+            }
+        }
+        fileAddress += espLength;
+    }
+
+    Log("Leave Flash\r\n");
+    for (x = 0; x < 3; x++) {
+        ret = espflash_FlashFinish(0);
+        if (ret < 0) {
+            Log("RETRY: Leave Flash\r\n");
+        } else {
+            break;
+        }
+    }
+
+
     asm("reset");
     return 0;
 }
@@ -321,7 +371,7 @@ int main(int argc, char** argv) {
         DELAY_40uS;
     }
 
-    if (sCount > 1) serialFlash();
+    if (sCount > 1) serialInterface();
 
     Log("Serial Connection Not Found...\r\n");
     //Is someone holding the CFG button?

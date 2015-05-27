@@ -19,6 +19,7 @@ extern "C" {
         float Setpoint;
         float outMax, outMin;
         float Input;
+        float error;
     } PID_CTX;
 
     void PID_Compute(PID_CTX *ctx);

@@ -1,17 +1,38 @@
-﻿Imports FermentationControllerHardwareDriver
-Imports System.Net
+﻿Imports System.Net
 Imports System.IO
 Imports Microsoft.Win32
 
 Class MainWindow
     Private Controller As FermentationControllerDevice
     Private coms As IHttpCommsProvider
+    Private poll As New Timers.Timer(1000)
+    Private pollTick As Integer = 0
     Private Sub MainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         Dim ssdp As New Discovery.SSDP.Agents.ClientAgent()
         coms = New HttpCommsProviderWebClient
         Dim IPAddress As String = InputBox("Controller IP Address:", "", "192.168.0.109")
 
         Controller = New FermentationControllerDevice(coms, "http://" & IPAddress)
+
+        AddHandler poll.Elapsed, Async Sub()
+                                     Try
+                                         Dim temp1 = Await Controller.GetTemperature(0)
+                                         Dim temp2 = Await Controller.GetTemperature(1)
+                                         pollTick += 1
+                                         Using fs As New StreamWriter("C:\poll.csv", True)
+                                             fs.WriteLine(pollTick & "," & temp1 & "," & temp2)
+                                         End Using
+                                         Dispatcher.Invoke(Sub()
+                                                               Me.Title = pollTick & ":  Probe0=" & temp1 & "C  Probe1=" & temp2 & "C"
+                                                           End Sub)
+                                     Catch ex As Exception
+
+                                     End Try
+                                     'poll.Enabled = False
+
+                                     'poll.Enabled = True
+                                 End Sub
+
     End Sub
 
     Private Async Sub cmdGetTemp_Click(sender As Object, e As RoutedEventArgs) Handles cmdGetTemp.Click
@@ -411,21 +432,18 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdFirmware_Click(sender As Object, e As RoutedEventArgs) Handles cmdFirmware.Click
-        Dim dlg As New OpenFileDialog
-        dlg.Filter = "HEX Firmware (*.hex)|*.hex"
+        Dim dlg As New Forms.FolderBrowserDialog
         dlg.ShowDialog()
         Try
-            Using rawFirmware = dlg.OpenFile
-                response.Text = "--"
-                Try
-                    Using binFirmware = HEX_FirmwareProcessor.GetBinary(rawFirmware, &H27800)
-                        Await Controller.uploadfirmware(binFirmware)
-                        response.Text = "OK"
-                    End Using
-                Catch ex As Exception
-                    response.Text = "Error:" & ex.ToString
-                End Try
-            End Using
+            response.Text = "--"
+            Try
+                Using binFirmware = HEX_FirmwareProcessor.GenerateMasterBIN(dlg.SelectedPath)
+                    Await Controller.uploadfirmware(binFirmware)
+                    response.Text = "OK"
+                End Using
+            Catch ex As Exception
+                response.Text = "Error:" & ex.ToString
+            End Try
 
         Catch ex As Exception
 
@@ -441,6 +459,20 @@ Class MainWindow
         End Try
 
 
+    End Sub
+
+    Private Sub cmdTogglePolling_Click(sender As Object, e As RoutedEventArgs) Handles cmdTogglePolling.Click
+        poll.Enabled = Not poll.Enabled
+    End Sub
+
+    Private Async Sub cmdUploadFile_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadFile.Click
+        Dim dlg As New OpenFileDialog
+        dlg.ShowDialog()
+
+        Using inp = dlg.OpenFile
+            Dim fname = Path.GetFileName(dlg.FileName)
+            Await Controller.uploadFile(inp, fname)
+        End Using
     End Sub
 End Class
 

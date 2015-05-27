@@ -74,7 +74,7 @@ extern "C" {
     void Send200_OK_SmallMsg(HTTP_REQUEST * req, const char *msg);
     void Send501_NotImplemented(HTTP_REQUEST * req);
     void Send404_NotFound(HTTP_REQUEST * req);
-    void Process_GET_File_ex(HTTP_REQUEST * req, int start, unsigned long length);
+    void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long length);
     void Send200_OK_Data(HTTP_REQUEST * req, unsigned char *msg, int length);
     char MakeLowercase(char inp);
 #ifdef	__cplusplus

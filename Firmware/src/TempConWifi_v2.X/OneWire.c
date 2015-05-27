@@ -50,7 +50,7 @@ unsigned char OneWireReadBit(int ProbeId) {
     return ret;
 }
 
-void OneWireWrite(int ProbeId, unsigned char dat) {
+void OneWireWriteByte(int ProbeId, unsigned char dat) {
     char idx = 0;
     for (idx = 0; idx < 8; idx++) {
         if (dat & 0x1) {
@@ -62,12 +62,19 @@ void OneWireWrite(int ProbeId, unsigned char dat) {
     }
 }
 
-unsigned char OneWireRead(int ProbeId) {
-    unsigned char ret = 0;
+int OneWireReadByte(int ProbeId, BYTE *retV) {
+    BYTE ret = 0;
     char idx = 0;
+    char Val;
     for (idx = 0; idx < 8; idx++) {
         ret >>= 1;
-        if (OneWireReadBit(ProbeId)) ret |= 0x80;
+        Val = OneWireReadBit(ProbeId);
+        if (Val == -1) {
+            return -1;
+        } else if (Val == 1) {
+            ret |= 0x80;
+        }
     }
-    return ret;
+    *retV = ret;
+    return 1;
 }
