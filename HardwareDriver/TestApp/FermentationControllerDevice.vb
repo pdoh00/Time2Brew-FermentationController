@@ -466,44 +466,45 @@ Public Class FermentationControllerDevice
         End While
     End Function
 
-    Public Async Function uploadFile(inputFile As Stream) As Task
+    Public Async Function uploadFile(inputFile As Stream, fname As String) As Task
         Dim first As Boolean = True
+        Dim isLast As Boolean = False
         Dim buffer(512) As Byte
         While inputFile.Position < inputFile.Length - 1
             Dim offset = inputFile.Position
             Dim bytesToSend = Math.Min(inputFile.Length - inputFile.Position, 512)
+            If bytesToSend < 512 OrElse inputFile.Position = inputFile.Length Then isLast = True Else isLast = False
             ReDim buffer(bytesToSend - 1)
             inputFile.Read(buffer, 0, bytesToSend)
             Dim chksum As UInt16 = FletcherChecksum.Fletcher16(buffer, 0, bytesToSend)
-            Dim url As String = RootAddress & "/api/uploadfirmware?offset=" & offset
-            url += "&chksum=" & chksum
-            url += "&content=" & ToURL_Safe_base64String(buffer, 0, bytesToSend)
+            Dim url As String = RootAddress & "/api/uploadfile?fname=" & fname & "&offset=" & offset
             If first Then
                 url += "&overwrite=y"
                 first = False
-                While (1)
-                    Try
-
-                        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
-                        If Result.StatusCode <> 200 Then Continue While ' Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
-                        Exit While
-                    Catch ex As Exception
-
-                    End Try
-                End While
             Else
                 url += "&overwrite=n"
-                While (1)
-                    Try
-
-                        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
-                        If Result.StatusCode <> 200 Then Continue While ' New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
-                        Exit While
-                    Catch ex As Exception
-
-                    End Try
-                End While
             End If
+
+            If isLast Then
+                url += "&finalize=y"
+            Else
+                url += "&finalize=n"
+            End If
+
+            url += "&chksum=" & chksum
+            url += "&content=" & ToURL_Safe_base64String(buffer, 0, bytesToSend)
+            While (1)
+                Try
+                    Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
+                    If Result.StatusCode <> 200 Then
+                        Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                        Continue While ' Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                    End If
+                    Exit While
+                Catch ex As Exception
+
+                End Try
+            End While
         End While
     End Function
 

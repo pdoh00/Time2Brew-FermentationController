@@ -465,10 +465,14 @@ Class MainWindow
         poll.Enabled = Not poll.Enabled
     End Sub
 
-    Private Sub cmdUploadFile_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadFile.Click
+    Private Async Sub cmdUploadFile_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadFile.Click
         Dim dlg As New OpenFileDialog
         dlg.ShowDialog()
 
+        Using inp = dlg.OpenFile
+            Dim fname = Path.GetFileName(dlg.FileName)
+            Await Controller.uploadFile(inp, fname)
+        End Using
     End Sub
 End Class
 

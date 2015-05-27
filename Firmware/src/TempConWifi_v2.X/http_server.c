@@ -714,138 +714,6 @@ char MakeLowercase(char inp) {
     return inp;
 }
 
-void Process_DELETE_File(HTTP_REQUEST * req) {
-    if (Global_Config_Mode != 1) {
-        Send500_InternalServerError(req, "Access to this interface is restriced to Configuration Mode Only");
-        return;
-    }
-    if (req->Resource == NULL) {
-        Send500_InternalServerError(req, "Resource is NULL");
-        return;
-    }
-
-    char msg[512];
-    int res;
-    char *resource = req->Resource;
-    resource++;
-
-    Log("%d: DELETE File - Resource=\"%s\"\r\n", req->TCP_ChannelID, resource);
-
-    res = ff_Delete(resource);
-    if (res != FR_OK) {
-        sprintf(msg, "ERROR: Unable to DELETE File.  RES=%s", Translate_DRESULT(res));
-        Log("    %s\r\n", msg);
-        Send500_InternalServerError(req, msg);
-        return;
-    }
-    Send200_OK_Simple(req);
-}
-
-void Process_PUT_File(HTTP_REQUEST * req) {
-    char IsFinal, Overwrite;
-    char *b64_Content;
-    BYTE *ContentData;
-    int ContentLength;
-    int b64_ContentLength;
-    unsigned int offset;
-    char temp[16];
-    int bWritten, res;
-    ff_File file;
-
-    if (req->Resource == NULL) {
-        Send500_InternalServerError(req, "Resource is NULL");
-        return;
-    }
-
-    char *urlParameter = req->Resource;
-    while (*urlParameter) {
-        if (*urlParameter == '?') {
-            *urlParameter = 0;
-            urlParameter++;
-            break;
-        } else {
-            urlParameter++;
-        }
-    }
-
-    char *resource = req->Resource;
-    resource++;
-
-    if (url_queryParse2(urlParameter, "offset", temp, 6)) {
-        if (sscanf(temp, "%d", &offset) != 1) {
-            sprintf((char *) fileBuffer, "Error Offset was invalid: offset=\"%s\"", temp);
-            Send500_InternalServerError(req, (char *) fileBuffer);
-            return;
-        }
-    } else {
-        offset = 0;
-    }
-
-    if (url_queryParse2(urlParameter, "isfinal", temp, 2)) {
-        if (temp[0] == 'n') IsFinal = 0;
-        else IsFinal = 1;
-    } else {
-        IsFinal = 1;
-    }
-
-    if (url_queryParse2(urlParameter, "overwrite", temp, 2)) {
-        if (temp[0] == 'n') Overwrite = 0;
-        else Overwrite = 1;
-    } else {
-        Overwrite = 1;
-    }
-
-    if (url_queryParse(urlParameter, "content", &b64_Content, &b64_ContentLength) == 0) {
-        Send500_InternalServerError(req, "Parameter 'content' is required");
-        return;
-    }
-    ContentData = (BYTE *) b64_Content;
-    ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
-    if (ContentLength < 0) {
-        Send500_InternalServerError(req, "Unable to decode base64 Content...");
-        return;
-    }
-
-    Log("PUT File: Overwrite=%b IsFinal=%b Offset=%ul ContentLength=%i Filename='%s'...\r\n", Overwrite, IsFinal, offset, ContentLength, resource);
-
-    if (Overwrite) ff_Delete(resource);
-
-    res = ff_OpenByFileName(&file, resource, 1);
-    if (res != FR_OK) {
-        sprintf((char *) fileBuffer, "Unable to create File: Error=%s", Translate_DRESULT(res));
-        Send500_InternalServerError(req, (char *) fileBuffer);
-        return;
-    }
-
-    if (offset > 0) {
-        res = ff_Seek(&file, offset, ff_SeekMode_Absolute);
-        if (res != FR_OK) {
-            sprintf((char *) fileBuffer, "Error Seeking File: res=%d", res);
-            Send500_InternalServerError(req, (char *) fileBuffer);
-            return;
-        }
-    }
-
-    res = ff_Append(&file, ContentData, ContentLength, &bWritten);
-    if (res != FR_OK) {
-        sprintf((char *) fileBuffer, "Unable to Write Equipment Profile: Error=%s", Translate_DRESULT(res));
-        Send500_InternalServerError(req, (char *) fileBuffer);
-        return;
-    }
-
-    if (IsFinal) {
-        res = ff_UpdateLength(&file);
-        if (res != FR_OK) {
-            sprintf((char *) fileBuffer, "Unable to Update Length of File: Error=%s", Translate_DRESULT(res));
-            Send500_InternalServerError(req, (char *) fileBuffer);
-            return;
-        }
-    }
-    Log("OK\r\n");
-    Send200_OK_Simple(req);
-
-}
-
 const char *GetContentType(const char *filename) {
     int fnameLength = strlen(filename) - 3;
     int x;
@@ -1071,15 +939,9 @@ void HTTP_ServerLoop() {
                         strcpy(req->Resource, defaultResource);
                     }
                     Process_GET_File(req);
-                } else if (req->Method == HTTP_METHOD_PUT) {
-                    //if (AuthorizeConnection(req)) Process_PUT_File(req);
-                    Process_PUT_File(req);
-                } else if (req->Method == HTTP_METHOD_DELETE) {
-                    //if (AuthorizeConnection(req)) Process_DELETE_File(req);
-                    Process_DELETE_File(req);
                 } else {
                     Log("Method Not Allowed: Channel=%d\r\n", req->TCP_ChannelID);
-                    Send405_MethodNotAllowed(req, "GET, PUT, DELETE");
+                    Send405_MethodNotAllowed(req, "GET");
                 }
             }
             DisposeHTTP_Request(req);
