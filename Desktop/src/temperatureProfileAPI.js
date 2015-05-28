@@ -39,13 +39,18 @@ var temperatureProfileAPI = (function() {
 
         for (var i = 0; i < response.byteLength / 8; i++) {
           var step = {};
+
           var startInCelcius = dv.getInt16(aryOffset, true);
           step.startTemp = Math.round(CelciusToFahrenheit(startInCelcius / 10.0) * 100) / 100;
           aryOffset += 2;
+
           var endInCelcius = dv.getInt16(aryOffset, true);
           step.endTemp = Math.round(CelciusToFahrenheit(endInCelcius / 10.0) * 100) / 100;
           aryOffset += 2;
-          step.duration = dv.getInt32(aryOffset);
+
+          step.duration = dv.getInt32(aryOffset, true);
+          aryOffset += 4;
+
           steps.push(step);
         }
         return steps;
@@ -106,12 +111,11 @@ var temperatureProfileAPI = (function() {
     var url = baseApiAddress + 'temperaturetrend?name=' +
       profileName + '&instance=' + profileInstance;
 
-    var newPromise = get(url, 'arraybuffer').then(function(response) {
-      var trendData = parseTrendData(response);
-      return trendData;
-    });
-
-    return newPromise;
+    return Rx.Observable.fromPromise(
+      get(url, 'arraybuffer').then(function(response) {
+        var trendData = parseTrendData(response);
+        return trendData;
+      }));
   };
 
   function parseTrendData(response) {
@@ -154,6 +158,28 @@ var temperatureProfileAPI = (function() {
     return (degreesF - 32.0) * (5 / 9);
   }
 
+  var formatTime = function(seconds) {
+    var days = 0;
+    var hours = 0;
+    var minutes = 0;
+    var remainingSeconds = seconds;
+
+    if (remainingSeconds >= 86400) {
+      days = Math.floor(remainingSeconds / 86400);
+      remainingSeconds = remainingSeconds % 86400;
+    }
+    if (remainingSeconds >= 3600) {
+      hours = Math.floor(remainingSeconds / 3600);
+      remainingSeconds = remainingSeconds % 3600;
+    }
+    if (remainingSeconds >= 60) {
+      minutes = Math.floor(remainingSeconds / 60);
+      remainingSeconds = remainingSeconds % 60;
+    }
+
+    return days + " days, " + hours + " hours, " + minutes + " minutes, " + remainingSeconds + " seconds";
+  };
+
 
   return {
     getAllProfiles: getAllProfiles,
@@ -165,7 +191,8 @@ var temperatureProfileAPI = (function() {
     executeProfile: executeProfile,
     getProfileInstances: getProfileInstances,
     deleteProfileInstance: deleteProfileInstance,
-    getTrendData: getTrendData
+    getTrendData: getTrendData,
+    formatTime: formatTime
   };
 
 })();

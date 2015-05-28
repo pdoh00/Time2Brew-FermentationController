@@ -1,16 +1,25 @@
 var baseApiAddress = 'http://10.10.1.148/api/';
 var epoch = new Date('1 January 1970 00:00:00 UTC');
 
-function getStatus() {
-  var newPromise = get(baseApiAddress + 'status', 'arraybuffer')
-    .then(function(response) {
-      return parseStatusReponse(response);
-    }).catch(function(error) {
-      alert(error);
-    });
+var statusAPI = (function() {
 
-  return newPromise;
-}
+  function getStatus() {
+    var newPromise = get(baseApiAddress + 'status', 'arraybuffer')
+      .then(function(response) {
+        return parseStatusReponse(response);
+      }).catch(function(error) {
+        alert(error);
+      });
+
+    return newPromise;
+  }
+
+
+  return {
+    getStatus: getStatus
+  };
+})();
+
 
 function parseStatusReponse(response) {
   var dv = new DataView(response);

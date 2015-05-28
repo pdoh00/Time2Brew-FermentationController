@@ -1,0 +1,34 @@
+{
+  "name": "src",
+  "main": "index.js",
+  "version": "0.0.0",
+  "homepage": "https://github.com/pdoh00/Time2Brew-FermentationController",
+  "authors": [
+    "pdoh00 <pdoh00@gmail.com>"
+  ],
+  "moduleType": [
+    "amd",
+    "es6",
+    "globals",
+    "node",
+    "yui"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.4",
+    "chartist": "~0.8.0",
+    "chartjs": "~1.0.2",
+    "flot": "~0.8.3",
+    "fontawesome": "~4.3.0",
+    "moment": "~2.10.3",
+    "mustache": "~2.0.0",
+    "rxjs": "~2.5.2"
+  }
+}

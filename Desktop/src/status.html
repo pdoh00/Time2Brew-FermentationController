@@ -127,13 +127,11 @@
   <script src="./promisify.js "></script>
   <script src="./chartMethods.js "></script>
   <script src="./statusAPI.js"></script>
-  <script src="./temperatureProfileAPI.js"></script>
   <script src="./bower_components/rxjs/dist/rx.lite.js"></script>
-  <script src="./bower_components/chartist/dist/chartist.min.js"></script>
   <script src="./bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
   <script>
     function updateStatus() {
-      getStatus().then(function(status) {
+      statusAPI.getStatus().then(function(status) {
 
         document.getElementById("systemTime").innerText =
           status.systemTime.toLocaleDateString() + ' ' + status.systemTime.toLocaleTimeString();

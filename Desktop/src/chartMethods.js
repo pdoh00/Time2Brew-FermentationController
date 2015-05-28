@@ -1,4 +1,6 @@
 var Chart = require('./bower_components/chartjs/Chart.js');
+var $ = require('./bower_components/jquery/dist/jquery.min.js');
+var flot = require('./bower_components/flot/jquery.flot.js');
 
 // var Chartist = require('./bower_components/chartist/dist/chartist.min.css');
 
@@ -39,6 +41,20 @@ function loadChart(canvas, labels, datasets) {
   }, options);
 }
 
-function loadChartist(data){
+function loadChartist(data) {
   // new Chartist.Line('.ct-chart', data);
 }
+
+
+var chartAPI = (function() {
+
+  var createChart = function(placeholder, data, options) {
+    var plot = $.plot(placeholder, data, options);
+  };
+
+
+  return {
+    createChart: createChart
+  };
+
+})();
