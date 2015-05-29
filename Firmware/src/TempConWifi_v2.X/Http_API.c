@@ -377,6 +377,7 @@ void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
                     (strcmp(ProfileTrendFile.FileName, req->Resource) == 0)) {
                 unsigned long et = globalstate.SystemTime - globalstate.ProfileStartTime;
                 et /= 60;
+                et += 1;
                 sendLength = et * 8;
             }
             sprintf(req->Resource, "/trnd.%s.%s", profileName, strInstance);
@@ -1217,12 +1218,12 @@ API_INTERFACE * GetAPI(HTTP_REQUEST * req) {
         int iLen = strlen(api_interfaces[idx].InterfaceName);
         if (iLen == resLen) {
             if (strncmp(req->Resource, api_interfaces[idx].InterfaceName, iLen) == 0) {
-                Log("API Interface Found='%s'\r\n", api_interfaces[idx].InterfaceName);
+                //Log("API Interface Found='%s'\r\n", api_interfaces[idx].InterfaceName);
                 return &api_interfaces[idx];
             }
         }
     }
-    Log("Get API Resource == NULL!!!\r\n");
+    //Log("Get API Resource == NULL!!!\r\n");
 
     return NULL;
 }

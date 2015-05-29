@@ -17,8 +17,8 @@
 
 /** CONFIGURATION Bits **********************************************/
 _FICD(ICS_PGD3 & JTAGEN_OFF); //ICD takes place on PGD3 and PGC3 pins
-_FPOR(ALTI2C1_OFF & ALTI2C2_OFF & WDTWIN_WIN75); //Do not use Alternate Pin Mapping for I2C
-_FWDT(WDTPOST_PS32768 & WDTPRE_PR128 & PLLKEN_ON & WINDIS_OFF & FWDTEN_OFF); //Turn off WDT
+_FPOR(ALTI2C1_OFF & ALTI2C2_OFF & WDTWIN_WIN25); //Do not use Alternate Pin Mapping for I2C
+_FWDT(WDTPOST_PS256 & WDTPRE_PR128 & PLLKEN_ON & WINDIS_OFF & FWDTEN_OFF); //Turn off WDT in hardware but Timeout=1.024seconds with no Window
 _FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_NONE & IOL1WAY_OFF); // Enable Clock Switching and Configure Primary Oscillator in XT mode
 _FOSCSEL(FNOSC_FRC & IESO_OFF); // Select Internal FRC at POR and do not lock the PWM registers
 _FGS(GWRP_OFF & GCP_OFF); //Turn off Code Protect

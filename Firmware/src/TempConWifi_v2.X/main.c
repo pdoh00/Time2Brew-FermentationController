@@ -26,17 +26,19 @@
 
 /** CONFIGURATION Bits **********************************************/
 _FICD(ICS_PGD3 & JTAGEN_OFF); //ICD takes place on PGD3 and PGC3 pins
-_FPOR(ALTI2C1_OFF & ALTI2C2_OFF & WDTWIN_WIN75); //Do not use Alternate Pin Mapping for I2C
-_FWDT(WDTPOST_PS32768 & WDTPRE_PR128 & PLLKEN_ON & WINDIS_OFF & FWDTEN_OFF); //Turn off WDT
+_FPOR(ALTI2C1_OFF & ALTI2C2_OFF & WDTWIN_WIN25); //Do not use Alternate Pin Mapping for I2C
+_FWDT(WDTPOST_PS256 & WDTPRE_PR128 & PLLKEN_ON & WINDIS_OFF & FWDTEN_OFF); //Turn off WDT in hardware but Timeout=1.024seconds with no Window
 _FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_NONE & IOL1WAY_OFF); // Enable Clock Switching and Configure Primary Oscillator in XT mode
 _FOSCSEL(FNOSC_FRC & IESO_OFF); // Select Internal FRC at POR and do not lock the PWM registers
 _FGS(GWRP_OFF & GCP_OFF); //Turn off Code Protect
 
 const char *WiFiConfigFilename = "secure.wificonfig";
 
-const char *Version = "0.1.6";
+const char *Version = "0.1.7";
 
 unsigned long Timer500Hz;
+
+char TemperatureControllerIsAlive, WifiCommunicationsAreAlive, MainLoopIsAlive, WDT_Enabled;
 
 int TriggerConfigReset = 0;
 
@@ -113,11 +115,12 @@ void __attribute__((__interrupt__, no_auto_psv)) _U2TXInterrupt(void) {
 void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
     static int HalfSecondTick = 0;
     static int CFG_MODE_COUNT = 0;
+
     _T1IF = 0;
     Timer500Hz++;
     HalfSecondTick++;
     if (HalfSecondTick == 250) {
-        _CNIF = 1;
+        _CNIF = 1; //Tell the Temperature Controller to Run! but on a lower priority thread.
         HalfSecondTick = 1;
     }
 
@@ -137,8 +140,49 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
 }
 
 void __attribute__((__interrupt__, no_auto_psv)) _CNInterrupt(void) {
+    static unsigned long WDT_TIME = 0;
+    static unsigned long lastTempConRun = 0;
+    static unsigned long lastWifiCommunication = 0;
+    static unsigned long lastMainLoopRun = 0;
+
     _CNIF = 0;
     TemperatureController_Interrupt();
+
+    if (WDT_Enabled) {
+        WDT_TIME++;
+
+        if (TemperatureControllerIsAlive) {
+            lastTempConRun = WDT_TIME;
+            TemperatureControllerIsAlive = 0;
+        }
+
+        if (WifiCommunicationsAreAlive) {
+            lastWifiCommunication = WDT_TIME;
+            WifiCommunicationsAreAlive = 0;
+        }
+
+        if (MainLoopIsAlive) {
+            lastMainLoopRun = WDT_TIME;
+            MainLoopIsAlive = 0;
+        }
+
+        if ((WDT_TIME - lastTempConRun) > 240) { //2 minute
+            Log("WDT: Temperature Controller Is Not Alive!");
+            asm("RESET");
+        }
+        if ((WDT_TIME - lastWifiCommunication) > 720) { //6 minutes
+            Log("WDT: WiFi Comms Are Not Alive!");
+            asm("RESET");
+        }
+        if ((WDT_TIME - lastMainLoopRun) > 240) { //2 minutes
+            Log("WDT: Main Loop Is Not Alive!");
+            asm("RESET");
+        }
+
+        asm("CLRWDT");
+    }
+
+
 }
 
 void __attribute__((__interrupt__, no_auto_psv)) _DMA2Interrupt(void) {
@@ -395,6 +439,7 @@ void MakeSafe() {
 }
 
 int main(int argc, char** argv) {
+    WDT_Enabled = 0;
     INTCON2bits.GIE = 0;
 
     SetupClock();
@@ -420,9 +465,31 @@ int main(int argc, char** argv) {
         };
     }
 
+    Log("Starting WDT:...");
+    if (RCONbits.WDTO) {
+        Log("Last Restart was due to WDT Timeout!...");
+        RCONbits.WDTO = 0;
+        TemperatureControllerIsAlive = 0;
+        WifiCommunicationsAreAlive = 0;
+        MainLoopIsAlive = 0;
+    }
+    asm("CLRWDT");
+    RCONbits.SWDTEN = 1;
+    WDT_Enabled = 1;
+    Log("OK\r\n");
+
+
     Log("\r\n**System Online**\r\n");
 
+    unsigned long now;
     while (1) {
+        MainLoopIsAlive = 1;
+        now = RTC_GetTime();
+        DISABLE_INTERRUPTS;
+        globalstate.SystemTime = now;
+        ENABLE_INTERRUPTS;
+        WriteRecoveryRecord(&globalstate);
+
         HTTP_ServerLoop();
         mDNS_ProcessLoop();
         uPnP_ProcessLoop();

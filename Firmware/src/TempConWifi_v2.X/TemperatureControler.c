@@ -532,18 +532,15 @@ int TruncateProfile(unsigned char *NewProfileData, int len, char *msg) {
 void TrendBufferCommitt() {
     int bytesWritten;
     unsigned long trendFileTargetPosition = 0;
-    unsigned long now;
 
 
     if (globalstate.SystemMode == SYSTEMMODE_ProfileEnded) TerminateProfile(scratch);
 
     while (1) {
-        now = RTC_GetTime();
         DISABLE_INTERRUPTS;
-        globalstate.SystemTime = now;
         if (trendBufferRead == trendBufferWrite) {
             ENABLE_INTERRUPTS;
-            break;
+            return;
         }
         TREND_RECORD *current = &trendBuffer[trendBufferRead];
         trendBufferRead++;
@@ -555,17 +552,30 @@ void TrendBufferCommitt() {
                 current->Probe1,
                 current->SetPoint,
                 current->Output, current->Relay);
-        Log("Record: 0=%i 1=%i Set=%i Out=%ub Relay=%xb\r\n",
+
+
+        trendFileTargetPosition = current->time * 8;
+
+        Log("Record, Time=%ul P0=%i P1=%i Set=%i Out=%ub Relay=%xb | TargetPos=%xl Sector=%xl Offset=%xl",
+                current->time,
                 current->Probe0,
                 current->Probe1,
                 current->SetPoint,
-                current->Output, current->Relay);
+                current->Output, current->Relay,
+                trendFileTargetPosition,
+                ProfileTrendFile.CurrentSector,
+                ProfileTrendFile.SectorOffset);
 
-        trendFileTargetPosition = current->time * 8;
         ff_Seek(&ProfileTrendFile, trendFileTargetPosition, ff_SeekMode_Absolute);
         ff_Append(&ProfileTrendFile, (BYTE *) scratch, 8, &bytesWritten);
+
+        Log(" | NewSector=%xl NewOffset=%xl\r\n",
+                ProfileTrendFile.CurrentSector,
+                ProfileTrendFile.SectorOffset);
+
+
     }
-    WriteRecoveryRecord(&globalstate);
+
 }
 
 void TemperatureController_Interrupt() {
@@ -574,7 +584,7 @@ void TemperatureController_Interrupt() {
     if (isTemperatureController_Initialized == 0) return;
     int CommandedTemperature;
     BYTE relay = 0;
-    if (globalstate.SystemTime == lastTimeSeconds) return; //Nothign to do...
+    if (globalstate.SystemTime == lastTimeSeconds) return; //Nothing to do...
 
     lastTimeSeconds = globalstate.SystemTime;
 
@@ -585,10 +595,10 @@ void TemperatureController_Interrupt() {
         globalstate.Output = 0;
         globalstate.HeatRelay = 0;
         globalstate.CoolRelay = 0;
-        Log("Idle:\r\n");
+        Log("TICK, Idle:\r\n");
         goto OnExit;
     } else if (globalstate.SystemMode == SYSTEMMODE_Profile) {
-        Log("PRFL:");
+        Log("TICK, PRFL:");
         unsigned long elapsedTime = globalstate.SystemTime - globalstate.ProfileStartTime;
         unsigned long thisTimeMinutes = elapsedTime / 60;
 
@@ -638,7 +648,7 @@ void TemperatureController_Interrupt() {
             goto OnExit;
         }
     } else {
-        Log("Man:");
+        Log("TICK, Man:");
         CommandedTemperature = globalstate.ManualSetPoint;
         Log("Temp=%i:", CommandedTemperature);
     }
@@ -846,6 +856,7 @@ void TemperatureController_Interrupt() {
 
 
 OnExit:
+    TemperatureControllerIsAlive = 1;
     SET_HEAT(globalstate.HeatRelay);
     SET_COOL(globalstate.CoolRelay);
 
@@ -858,6 +869,7 @@ OnExit:
             Log("\r\n");
         }
     }
+
 }
 
 int TemperatureController_Initialize() {

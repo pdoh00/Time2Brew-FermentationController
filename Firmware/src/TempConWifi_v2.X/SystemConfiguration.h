@@ -35,6 +35,7 @@ extern unsigned int ADC_BufferA[32] __attribute__((aligned(64)));
 extern unsigned int ADC_BufferB[32] __attribute__((aligned(64)));
 extern unsigned long V;
 extern int Global_Config_Mode;
+extern char TemperatureControllerIsAlive, WifiCommunicationsAreAlive;
 
 #define HW_REV_E
 

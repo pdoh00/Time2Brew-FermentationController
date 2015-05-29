@@ -113,6 +113,7 @@ extern "C" {
     int rawReadTemp(int ProbeIDX);
     void InitializeRecoveryRecord();
     int LoadProfile(const char *FileName, char *msg, MACHINE_STATE *dest);
+    void WriteRecoveryRecord(MACHINE_STATE *source);
 
 #ifdef	__cplusplus
 }

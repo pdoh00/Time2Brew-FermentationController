@@ -131,7 +131,7 @@ unsigned char i2c_read_byte(int nack, int send_stop) {
 }
 
 int RTC_Initialize() {
-    Delay(0.2);
+    Delay(0.5);
 
     i2c_start_cond();
     i2c_write_byte(0, 0, 0b11011110);
@@ -170,7 +170,7 @@ int RTC_Initialize() {
         }
 
         i2c_stop_cond();
-        Log("ST Should be Runnin\r\n");
+        Log("RTC Clock Started\r\n");
     }
 
     globalstate.SystemTime = RTC_GetTime();

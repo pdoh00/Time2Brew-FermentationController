@@ -15,8 +15,19 @@
     Public StepTimeRemaining_seconds As UInt32
     Public ManualSetPoint_C As Double
     Public EquipmentProfileName As String
-
+    Public CoolWhenCanTurnOff As UInt32
+    Public CoolWhenCanTurnOn As UInt32
+    Public HeatWhenCanTurnOff As UInt32
+    Public HeatWhenCanTurnOn As UInt32
+    Public Output As Integer
+    Public ProcessPID_ITerm As Single
+    Public ProcessPID_error As Single
+    Public TargetPID_ITerm As Single
+    Public TargetPID_error As Single
+    Public ProfileStartTime As UInt32
+    Public TimeTurnedOn As UInt32
     Public ProfileStartTime_seconds As UInt32
+
     Public Sub New(sourceData As Byte())
         Dim offset As Integer = 0
         Dim timeOffset = BitConverter.ToUInt32(sourceData, offset)
@@ -56,6 +67,35 @@
 
         EquipmentProfileName = GetString(sourceData, offset, 64)
         offset += 64
+
+        CoolWhenCanTurnOff = BitConverter.ToUInt32(sourceData, offset)
+        offset += 4
+        CoolWhenCanTurnOn = BitConverter.ToUInt32(sourceData, offset)
+        offset += 4
+        HeatWhenCanTurnOff = BitConverter.ToUInt32(sourceData, offset)
+        offset += 4
+        HeatWhenCanTurnOn = BitConverter.ToUInt32(sourceData, offset)
+        offset += 4
+
+        Output = sourceData(offset)
+        If (Output > 128) Then Output = Output - 256
+        offset += 1
+
+        ProcessPID_ITerm = BitConverter.ToSingle(sourceData, offset)
+        offset += 4
+        ProcessPID_error = BitConverter.ToSingle(sourceData, offset)
+        offset += 4
+        TargetPID_ITerm = BitConverter.ToSingle(sourceData, offset)
+        offset += 4
+        TargetPID_error = BitConverter.ToSingle(sourceData, offset)
+        offset += 4
+
+        ProfileStartTime = BitConverter.ToUInt32(sourceData, offset)
+        offset += 4
+
+        TimeTurnedOn = BitConverter.ToUInt32(sourceData, offset)
+        offset += 4
+
     End Sub
 
     Public Overrides Function ToString() As String
@@ -75,6 +115,17 @@
         ret += "StepTimeRemaining_seconds: " & Me.StepTimeRemaining_seconds.ToString & vbCrLf
         ret += "ManualSetPoint_C: " & Me.ManualSetPoint_C.ToString & vbCrLf
         ret += "EquipmentProfileName: " & Me.EquipmentProfileName & vbCrLf
+        ret += "CoolWhenCanTurnOff: " & New DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Me.CoolWhenCanTurnOff).ToLocalTime & vbCrLf
+        ret += "CoolWhenCanTurnOn: " & New DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Me.CoolWhenCanTurnOn).ToLocalTime & vbCrLf
+        ret += "HeatWhenCanTurnOff: " & New DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Me.HeatWhenCanTurnOff).ToLocalTime & vbCrLf
+        ret += "HeatWhenCanTurnOn: " & New DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Me.HeatWhenCanTurnOn).ToLocalTime & vbCrLf
+        ret += "Output: " & Me.Output & vbCrLf
+        ret += "ProcessPID_ITerm: " & Me.ProcessPID_ITerm.ToString("0.000") & vbCrLf
+        ret += "ProcessPID_error: " & Me.ProcessPID_error.ToString("0.000") & vbCrLf
+        ret += "TargetPID_ITerm: " & Me.TargetPID_ITerm.ToString("0.000") & vbCrLf
+        ret += "TargetPID_error: " & Me.TargetPID_error.ToString("0.000") & vbCrLf
+        ret += "TimeTurnedOn: " & New DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Me.TimeTurnedOn).ToLocalTime & vbCrLf
+
         Return ret
     End Function
 

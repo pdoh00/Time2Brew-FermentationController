@@ -13,6 +13,7 @@
                     <Button Margin="5" Name="cmdFirmware">Upload Firmware</Button>
                     <Button Margin="5" Name="cmdVersion" Content="Firmware Version"/>
                     <Button Margin="5" Name="cmdUploadFile" Content="Upload File"/>
+                    <Button Margin="5" Name="cmdSetTime" Content="Set Time"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <Button Margin="5" Name="cmdGetTemp">Get Temperature</Button>

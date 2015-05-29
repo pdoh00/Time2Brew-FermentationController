@@ -260,6 +260,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
     switch (msgID) {
         case ESP_START_MDNS_RESP:
             if (ResponseCode == Init_OK) {
+                WifiCommunicationsAreAlive = 1;
                 StartMDNS_State = 1;
             } else {
                 StartMDNS_State = -1;
@@ -269,6 +270,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             break;
         case ESP_START_UPNP_RESP:
             if (ResponseCode == Init_OK) {
+                WifiCommunicationsAreAlive = 1;
                 StartUPNP_State = 1;
             } else {
                 //Log("uPnP Start Failed: %s\r\n", translateESP_RESP_CODE(ResponseCode));
@@ -277,6 +279,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             }
             break;
         case ESP_IP_INFO:
+            WifiCommunicationsAreAlive = 1;
             //Log("ESP IP Address Changed: %d.%d.%d.%d\r\n", msg->Detail.ub[3], msg->Detail.ub[2], msg->Detail.ub[1], msg->Detail.ub[0]);
             IP_Address.b[3] = msg->Detail.ub[3];
             IP_Address.b[2] = msg->Detail.ub[2];
@@ -288,6 +291,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
                 TCP->SendStateDetail = ResponseCode;
                 if (ResponseCode == SendOK) {
                     TCP->SendState = TCP_SEND_STATE_Success;
+                    WifiCommunicationsAreAlive = 1;
                 } else {
                     Log("%b: TCP Send Failed: %s\r\n", ChannelID, translateESP_RESP_CODE(ResponseCode));
                     TCP->SendState = TCP_SEND_STATE_Fail;
@@ -296,12 +300,14 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             break;
         case ESP_TCP_RECIEVE:
             if (TCP != NULL) {
+                WifiCommunicationsAreAlive=1;
                 ParseMessage_HTTP(msg);
             }
             break;
         case ESP_UPNP_SEND_RESULT:
             uPnP_Channel.SendStateDetail = ResponseCode;
             if (ResponseCode == SendOK) {
+                WifiCommunicationsAreAlive=1;
                 uPnP_Channel.SendState = TCP_SEND_STATE_Success;
             } else {
                 Log("uPnP Send Failed: %s\r\n", translateESP_RESP_CODE(ResponseCode));
@@ -309,11 +315,13 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             }
             break;
         case ESP_UPNP_RECIEVE:
+            WifiCommunicationsAreAlive = 1;
             uPnP_RecieveMsg(msg);
             break;
         case ESP_MDNS_SEND_RESULT:
             mDNS_Channel.SendStateDetail = ResponseCode;
             if (ResponseCode == SendOK) {
+                WifiCommunicationsAreAlive=1;
                 mDNS_Channel.SendState = TCP_SEND_STATE_Success;
             } else {
                 Log("mDNS Send Failed: %s\r\n", translateESP_RESP_CODE(ResponseCode));
@@ -321,10 +329,12 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             }
             break;
         case ESP_MDNS_RECIEVE:
+            WifiCommunicationsAreAlive = 1;
             mDNS_RecieveMsg(msg);
             break;
         case ESP_INIT_RESP:
             if (ResponseCode == Init_OK) {
+                WifiCommunicationsAreAlive=1;
                 ResetState = RESET_SUCESS;
             } else {
                 //Log("Reset Failed: %s\r\n", translateESP_RESP_CODE(ResponseCode));

@@ -186,12 +186,12 @@ Class MainWindow
         Dim l As New List(Of PROFILE_STEP)
         Dim rnd As New Random(Now.Millisecond)
 
-        l.Add(New PROFILE_STEP(20, 30, 604800)) '7 days
-        l.Add(New PROFILE_STEP(30, 30, 240)) '4 minutes
-        l.Add(New PROFILE_STEP(30, 10, 600)) '10 minutes
-        l.Add(New PROFILE_STEP(10, 10, 120)) '2 minutes
-        l.Add(New PROFILE_STEP(10, 12, 120)) '2 minutes
-        l.Add(New PROFILE_STEP(12, 50, 600)) '10 minutes
+        l.Add(New PROFILE_STEP(40, 80, 86400)) '1 Days
+        l.Add(New PROFILE_STEP(80, 50, 86400)) '1 Day
+        l.Add(New PROFILE_STEP(50, 50, 86400)) '1 Day
+        l.Add(New PROFILE_STEP(50, 30, 86400)) '1 Day
+        l.Add(New PROFILE_STEP(30, 25, 3600)) '1 Hour
+        l.Add(New PROFILE_STEP(25, 25, 600)) '10 minutes
 
         Try
             Await Controller.UploadProfile("testProfile2", l)
@@ -473,6 +473,10 @@ Class MainWindow
             Dim fname = Path.GetFileName(dlg.FileName)
             Await Controller.uploadFile(inp, fname)
         End Using
+    End Sub
+
+    Private Async Sub cmdSetTime_Click(sender As Object, e As RoutedEventArgs) Handles cmdSetTime.Click
+        Await Controller.SetTime(Now)
     End Sub
 End Class
 
