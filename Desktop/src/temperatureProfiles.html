@@ -30,18 +30,16 @@
     </div>
   </nav>
 
-
   <div id="page-wrapper" class="container">
     <div class="flex-container-col" style="width: 100%">
 
       <h1>Temperature Profiles</h1>
 
-      <div class="panel-group" id="accordion">
-
-      </div>
+      <div class="panel-group" id="accordion"></div>
 
     </div>
   </div>
+
   <script src="./configureApp.js"></script>
   <script src="./promisify.js "></script>
   <script src="./chartMethods.js "></script>
@@ -52,293 +50,297 @@
   <script src="./bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
 
   <script id="profilePanelTemplate" type="x-tmpl-mustache">
-    <div class="panel-heading">
+    <div class="panel-heading" role="tab">
       <h4 class="panel-title">
-        <p data-toggle="collapse" data-target="#{{collapseId}}">{{profileName}}</p>
+        <p id="profCol" data-toggle="collapse" data-parent="#accordion" data-target="#{{collapseId}}">
+          {{profileName}}
+        </p>
         <h4>
     </div>
-    <div id="{{collapseId}}" class="panel-collapse collapse in">
-      <div class="panel-body" id="{{bodyId}}">
-      </div>
+    <div id="{{collapseId}}" class="panel-collapse collapse" role="tabpanel">
+      <div class="panel-body" id="{{bodyId}}"></div>
+    </div>
   </script>
 
   <script id="profileStepsPanelTemplate" type="x-tmpl-mustache">
-
     <div class="panel-heading">
       <h4 class="panel-title">
-        <p data-toggle="collapse" data-target="#{{collapseId}}">Profile Steps</p>
+        <p data-toggle="collapse" data-target="#{{collapseId}}">
+          Steps
+        </p>
         <h4>
     </div>
-    <div id="{{collapseId}}" class="panel-collapse collapse in">
+    <div id="{{collapseId}}" class="panel-collapse collapse">
       <div class="panel-body">
         <ol id="{{stepListId}}"></ol>
+        <div id="{{stepChartId}}" style="width: 100%; height: 200px"></div>
       </div>
     </div>
-
   </script>
 
   <script id="profileInstancesPanelTemplate" type="x-tmpl-mustache">
-
     <div class="panel-heading">
       <h4 class="panel-title">
-        <p data-toggle="collapse" data-target="#{{collapseId}}">Profile Runs</p>
+        <p data-toggle="collapse" data-target="#{{collapseId}}">
+          Profile Runs
+        </p>
         <h4>
     </div>
-    <div id="{{collapseId}}" class="panel-collapse collapse in">
+    <div id="{{collapseId}}" class="panel-collapse collapse">
       <div class="panel-body">
-
         <ul id="{{instanceListId}}"></ul>
-
       </div>
     </div>
-
   </script>
 
   <script id="instanceDataPanelTemplate" type="x-tmpl-mustache">
-
     <div class="panel-heading">
       <h4 class="panel-title">
-        <p data-toggle="collapse" data-target="#{{collapseId}}"><i class="fa fa-line-chart"></i> {{date}}</p>
+        <p data-toggle="collapse" data-target="#{{collapseId}}">
+          <i class="fa fa-line-chart"></i> {{date}}
+        </p>
         <h4>
     </div>
-    <div id="{{collapseId}}" class="panel-collapse collapse in">
+    <div id="{{collapseId}}" class="panel-collapse collapse">
       <div class="panel-body">
-        <div class="ct-chart .ct-perfect-fourth" id="{{chartId}}"></div>
+        <div id="{{chartId}}" style="width: 100%; height: 200px"></div>
       </div>
     </div>
-
   </script>
 
   <script>
     function updateProfiles() {
-        // var loadProfileSteps = function(profileName) {
-        //   return getProfileSteps(profileName);
-        // };
-        // var loadProfileInstances = function(profileName) {
-        //   return getProfileInstances(profileName);
-        // };
-
-        var profileList = document.getElementById('accordion');
-        //clear the list
-        while (profileList.firstChild) {
-          profileList.removeChild(profileList.firstChild);
-        }
-
-        temperatureProfileAPI.getAllProfiles()
-          .selectMany(
-            function(profile) {
-              return profile;
-            })
-          .subscribe(
-            function(p) {
-
-              var sub = Rx.Observable.forkJoin(
-                Rx.Observable.return(p),
-                temperatureProfileAPI.getProfileSteps(p.name),
-                temperatureProfileAPI.getProfileInstances(p.name));
-
-              sub
-                .subscribe(function(x) {
-                  var profile = x[0];
-                  profile.steps = x[1];
-                  profile.instances = x[2];
-                  profileList.appendChild(createProfilePanel(profile));
-                });
-            },
-            function(err) {
-              console.log('Error: ' + err);
-            },
-            function() {
-              console.log('Complete');
-            });
-
+      var profileList = document.getElementById('accordion');
+      //clear the list
+      while (profileList.firstChild) {
+        profileList.removeChild(profileList.firstChild);
       }
 
-    function createProfilePanel(profile) {
+      temperatureProfileAPI.getAllProfiles()
+        .selectMany(
+          function(profile) {
+            return profile;
+          })
+        .subscribe(
+          function(p) {
 
-      var div = document.createElement('div');
-      div.setAttribute('class', 'panel panel-default');
+            var sub = Rx.Observable.forkJoin(
+              Rx.Observable.return(p),
+              temperatureProfileAPI.getProfileSteps(p.name),
+              temperatureProfileAPI.getProfileInstances(p.name));
 
-      var collapseId = 'collapse' + profile.name.replace(/\s+/g, '');
-      var bodyId = 'body' + profile.name.replace(/\s+/g, '');
+            sub
+              .subscribe(function(x) {
+                var profile = x[0];
+                profile.steps = x[1];
+                profile.instances = x[2];
+                createProfilePanel(profile, profileList);
+
+              });
+          },
+          function(err) {
+            console.log('Error: ' + err);
+          },
+          function() {
+            console.log('Complete');
+          });
+    }
+
+    function createProfilePanel(profile, parent) {
+
+      var profilePanel = document.createElement('div');
+      profilePanel.setAttribute('class', 'panel panel-default');
 
       var htmlTemplate = document.getElementById('profilePanelTemplate').innerHTML;
       Mustache.parse(htmlTemplate);
 
-      div.innerHTML = Mustache.render(htmlTemplate, {
+      var collapseId = 'collapse' + profile.name.replace(/\s+/g, '');
+      var bodyId = 'body' + profile.name.replace(/\s+/g, '');
+      profilePanel.innerHTML = Mustache.render(htmlTemplate, {
         profileName: profile.name,
         collapseId: collapseId,
         bodyId: bodyId
       });
 
-      var stepsDiv = createStepsPanel(profile.name, profile.steps);
-      var instDiv = createInstancePanel(profile.name, profile.instances);
+      parent.appendChild(profilePanel);
 
-      var stepsElem = div.querySelector('#' + bodyId);
-      stepsElem.appendChild(stepsDiv);
+      var stepsParent = profilePanel.querySelector('#' + bodyId);
+      createStepsPanel(profile.name, profile.steps, stepsParent);
 
-      var instPnlElem = div.querySelector('#' + bodyId);
-      instPnlElem.appendChild(instDiv);
+      var instPnlParent = profilePanel.querySelector('#' + bodyId);
+      createInstancePanel(profile.name, profile.instances, instPnlParent);
 
-      return div;
     }
 
-    function createStepsPanel(profileName, steps) {
+    function createStepsPanel(profileName, steps, parent) {
       var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Steps';
       var stepListId = profileName.replace(/\s+/g, '') + 'StepList';
-      var div = document.createElement('div');
-      div.setAttribute('class', 'panel panel-default');
+      var stepChartId = profileName.replace(/\s+/g, '') + 'StepListChartId';
+
+      var stepListPanel = document.createElement('div');
+      stepListPanel.setAttribute('class', 'panel panel-default');
 
       var htmlTemplate = document.getElementById('profileStepsPanelTemplate').innerHTML;
       Mustache.parse(htmlTemplate);
 
-      div.innerHTML = Mustache.render(htmlTemplate, {
+      stepListPanel.innerHTML = Mustache.render(htmlTemplate, {
         collapseId: collapseId,
-        stepListId: stepListId
+        stepListId: stepListId,
+        stepChartId: stepChartId
       });;
 
-      var stepList = div.querySelector('#' + stepListId);
+      var stepList = stepListPanel.querySelector('#' + stepListId);
+
+      var stepData = [];
+      var overallDuration = 0;
       for (var i = 0; i < steps.length; i++) {
         var entry = document.createElement('li');
-        var stepData = document.createTextNode("Start at: " + steps[i].startTemp + " End at: " + steps[i].endTemp + " Duration: " + steps[i].duration);
-        entry.appendChild(stepData);
-        stepList.appendChild(entry);
+
+        if (steps[i].startTemp == steps[i].endTemp) {
+          var stepText = document.createTextNode("Hold at: " +
+            steps[i].startTemp + ' \xB0F' + " for " + temperatureProfileAPI.formatTime(steps[i].duration));
+          entry.appendChild(stepText);
+          stepList.appendChild(entry);
+        } else {
+          var stepText = document.createTextNode("Ramp from " +
+            steps[i].startTemp +
+            ' \xB0F' + " to " +
+            steps[i].endTemp + ' \xB0F' +
+            " over " + temperatureProfileAPI.formatTime(steps[i].duration));
+
+          entry.appendChild(stepText);
+          stepList.appendChild(entry);
+        }
+        stepData.push([overallDuration, steps[i].startTemp]);
+        overallDuration += steps[i].duration;
+        stepData.push([overallDuration, steps[i].endTemp]);
       }
-      return div;
+
+      parent.appendChild(stepListPanel);
+
+      $("#" + collapseId).on('shown.bs.collapse', function() {
+        var options = {
+          series: {
+            lines: {
+              show: true
+            },
+            points: {
+              show: true
+            }
+          }
+        };
+        var chartPanel = $("#" + stepChartId);
+        var data = [{
+          label: "Steps",
+          data: stepData
+        }];
+        var plot = $.plot(chartPanel, data, options);
+
+      });
     }
 
-    function createInstancePanel(profileName, instances) {
+    function createInstancePanel(profileName, instances, parent) {
       var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Instances';
       var instanceListId = profileName.replace(/\s+/g, '') + 'InstanceList';
-      var div = document.createElement('div');
-      div.setAttribute('class', 'panel panel-default');
+      var instanceListPanel = document.createElement('div');
+      instanceListPanel.setAttribute('class', 'panel panel-default');
 
       var htmlTemplate = document.getElementById('profileInstancesPanelTemplate').innerHTML;
       Mustache.parse(htmlTemplate);
 
-      var instancePanel = Mustache.render(htmlTemplate, {
+      instanceListPanel.innerHTML = Mustache.render(htmlTemplate, {
         collapseId: collapseId,
         instanceListId: instanceListId
       });
 
-      div.innerHTML = instancePanel;
+      parent.appendChild(instanceListPanel);
 
-      for (var i = 0; i < instances.length; i++) {
-        var data = {
-          labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-          series: [
-            [12, 9, 7, 8, 5],
-            [2, 1, 3.5, 7, 3],
-            [1, 3, 4, 5, 6]
-          ]
-        };
-
-        var options = {
-          fullWidth: true,
-          chartPadding: {
-            right: 30
-          },
-          // Don't draw the line chart points
-          showPoint: false,
-          // Disable line smoothing
-          lineSmooth: false,
-          // X-Axis specific configuration
-          axisX: {
-            // We can disable the grid for this axis
-            showGrid: false //,
-              // and also don't show the label
-              //showLabel: false
-          },
-          // Y-Axis specific configuration
-          axisY: {
-            // Lets offset the chart a bit from the labels
-            offset: 30,
-            // The label interpolation function enables you to modify the values
-            // used for the labels on each axis. Here we are converting the
-            // values into million pound.
-            // labelInterpolationFnc: function(value) {
-            //   return '$' + value + 'm';
-            // }
+      temperatureProfileAPI.getProfileInstances(profileName)
+        .subscribe(function(dates) {
+          for (var i = 0; i < dates.length; i++) {
+            var instanceId = dates[i].getTime() / 1000;
+            var date = new Date(instanceId * 1000);
+            var instanceList = $("#" + instanceListId)[0];
+            createInstanceDataPanel(profileName, instanceList, instanceId, date)
           }
-        };
-        //createInstanceDataPanel(i, 'abc', instanceListId, i + '/14/2015', data, options);
-        var chartId = 'chart' + i;
-        var collapseId = 'collapse' + i;
-        var div2 = document.createElement('div');
-        div2.setAttribute('class', 'panel panel-default');
-
-        var htmlTemplate = document.getElementById('instanceDataPanelTemplate').innerHTML;
-        Mustache.parse(htmlTemplate);
-
-        var entry = document.createElement('li');
-        entry.innerHTML = Mustache.render(htmlTemplate, {
-          collapseId: collapseId,
-          chartId: chartId,
-          date: instances[i]
         });
-
-        var list = div.querySelector('#' + instanceListId);
-        list.appendChild(entry);
-
-        //new Chartist.Line('#' + chartId, data, options);
-
-      }
-      return div;
     }
 
-    function createInstanceDataPanel(panelIndex, instanceId, selectorId, date, data, options) {
+    //instanceId = seconds from epoch
+    function createInstanceDataPanel(profileName, parent, instanceId, date) {
+      var collapseId = 'collapse' + instanceId;
+      var chartId = 'chart' + instanceId;
+      var listItem = document.createElement('li');
+      var instancePanel = document.createElement('div');
+      instancePanel.setAttribute('class', 'panel panel-default');
 
+      var htmlTemplate = document.getElementById('instanceDataPanelTemplate').innerHTML;
+      Mustache.parse(htmlTemplate);
 
+      instancePanel.innerHTML = Mustache.render(htmlTemplate, {
+        collapseId: collapseId,
+        chartId: chartId,
+        date: date
+      });
+      listItem.appendChild(instancePanel);
+      parent.appendChild(listItem);
+
+      $("#" + collapseId).on('shown.bs.collapse', function() {
+        if ($('#' + chartId).children().length == 0) {
+          temperatureProfileAPI.getTrendData(profileName, instanceId)
+            .subscribe(function(trendData) {
+              var probe0Data = [];
+              var probe1Data = [];
+              var setpointData = [];
+
+              for (var j = 0; j < trendData.records.length; j += 5) {
+
+                var timeStamp = (instanceId + (j * 60)) * 1000;
+                console.log(new Date(timeStamp));
+                if (trendData.records[j].probe0Temp > 0) {
+                  probe0Data.push([timeStamp, trendData.records[j].probe0Temp]);
+                }
+                if(trendData.records[j].probe1Temp > 0){
+                  probe1Data.push([timeStamp, trendData.records[j].probe1Temp]);
+                }
+
+                setpointData.push([timeStamp, trendData.records[j].setpointTemp]);
+              }
+              var options = {
+                xaxis: {
+                  mode: "time",
+                  timeformat: "%a %H:%M:%S"
+                },
+                series: {
+                  lines: {
+                    show: true
+                  },
+                  points: {
+                    show: false
+                  }
+                }
+              };
+
+              var data = [{
+                label: "Probe 0",
+                data: probe0Data
+              }, {
+                label: "Probe 1",
+                data: probe1Data
+              }, {
+                label: "Setpoint",
+                data: setpointData
+              }];
+              var chartPanel = $("#" + chartId);
+              chartAPI.createChart(chartPanel, data, options);
+            });
+        }
+      });
     }
 
     window.onload = function() {
       updateProfiles();
-      // var profilePanel = createProfilePanel("British Ale Yeast");
-      //
-      // var profilePanelParent = document.getElementById('accordion');
-      // profilePanelParent.appendChild(profilePanel);
 
-      // var data = {
-      //   labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      //   series: [
-      //     [12, 9, 7, 8, 5],
-      //     [2, 1, 3.5, 7, 3],
-      //     [1, 3, 4, 5, 6]
-      //   ]
-      // };
-      //
-      // var options = {
-      //   fullWidth: true,
-      //   chartPadding: {
-      //     right: 30
-      //   },
-      //   // Don't draw the line chart points
-      //   showPoint: false,
-      //   // Disable line smoothing
-      //   lineSmooth: false,
-      //   // X-Axis specific configuration
-      //   axisX: {
-      //     // We can disable the grid for this axis
-      //     showGrid: false //,
-      //       // and also don't show the label
-      //       //showLabel: false
-      //   },
-      //   // Y-Axis specific configuration
-      //   axisY: {
-      //     // Lets offset the chart a bit from the labels
-      //     offset: 30,
-      //     // The label interpolation function enables you to modify the values
-      //     // used for the labels on each axis. Here we are converting the
-      //     // values into million pound.
-      //     // labelInterpolationFnc: function(value) {
-      //     //   return '$' + value + 'm';
-      //     // }
-      //   }
-      // };
-      // createInstanceDataPanel(1, 'abc', 'instanceDataList', '1/14/2015', data, options);
-      // createInstanceDataPanel(2, 'abc', 'instanceDataList', '3/18/2015', data, options);
-      // createInstanceDataPanel(3, 'abc', 'instanceDataList', '4/10/2015', data, options);
-      // createInstanceDataPanel(4, 'abc', 'instanceDataList', '8/25/2015', data, options);
     };
   </script>
 </body>

@@ -1,44 +1,17 @@
 var Chart = require('./bower_components/chartjs/Chart.js');
+var $ = require('./bower_components/jquery/dist/jquery.min.js');
+var flot = require('./bower_components/flot/jquery.flot.js');
+var flotTime = require('./bower_components/flot/jquery.flot.time.js');
 
-// var Chartist = require('./bower_components/chartist/dist/chartist.min.css');
+var chartAPI = (function() {
 
-function getChart() {
-  var request = new XMLHttpRequest();
-  request.open('GET', 'http://127.0.0.1:1337', true);
-
-  request.onload = function() {
-    if (request.status >= 200 && request.status < 400) {
-
-      var ctx = myChart.getContext("2d");
-      var options = {
-        responsive: true
-      };
-      var myLineChart = new Chart(ctx).Line(JSON.parse(request.responseText), options);
-
-    } else {
-      alert("ERROR");
-    }
+  var createChart = function(placeholder, data, options) {
+    var plot = $.plot(placeholder, data, options);
   };
 
-  request.onerror = function() {
-    alert("CONNECTION ERROR");
+
+  return {
+    createChart: createChart
   };
 
-  request.send();
-}
-
-function loadChart(canvas, labels, datasets) {
-  var ctx = canvas.getContext("2d");
-  var options = {
-    responsive: true,
-    showXLabels: 25
-  };
-  var myLineChart = new Chart(ctx).Line({
-    labels: labels,
-    datasets: datasets
-  }, options);
-}
-
-function loadChartist(data){
-  // new Chartist.Line('.ct-chart', data);
-}
+})();

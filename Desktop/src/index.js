@@ -16,7 +16,7 @@ app.on('window-all-closed', function() {
 
 app.on('ready', function(){
   mainWindow = new BrowswerWindow({
-    width: 1200,
+    width: 1400,
     height: 800
   });
 
