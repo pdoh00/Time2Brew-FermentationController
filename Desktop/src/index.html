@@ -41,90 +41,19 @@
   <script src="./chartMethods.js "></script>
   <script src="./menu.js"></script>
   <script src="./checksum.js"></script>
-  <script src="./deviceAPI.js"></script>
-  <script src="./equipmentProfileAPI.js"></script>
 
-  <script src="./temperatureProfileAPI.js"></script>
+
   <script src="./bower_components/rxjs/dist/rx.lite.js"></script>
-  <script src="./bower_components/chartist/dist/chartist.min.js"></script>
-
   <script src="./bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
 
 
   <script>
-
-    //instanceId is a Date
-    function getTrendDataForInstance(profileName, instanceId) {
-
-
-      var secondsFromEpoch = Math.round(instanceId.getTime() / 1000);
-
-      getTrendData(profileName, secondsFromEpoch)
-        .then(function(trendData) {
-          // console.log(JSON.stringify(trendData));
-
-          var probe0Temps = [];
-          var probe1Temps = [];
-          var setpointTemps = [];
-          var outputPercentages = [];
-          var labels = [];
-          var seconds = 0;
-
-          for (var i = 0; i < trendData.records.length; i++) {
-            probe0Temps.push(trendData.records[i].probe0Temp);
-            probe1Temps.push(trendData.records[i].probe1Temp);
-            setpointTemps.push(trendData.records[i].setpointTemp);
-            outputPercentages.push(trendData.records[i].outputPercent);
-            instanceId.setSeconds(seconds)
-            labels.push(instanceId.toISOString());
-            seconds += 60;
-          }
-
-      
-          var data = {
-            labels: labels,
-            series: [probe0Temps, setpointTemps]
-          };
-
-          var options = {
-            // Don't draw the line chart points
-            showPoint: false,
-            // Disable line smoothing
-            lineSmooth: false,
-            // X-Axis specific configuration
-            axisX: {
-              // We can disable the grid for this axis
-              showGrid: false //,
-                // and also don't show the label
-                //showLabel: false
-            },
-            // Y-Axis specific configuration
-            axisY: {
-              // Lets offset the chart a bit from the labels
-              offset: 30,
-              // The label interpolation function enables you to modify the values
-              // used for the labels on each axis. Here we are converting the
-              // values into million pound.
-              // labelInterpolationFnc: function(value) {
-              //   return '$' + value + 'm';
-              // }
-            }
-          };
-
-          new Chartist.Line('.ct-chart', data, options);
-          // loadChartist({labels: labels, series:[probe0Temps]});
-
-        }).catch(function(error) {
-          console.log(error)
-        });
-    }
+    window.onload = onWindowLoad();
 
     function onWindowLoad() {
-      // updateProfiles();
+
 
     };
-
-    window.onload = onWindowLoad();
   </script>
 
 </body>
