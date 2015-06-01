@@ -38,6 +38,7 @@ extern "C" {
     int OneWireReset(int ProbeId);
     void OneWireWriteByte(int ProbeId, unsigned char dat);
     int OneWireReadByte(int ProbeId, unsigned char *retV);
+    int OneWireIsBusShorted();
 
 #ifdef	__cplusplus
 }

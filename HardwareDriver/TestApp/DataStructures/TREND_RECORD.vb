@@ -3,7 +3,7 @@
     Public Probe1_Temperature_C As Single
     Public SetPoint_Temperature_C As Single
     Public Output_percent As Single
-    Public dummy As Byte
+    Public RelayState As Byte
 
     Public Sub New(sourceData As Byte(), sourceOffset As Integer)
         Dim offset As Integer = sourceOffset
@@ -21,11 +21,11 @@
             Output_percent *= 0.01
         End If
         offset += 1
-        dummy = sourceData(offset)
+        RelayState = sourceData(offset)
         offset += 1
     End Sub
 
     Public Overrides Function ToString() As String
-        Return Probe0_Temperature_C & ", " & Probe1_Temperature_C & "," & SetPoint_Temperature_C & "," & Output_percent
+        Return Probe0_Temperature_C & ", " & Probe1_Temperature_C & "," & SetPoint_Temperature_C & "," & Output_percent & "," & If(RelayState = 1, "1", If(RelayState = 2, "-1", "0"))
     End Function
 End Structure
