@@ -17,6 +17,16 @@ Public Structure EQUIPMENT_PROFILE
     Public TargetOutput_Max_C As Single
     Public TargetOutput_Min_C As Single
     Public ThresholdDelta_C As Single
+    Public Process_D_FilterGain As Single
+    Public Process_D_FilterCoeff As Single
+    Public Process_D_AdaptiveBand As Single
+    Public Target_D_FilterGain As Single
+    Public Target_D_FilterCoeff As Single
+    Public Target_D_AdaptiveBand As Single
+    Public coolDifferential As Single
+    Public heatDifferential As Single
+    Public coolTransition As Single
+    Public heatTransition As Single
 
     Public Function Serialize() As Byte()
         Using ms As New MemoryStream()
@@ -36,7 +46,16 @@ Public Structure EQUIPMENT_PROFILE
             ms.Write(BitConverter.GetBytes(Target_Kd), 0, 4)
             ms.Write(BitConverter.GetBytes(TargetOutput_Max_C * 10), 0, 4)
             ms.Write(BitConverter.GetBytes(TargetOutput_Min_C * 10), 0, 4)
-            ms.Write(BitConverter.GetBytes(ThresholdDelta_C * 10), 0, 4)
+            ms.Write(BitConverter.GetBytes(Process_D_FilterGain), 0, 4)
+            ms.Write(BitConverter.GetBytes(Process_D_FilterCoeff), 0, 4)
+            ms.Write(BitConverter.GetBytes(Process_D_AdaptiveBand * 10), 0, 4)
+            ms.Write(BitConverter.GetBytes(Target_D_FilterGain), 0, 4)
+            ms.Write(BitConverter.GetBytes(Target_D_FilterCoeff), 0, 4)
+            ms.Write(BitConverter.GetBytes(Target_D_AdaptiveBand * 10), 0, 4)
+            ms.Write(BitConverter.GetBytes(CShort(coolDifferential * 10)), 0, 2)
+            ms.Write(BitConverter.GetBytes(CShort(heatDifferential * 10)), 0, 2)
+            ms.Write(BitConverter.GetBytes(CShort(coolTransition * 10)), 0, 2)
+            ms.Write(BitConverter.GetBytes(CShort(heatTransition * 10)), 0, 2)
             Dim F16 = FletcherChecksum.Fletcher16(ms.ToArray, 0, ms.Length)
             ms.Position = ms.Length
             ms.Write(BitConverter.GetBytes(F16), 0, 2)
@@ -79,9 +98,26 @@ Public Structure EQUIPMENT_PROFILE
         offset += 4
         TargetOutput_Min_C = BitConverter.ToSingle(sourceData, offset) * 0.1
         offset += 4
-        ThresholdDelta_C = BitConverter.ToSingle(sourceData, offset) * 0.1
+        Process_D_FilterGain = BitConverter.ToSingle(sourceData, offset)
         offset += 4
-
+        Process_D_FilterCoeff = BitConverter.ToSingle(sourceData, offset)
+        offset += 4
+        Process_D_AdaptiveBand = BitConverter.ToSingle(sourceData, offset) * 0.1
+        offset += 4
+        Target_D_FilterGain = BitConverter.ToSingle(sourceData, offset)
+        offset += 4
+        Target_D_FilterCoeff = BitConverter.ToSingle(sourceData, offset)
+        offset += 4
+        Target_D_AdaptiveBand = BitConverter.ToSingle(sourceData, offset) * 0.1
+        offset += 4
+        coolDifferential = BitConverter.ToInt16(sourceData, offset) * 0.1
+        offset += 2
+        heatDifferential = BitConverter.ToInt16(sourceData, offset) * 0.1
+        offset += 2
+        coolTransition = BitConverter.ToInt16(sourceData, offset) * 0.1
+        offset += 2
+        heatTransition = BitConverter.ToInt16(sourceData, offset) * 0.1
+        offset += 2
         Dim RecordF16 = BitConverter.ToUInt16(sourceData, offset)
         offset += 2
 

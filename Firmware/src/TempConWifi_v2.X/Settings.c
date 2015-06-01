@@ -36,7 +36,16 @@ int CreateDefaultEquipmentProfile() {
     eq->Target_Kd = 0;
     eq->TargetOutput_Max = 1000;
     eq->TargetOutput_Min = 0;
-    eq->ThresholdDelta = 5;
+    eq->heatDifferential = 50;  //5C or 9F
+    eq->heatTransition = 50;   //5C or 9F
+    eq->coolDifferential = 100;  //10C or 18F
+    eq->coolTransition = 100;   //10C or 18F
+    eq->Target_D_AdaptiveBand = 25.0;
+    eq->Target_D_FilterGain = 20.8776099;
+    eq->Target_D_FilterCoeff = 0.9042035937;
+    eq->Process_D_AdaptiveBand = 25.0;
+    eq->Process_D_FilterGain = 20.8776099;
+    eq->Process_D_FilterCoeff = 0.9042035937;
     eq->CheckSum = fletcher16((BYTE *) eq, sizeof (EQUIPMENT_PROFILE) - 2);
 
     Log("Equip Size=%i Checksum=%ui\r\n", sizeof (EQUIPMENT_PROFILE), eq->CheckSum);
@@ -56,152 +65,6 @@ int CreateDefaultEquipmentProfile() {
     ff_UpdateLength(&handle);
 
     return FR_OK;
-}
-
-static unsigned char GetRandomByte() {
-    unsigned char rnd;
-    while (1) {
-        DISABLE_INTERRUPTS;
-        if (TRNG_fifo->Read != TRNG_fifo->Write) {
-            ENABLE_INTERRUPTS;
-            break;
-        }
-        ENABLE_INTERRUPTS;
-        DELAY_5uS;
-    };
-    FIFO_Read(TRNG_fifo, rnd);
-    return rnd;
-}
-
-static int CreateUnqiueKey() {
-    unsigned char rnd;
-    unsigned char secBuff[256];
-    diskEraseSecure(1);
-
-    //    Log("A new key is needed: Short Press the CFG button to continue\r\n");
-    //    if (!CFG_MODE_PORT) while (!CFG_MODE_PORT);
-    //    while (CFG_MODE_PORT);
-
-    Log("Setting Magic\r\n");
-    memset(secBuff, 0xFF, 256);
-    secBuff[0] = 0x12;
-    secBuff[1] = 0x34;
-
-    Log("Build WiFi Password...");
-    char *cursor = (char *) &secBuff[4];
-    int x;
-    for (x = 0; x < 8; x++) {
-        rnd = GetRandomByte();
-        cursor += sprintf(cursor, "%02x", rnd ^ (TMR4 & 0xFF));
-    }
-    *(cursor++) = 0;
-    Log("OK\r\n");
-
-    Log("Build GUID Part 1...");
-    for (x = 0; x < 4; x++) {
-        rnd = GetRandomByte();
-        cursor += sprintf(cursor, "%02x", rnd ^ (TMR4 & 0xFF));
-    }
-    *(cursor++) = '-';
-    Log("OK\r\n");
-
-    Log("Build GUID Part 2...");
-    for (x = 0; x < 2; x++) {
-        rnd = GetRandomByte();
-        cursor += sprintf(cursor, "%02x", rnd ^ (TMR4 & 0xFF));
-    }
-    *(cursor++) = '-';
-    Log("OK\r\n");
-
-    Log("Build GUID Part 3...");
-    for (x = 0; x < 2; x++) {
-        rnd = GetRandomByte();
-        cursor += sprintf(cursor, "%02x", rnd ^ (TMR4 & 0xFF));
-    }
-    *(cursor++) = '-';
-    Log("OK\r\n");
-
-    Log("Build GUID Part 4...");
-    for (x = 0; x < 2; x++) {
-        rnd = GetRandomByte();
-        cursor += sprintf(cursor, "%02x", rnd ^ (TMR4 & 0xFF));
-    }
-    *(cursor++) = '-';
-    Log("OK\r\n");
-
-    Log("Build GUID Part 5...");
-    for (x = 0; x < 6; x++) {
-        rnd = GetRandomByte();
-        cursor += sprintf(cursor, "%02x", rnd ^ (TMR4 & 0xFF));
-    }
-    *(cursor++) = 0;
-    Log("OK\r\n");
-
-    Log("Write Secure Sector...");
-    diskWriteSecure(1, secBuff);
-    Log("OK\r\n");
-    return 1;
-}
-
-int Load_Cfg_Mode_Config(void) {
-    int res;
-    ff_File file;
-    Log("Check For equip.default file\r\n");
-    res = ff_OpenByFileName(&file, "equip.default", 0);
-    if (res != FR_OK) {
-        Log("Equipment File Not Found: Creating the Default Value\r\n");
-        res = CreateDefaultEquipmentProfile();
-        if (res != FR_OK) return res;
-    }
-
-    Log("\r\nCheck Unique Key...");
-    unsigned char secBuff[256];
-    unsigned long *magic = (unsigned long *) &secBuff[0];
-
-    diskReadSecure(1, secBuff);
-    if (secBuff[0] == 0xFF || *magic != 0x12398764ul || strlen((char *) &secBuff[4]) != 16) {
-        CreateUnqiueKey();
-        diskReadSecure(1, secBuff);
-    }
-    Log(" OK\r\n");
-
-    sprintf(ESP_Config.Name, "TEMPCONCONFIG");
-    sprintf(ESP_Config.UUID, "f14fe247-a3bb-4663-9875-edccbe0b3f35");
-    ESP_Config.EncryptionMode = AUTH_WPA2_PSK;
-    ESP_Config.Mode = SOFTAP_MODE;
-    sprintf(ESP_Config.Password, "%s", &secBuff[4]);
-    sprintf(ESP_Config.SSID, "TEMPCONCONFIG");
-    ESP_Config.Channel = 1;
-
-    InitializeRecoveryRecord();
-
-    Log("CONFIG_MODE! SSID='%s' Password='%s'\r\n", ESP_Config.SSID, ESP_Config.Password);
-    return 1;
-}
-
-int CreateFactoryDefaultConfig() {
-    Log("Factory Default Started\r\n");
-
-    sprintf(ESP_Config.Name, "TEMPCON");
-    sprintf(ESP_Config.UUID, "f14fe247-a3bb-4663-9875-edccbe0b3f35");
-    ESP_Config.Mode = SOFTAP_MODE;
-    ESP_Config.Password[0] = 0;
-    sprintf(ESP_Config.SSID, "TEMPCON");
-    ESP_Config.Channel = 1;
-    ESP_Config.EncryptionMode = AUTH_OPEN;
-    ESP_Config.HA1[0] = 0;
-
-    CreateDefaultEquipmentProfile();
-
-    UpdateCredentials("user", "pass");
-
-    if (ESP_ConfigSave(&ESP_Config, WiFiConfigFilename) == 0) return 0;
-
-    Log("    WiFi Config Defaulted\r\n");
-
-    Log("Default Config Saved OK!\r\n");
-
-    return 1;
 }
 
 static int CreateFactoryDefaultWifiConfig() {

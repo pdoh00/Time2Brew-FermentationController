@@ -1,7 +1,7 @@
 ﻿<Window x:Class="MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="MainWindow" Height="535.075" Width="775.746">
+    Title="MainWindow" Height="1130.675" Width="916.746">
     <Grid>
         <StackPanel Orientation="Vertical">
             <TextBlock Name="response"></TextBlock>
@@ -18,7 +18,7 @@
                 <StackPanel Orientation="Vertical">
                     <Button Margin="5" Name="cmdGetTemp">Get Temperature</Button>
                     <Button Margin="5" Name="cmdTogglePolling">Poll Temperature</Button>
-                    <Button Margin="5" Name="cmdGetStats">Get Status</Button>                    
+                    <Button Margin="5" Name="cmdGetStats">Get Status</Button>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <Button Margin="5" Name="cmdGetEquipmentProfileListing">Get Equipment Profile Listing</Button>
@@ -26,6 +26,7 @@
                     <Button Margin="5" Name="cmdUploadEquipmentProfile">Upload Equipment Profile</Button>
                     <Button Margin="5" Name="cmdDownloadEquipmentProfile">Download Equipment Profile</Button>
                     <Button Margin="5" Name="cmdDeleteEquipmentProfile">Delete Equipment Profile</Button>
+                    <Button Margin="5" x:Name="cmdEditEquipmentProfile" Content="Edit Equipment Profile"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <Button Margin="5" Name="cmdGetProfileListing">Get Profile Listing</Button>
@@ -35,8 +36,8 @@
                     <Button Margin="5" Name="cmdTerminateProfile">Terminate Profile</Button>
                     <Button Margin="5" Name="cmdDeleteProfile">Delete Profile</Button>
                 </StackPanel>
-                <StackPanel Orientation="Vertical">                    
-                    <Button Margin="5" Name="cmdGetInstanceListing">Get Profile Instance Listing</Button>                    
+                <StackPanel Orientation="Vertical">
+                    <Button Margin="5" Name="cmdGetInstanceListing">Get Profile Instance Listing</Button>
                     <Button Margin="5" Name="cmdDownloadInstance">Download Profile Instance</Button>
                     <Button Margin="5" Name="cmdDownloadTrend">Download Trend Data</Button>
                     <Button Margin="5" Name="cmdDeleteTrend">Delete Trend Data</Button>

@@ -180,48 +180,6 @@ int diskRead(uint32_t address, int bCount, BYTE * out) {
     return 1;
 }
 
-int diskRead_StreamToWifi(uint32_t address, int bCount) {
-    //Log("       diskRead_StreamToWifi: Address=%xl bCount=%i\r\n", address, bCount);
-    BYTE out;
-    FLASH_ASSERT_CS;
-    xchg_spi(0x03);
-    xchg_spi((address & 0xFF0000) >> 16);
-    xchg_spi((address & 0xFF00) >> 8);
-    xchg_spi((address & 0xFF));
-
-    int bytesCanSend = 0;
-
-    while (bCount) {
-        DISABLE_INTERRUPTS;
-        bytesCanSend = FIFO_FreeSpace(txFIFO);
-        ENABLE_INTERRUPTS;
-        bytesCanSend--;
-        bytesCanSend--;
-        //Log("bytesCanSend=%i\r\n", bytesCanSend);
-
-        if (bytesCanSend > bCount) bytesCanSend = bCount;
-
-        while (bytesCanSend) {
-            //Read SPI Byte and pack into *out
-            out = xchg_spi(0xFF);
-            bCount--;
-            if (out == ESCAPE_CHAR) {
-                FIFO_Write(txFIFO, ESCAPE_CHAR);
-                bytesCanSend--;
-                FIFO_Write(txFIFO, ESCAPE_CHAR);
-                bytesCanSend--;
-            } else {
-                FIFO_Write(txFIFO, out);
-                bytesCanSend--;
-            }
-            if (U1STAbits.TRMT) _U1TXIF = 1;
-        }
-        DELAY_105uS;
-    }
-    FLASH_RELEASE_CS;
-    return 1;
-}
-
 int diskWritePage(uint32_t address, int bCount, BYTE *data) {
     //Log("         diskWritePage: Address=%xl Count=%i...\r\n", address, bCount);
     BYTE status;
@@ -824,14 +782,33 @@ int ff_Overwrite(ff_File *file, const char *filename) {
 }
 
 int ff_Read_StreamToWifi(ff_File *file, int bCount) {
+    unsigned char sectorBuff[256];
     int bytesToRead;
     uint32_t nextSector;
+    int subsectorBCOUNT, ssSend;
+    unsigned long subsectorOffset;
     int res;
     while (bCount) {
         bytesToRead = 0x1000 - file->SectorOffset;
+        //        Log("bCount=%i, FilePosition=%xl, Sector=%xl, SectorOffset=%xl, bytesToRead=%i\r\n",
+        //                bCount, file->Position, file->CurrentSector, file->SectorOffset, bytesToRead);
         if (bytesToRead > bCount) bytesToRead = bCount;
 
-        diskRead_StreamToWifi((file->CurrentSector << 12) + file->SectorOffset, bytesToRead);
+        subsectorBCOUNT = bytesToRead;
+        subsectorOffset = 0;
+        while (subsectorBCOUNT) {
+            if (subsectorBCOUNT > 256) {
+                ssSend = 256;
+            } else {
+                ssSend = subsectorBCOUNT;
+            }
+            diskRead((file->CurrentSector << 12) + file->SectorOffset + subsectorOffset, ssSend, sectorBuff);
+            subsectorOffset += ssSend;
+            subsectorBCOUNT -= ssSend;
+            ESP_StreamArray(sectorBuff, ssSend);
+        }
+
+
         bCount -= bytesToRead;
         file->Position += bytesToRead;
         if (file->Position > file->Length) file->Length = file->Position;
@@ -842,13 +819,13 @@ int ff_Read_StreamToWifi(ff_File *file, int bCount) {
             //Log("Sector Change: SectorOffset=%xl\r\n", file->SectorOffset);
             //Okay get the next sector we should be writing to...
             res = GetNextSector(file->CurrentSector, &nextSector);
-            if (res != FR_OK && res != FR_EOF) return res;
-            //Is this the last sector that's been allocated?
-            if (nextSector == 0x7FFF) {
-                //Yep, so let's allocated one more...
-                res = AllocateSector(file->CurrentSector, &nextSector);
-                if (res != FR_OK) return res;
+            if (res == FR_EOF) {
+                if (bCount == 0) return FR_OK;
+                else return FR_EOF;
             }
+            if (res != FR_OK) return res;
+            //Is this the last sector that's been allocated?
+            if (nextSector > SECTORCOUNT || nextSector < 5) return FR_CORRUPTED;
             file->CurrentSector = nextSector;
             file->SectorOffset = 0;
         }
@@ -1414,8 +1391,6 @@ int ff_CheckFS() {
         }
     }
 }
-
-
 
 #ifdef FF_TEST
 #define VERIFY_NON_ZERO(z,a) {\

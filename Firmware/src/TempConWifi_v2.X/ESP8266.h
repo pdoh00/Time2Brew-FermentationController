@@ -8,6 +8,9 @@
 #ifndef ESP8266_H
 #define	ESP8266_H
 
+#define ESP8266_SLIP_MESSAGE_MAX_LEN 2048
+
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -44,8 +47,8 @@ extern "C" {
         int ResponseCode;
         OMNI Detail;
         int DataLength;
-        BYTE __attribute__((aligned)) Data[1536];
-    } MESSAGE;
+        BYTE __attribute__((aligned)) Data[ESP8266_SLIP_MESSAGE_MAX_LEN];
+    } ESP8266_SLIP_MESSAGE;
 
     typedef struct {
         int MessageType;
@@ -80,7 +83,7 @@ extern "C" {
         int Channel;
         char SSID[32];
         char Password[32];
-        char HA1[34];        
+        char HA1[34];
     } ESP8266_CONFIG;
 
     extern ESP8266_CONFIG ESP_Config;

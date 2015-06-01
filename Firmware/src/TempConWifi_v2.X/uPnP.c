@@ -50,7 +50,7 @@ void SendUUIDNotify();
 void SendURNNotify();
 int uPnP_GenerateDeviceXML();
 
-void uPnP_RecieveMsg(MESSAGE *msg) {
+void uPnP_RecieveMsg(ESP8266_SLIP_MESSAGE *msg) {
 
     if (memcmp(msg->Data, "M-SEARCH * HTTP", 15) != 0) {
         //Log("   uPnP is NOT an M-SEARCH * HTTP Request\r\n");

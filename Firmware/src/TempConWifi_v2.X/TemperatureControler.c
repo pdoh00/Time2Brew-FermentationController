@@ -27,7 +27,6 @@ char isTemperatureController_Initialized = 0;
 struct {
     unsigned long Profile_FileEntryAddress;
     unsigned long Equipment_FileEntryAddress;
-    unsigned long Trend_FileEntryAddress;
     unsigned long CoolWhenCanTurnOff;
     unsigned long CoolWhenCanTurnOn;
     unsigned long HeatWhenCanTurnOff;
@@ -54,6 +53,7 @@ int rawReadTemp(int ProbeIDX) {
     int retry = 3;
     ret = -32767;
     while (retry--) {
+        if (OneWireIsBusShorted()) continue;
         if (OneWireReset(ProbeIDX) != 0) continue;
         OneWireWriteByte(ProbeIDX, 0xCC);
         OneWireWriteByte(ProbeIDX, 0xBE);
@@ -94,6 +94,46 @@ int ReadTemperature(MACHINE_STATE *dest) {
     return 1;
 }
 
+int GetProfileTotalDuration(const char *FileName, unsigned long *retVal) {
+    unsigned char step[8];
+    int bytesRead;
+    ff_File Handle;
+    ff_File *ptrHandle = &Handle;
+    int res;
+
+    res = ff_OpenByFileName(ptrHandle, FileName, 0);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    unsigned long totalProfileRunTime = 0;
+    int temp1, temp2;
+    unsigned long StepDuration;
+    unsigned long bRemain = ptrHandle->Length;
+    int stepIdx = 0;
+    while (bRemain >= 8) {
+        res = ff_Read(ptrHandle, step, 8, &bytesRead);
+        if (res != FR_OK) {
+            return res;
+        }
+        if (bytesRead != 8) {
+            return FR_ERR_OTHER;
+        }
+        bRemain -= 8;
+
+        Unpack(step, "IIl",
+                &temp1,
+                &temp2,
+                &StepDuration);
+
+        totalProfileRunTime += StepDuration;
+        stepIdx++;
+    }
+    *(retVal) = totalProfileRunTime;
+
+    return FR_OK;
+}
+
 int LoadProfile(const char *FileName, char *msg, MACHINE_STATE *dest) {
     unsigned char step[8];
     int bytesRead;
@@ -109,6 +149,7 @@ int LoadProfile(const char *FileName, char *msg, MACHINE_STATE *dest) {
         return res;
     }
 
+    dest->totalProfileRunTime = 0;
     unsigned long bRemain = ptrHandle->Length;
     int stepIdx = 0;
     while (bRemain >= 8) {
@@ -132,6 +173,7 @@ int LoadProfile(const char *FileName, char *msg, MACHINE_STATE *dest) {
                 dest->ProfileSteps[stepIdx].EndTemperature,
                 dest->ProfileSteps[stepIdx].Duration);
 
+        dest->totalProfileRunTime += dest->ProfileSteps[stepIdx].Duration;
         stepIdx++;
     }
     dest->StepCount = stepIdx;
@@ -151,12 +193,18 @@ int SetEquipmentProfile(const char *FileName, char *msg, MACHINE_STATE *dest) {
     PID_SetTunings(&dest->TargetPID,
             dest->equipmentConfig.Target_Kp,
             dest->equipmentConfig.Target_Ki,
-            dest->equipmentConfig.Target_Kd);
+            dest->equipmentConfig.Target_Kd,
+            dest->equipmentConfig.Target_D_FilterGain,
+            dest->equipmentConfig.Target_D_FilterCoeff,
+            dest->equipmentConfig.Target_D_AdaptiveBand);
 
     PID_SetTunings(&dest->ProcessPID,
             dest->equipmentConfig.Process_Kp,
             dest->equipmentConfig.Process_Ki,
-            dest->equipmentConfig.Process_Kd);
+            dest->equipmentConfig.Process_Kd,
+            dest->equipmentConfig.Process_D_FilterGain,
+            dest->equipmentConfig.Process_D_FilterCoeff,
+            dest->equipmentConfig.Process_D_AdaptiveBand);
 
     PID_SetOutputLimits(&dest->TargetPID,
             dest->equipmentConfig.TargetOutput_Min,
@@ -222,7 +270,6 @@ void WriteRecoveryRecord(MACHINE_STATE *source) {
     recovery_record.Profile_FileEntryAddress = Profile.FileEntryAddress;
     recovery_record.ManualSetPoint = source->ManualSetPoint;
     recovery_record.Equipment_FileEntryAddress = Equip.FileEntryAddress;
-    recovery_record.Trend_FileEntryAddress = ProfileTrendFile.FileEntryAddress;
     recovery_record.ProfileStartTime = source->ProfileStartTime;
     recovery_record.SystemMode = source->SystemMode;
     recovery_record.signature = 0x1234;
@@ -275,7 +322,6 @@ void InitializeRecoveryRecord() {
     Log(".SystemMode=%ub\r\n", recovery_record.SystemMode);
     Log(".TargetPID_Output=%f2\r\n", recovery_record.TargetPID_Output);
     Log(".TimeTurnedOn=%ul\r\n", recovery_record.TimeTurnedOn);
-    Log(".Trend_FileEntryAddress=%xl\r\n", recovery_record.Trend_FileEntryAddress);
     Log(".signature=%xi\r\n", recovery_record.signature);
     Log(".TargetPID_Output=%f2\r\n", recovery_record.TargetPID_Output);
     Log(".Profile_FileEntryAddress=%xl\r\n\r\n", recovery_record.Profile_FileEntryAddress);
@@ -286,6 +332,8 @@ void InitializeRecoveryRecord() {
 }
 
 int RestoreRecoveryRecord() {
+    char filename[128];
+    int res;
     MACHINE_STATE temp;
     uint16_t recordChecksum, calcChecksum;
     Log("---Reading Recovery Record\r\n");
@@ -299,49 +347,76 @@ int RestoreRecoveryRecord() {
     }
 
     if (recovery_record.signature != 0x1234) return 0;
-    Log(".CoolWhenCanTurnOff=%ul\r\n", recovery_record.CoolWhenCanTurnOff);
-    Log(".CoolWhenCanTurnOn=%ul\r\n", recovery_record.CoolWhenCanTurnOn);
-    Log(".Equipment_FileEntryAddress=%xl\r\n", recovery_record.Equipment_FileEntryAddress);
-    Log(".HeatWhenCanTurnOff=%ul\r\n", recovery_record.HeatWhenCanTurnOff);
-    Log(".HeatWhenCanTurnOn=%ul\r\n", recovery_record.HeatWhenCanTurnOn);
-    Log(".ManualSetPoint=%i\r\n", recovery_record.ManualSetPoint);
-    Log(".ProcessPID_Output=%f2\r\n", recovery_record.ProcessPID_Output);
-    Log(".ProfileStartTime=%ul\r\n", recovery_record.ProfileStartTime);
-    Log(".SystemMode=%ub\r\n", recovery_record.SystemMode);
-    Log(".TargetPID_Output=%f2\r\n", recovery_record.TargetPID_Output);
-    Log(".TimeTurnedOn=%ul\r\n", recovery_record.TimeTurnedOn);
-    Log(".Trend_FileEntryAddress=%xl\r\n", recovery_record.Trend_FileEntryAddress);
-    Log(".signature=%xi\r\n", recovery_record.signature);
-    Log(".TargetPID_Output=%f2\r\n", recovery_record.TargetPID_Output);
-    Log(".Profile_FileEntryAddress=%xl\r\n", recovery_record.Profile_FileEntryAddress);
+    Log("   .CoolWhenCanTurnOff=%ul\r\n", recovery_record.CoolWhenCanTurnOff);
+    Log("   .CoolWhenCanTurnOn=%ul\r\n", recovery_record.CoolWhenCanTurnOn);
+    Log("   .Equipment_FileEntryAddress=%xl\r\n", recovery_record.Equipment_FileEntryAddress);
+    Log("   .HeatWhenCanTurnOff=%ul\r\n", recovery_record.HeatWhenCanTurnOff);
+    Log("   .HeatWhenCanTurnOn=%ul\r\n", recovery_record.HeatWhenCanTurnOn);
+    Log("   .ManualSetPoint=%i\r\n", recovery_record.ManualSetPoint);
+    Log("   .ProcessPID_Output=%f2\r\n", recovery_record.ProcessPID_Output);
+    Log("   .ProfileStartTime=%ul\r\n", recovery_record.ProfileStartTime);
+    Log("   .SystemMode=%ub\r\n", recovery_record.SystemMode);
+    Log("   .TargetPID_Output=%f2\r\n", recovery_record.TargetPID_Output);
+    Log("   .TimeTurnedOn=%ul\r\n", recovery_record.TimeTurnedOn);
+    Log("   .signature=%xi\r\n", recovery_record.signature);
+    Log("   .TargetPID_Output=%f2\r\n", recovery_record.TargetPID_Output);
+    Log("   .Profile_FileEntryAddress=%xl\r\n", recovery_record.Profile_FileEntryAddress);
 
     //Restore the Profile and Equipment Names
     ff_File Profile, Equip;
 
     if (recovery_record.SystemMode == SYSTEMMODE_Profile) {
+        Log("Finding Active Profile File @ Entry Address: %xl...", recovery_record.Profile_FileEntryAddress);
         if (recovery_record.Profile_FileEntryAddress) {
-            if (ff_OpenByEntryAddress(&Profile, recovery_record.Profile_FileEntryAddress) != FR_OK) return 0;
+            res = ff_OpenByEntryAddress(&Profile, recovery_record.Profile_FileEntryAddress);
+            if (res != FR_OK) {
+                Log("FAIL: res=%s", Translate_DRESULT(res));
+                return 0;
+            }
+        } else {
+            Log("Error: Entry Address is Blank\r\n");
+            return 0;
         }
-        if (recovery_record.Trend_FileEntryAddress) {
-            if (ff_OpenByEntryAddress(&ProfileTrendFile, recovery_record.Trend_FileEntryAddress) != FR_OK) return 0;
-        }
+
         sprintf(temp.ActiveProfileName, "%s", Profile.FileName);
-        Log("Loading Active Profile: '%s'\r\n", Profile.FileName);
-        if (LoadProfile(temp.ActiveProfileName, scratch, &temp) != FR_OK) return 0;
+        Log("Loading Active Profile: '%s'...", Profile.FileName);
+        res = LoadProfile(temp.ActiveProfileName, scratch, &temp);
+        if (res != FR_OK) {
+            Log("FAIL: res=%s\r\n", Translate_DRESULT(res));
+            return 0;
+        }
+
+        sprintf(filename, "trnd.%s", &Profile.FileName[5]);
+        Log("Opening Trend Record '%s'...", filename);
+        res = ff_OpenByFileName(&ProfileTrendFile, filename, 0);
+        if (res != FR_OK) {
+            Log("FAIL: res=%s\r\n", Translate_DRESULT(res));
+            return 0;
+        }
     } else {
         temp.ActiveProfileName[0] = 0;
     }
 
     if (recovery_record.Equipment_FileEntryAddress) {
-        if (ff_OpenByEntryAddress(&Equip, recovery_record.Equipment_FileEntryAddress) != FR_OK) return 0;
+        Log("Loading Equipment Profile @ EntryAddress:%xl...", recovery_record.Equipment_FileEntryAddress);
+        res = ff_OpenByEntryAddress(&Equip, recovery_record.Equipment_FileEntryAddress);
+        if (res != FR_OK) {
+            Log("FAIL: res=%s\r\n", Translate_DRESULT(res));
+            return 0;
+        }
         sprintf(temp.EquipmentName, "%s", Equip.FileName);
     } else {
+        Log("Loading Deafult Equipment Profile...");
         sprintf(temp.EquipmentName, "equip.default");
     }
 
     //Load the Equipment Profile
-    Log("Loading Equipment Profile: '%s'\r\n", temp.EquipmentName);
-    if (SetEquipmentProfile(temp.EquipmentName, scratch, &temp) != FR_OK) return 0;
+    Log("Filename='%s'...", temp.EquipmentName);
+    res = SetEquipmentProfile(temp.EquipmentName, scratch, &temp);
+    if (res != FR_OK) {
+        Log("FAIL: res=%s\r\n", Translate_DRESULT(res));
+        return 0;
+    }
 
     //Restore the other settings
     temp.CoolWhenCanTurnOff = recovery_record.CoolWhenCanTurnOff;
@@ -375,6 +450,7 @@ int RestoreRecoveryRecord() {
     DISABLE_INTERRUPTS;
     memcpy((BYTE *) & globalstate, (BYTE *) & temp, sizeof (MACHINE_STATE));
     ENABLE_INTERRUPTS;
+    Log("Recoery Success!\r\n");
     return 1;
 }
 
@@ -413,28 +489,22 @@ int SaveActiveProfile() {
 }
 
 int ExecuteProfile(const char *ProfileName, char *msg) {
+    int res;
     sprintf(scratch, "prfl.%s", ProfileName);
     if (LoadProfile(scratch, msg, &globalstate) != 1) {
         return -1;
     }
+
     sprintf(globalstate.ActiveProfileName, "inst.%s.%lu", ProfileName, globalstate.SystemTime);
     SaveActiveProfile();
+
     sprintf(scratch, "trnd.%s.%lu", ProfileName, globalstate.SystemTime);
     ff_Delete(scratch);
-    ff_OpenByFileName(&ProfileTrendFile, scratch, 1);
-    int idx;
-    unsigned long totalProfileLength = 0;
-    for (idx = 0; idx < globalstate.StepCount; idx++) {
-        totalProfileLength += globalstate.ProfileSteps[idx].Duration;
+    res = ff_OpenByFileName(&ProfileTrendFile, scratch, 1);
+    if (res != FR_OK) {
+        sprintf(msg, "Error: unable to allocate profile trend record='%s' res=%s", scratch, Translate_DRESULT(res));
+        return -1;
     }
-    Log("totalProfileLength-Seconds=%ul\r\n", totalProfileLength);
-    totalProfileLength /= 60; //60 seconds per sample - total Sample Count
-    Log("Total Sample Count=%ul\r\n", totalProfileLength);
-    totalProfileLength *= 8; //Eight Bytes Per Sample - Total File Length;
-    Log("Trend File Size=%ul\r\n", totalProfileLength);
-    ff_Seek(&ProfileTrendFile, totalProfileLength, ff_SeekMode_Absolute);
-    ff_UpdateLength(&ProfileTrendFile);
-    ff_Seek(&ProfileTrendFile, 0, ff_SeekMode_Absolute);
     BuildProfileInstanceListing(ProfileName);
 
     DISABLE_INTERRUPTS;
@@ -450,8 +520,6 @@ int ExecuteProfile(const char *ProfileName, char *msg) {
 }
 
 int TerminateProfile(char *msg) {
-    int idx;
-    unsigned long totalLength = 0;
     BYTE OriginalMode = globalstate.SystemMode;
     DISABLE_INTERRUPTS;
     globalstate.SystemMode = SYSTEMMODE_IDLE;
@@ -462,13 +530,6 @@ int TerminateProfile(char *msg) {
         current->EndTemperature = globalstate.StepTemperature;
         current->Duration -= globalstate.StepTimeRemaining;
         globalstate.StepCount = globalstate.StepIdx + 1;
-        for (idx = 0; idx < globalstate.StepCount; idx++) {
-            totalLength += globalstate.ProfileSteps[idx].Duration;
-        }
-        totalLength /= 60;
-        totalLength *= 8;
-        ProfileTrendFile.Length = totalLength;
-        ff_UpdateLength(&ProfileTrendFile);
         SaveActiveProfile();
     }
 
@@ -530,6 +591,7 @@ int TruncateProfile(unsigned char *NewProfileData, int len, char *msg) {
 }
 
 void TrendBufferCommitt() {
+    BYTE tbcBuff[8];
     int bytesWritten;
     unsigned long trendFileTargetPosition = 0;
 
@@ -542,40 +604,173 @@ void TrendBufferCommitt() {
             ENABLE_INTERRUPTS;
             return;
         }
-        TREND_RECORD *current = &trendBuffer[trendBufferRead];
+        TREND_RECORD *thisRecord = &trendBuffer[trendBufferRead];
         trendBufferRead++;
         if (trendBufferRead >= TRENDBUFFER_SIZE) trendBufferRead = 0;
         ENABLE_INTERRUPTS;
 
-        Pack((BYTE *) & scratch, "IIIBB",
-                current->Probe0,
-                current->Probe1,
-                current->SetPoint,
-                current->Output, current->Relay);
+        Pack(tbcBuff, "IIIBB",
+                thisRecord->Probe0,
+                thisRecord->Probe1,
+                thisRecord->SetPoint,
+                thisRecord->Output, thisRecord->Relay);
 
 
-        trendFileTargetPosition = current->time * 8;
+        trendFileTargetPosition = thisRecord->time * 8;
 
-        Log("Record, Time=%ul P0=%i P1=%i Set=%i Out=%ub Relay=%xb | TargetPos=%xl Sector=%xl Offset=%xl",
-                current->time,
-                current->Probe0,
-                current->Probe1,
-                current->SetPoint,
-                current->Output, current->Relay,
+        Log("Record,%ul,%i,%i,%i,%ub,%xb,%xl,%xl,%xl",
+                thisRecord->time,
+                thisRecord->Probe0,
+                thisRecord->Probe1,
+                thisRecord->SetPoint,
+                thisRecord->Output, thisRecord->Relay,
                 trendFileTargetPosition,
                 ProfileTrendFile.CurrentSector,
                 ProfileTrendFile.SectorOffset);
 
-        ff_Seek(&ProfileTrendFile, trendFileTargetPosition, ff_SeekMode_Absolute);
-        ff_Append(&ProfileTrendFile, (BYTE *) scratch, 8, &bytesWritten);
+        if (ProfileTrendFile.Position != trendFileTargetPosition) {
+            ff_Seek(&ProfileTrendFile, trendFileTargetPosition, ff_SeekMode_Absolute);
+        }
+        ff_Append(&ProfileTrendFile, tbcBuff, 8, &bytesWritten);
 
-        Log(" | NewSector=%xl NewOffset=%xl\r\n",
+        Log(",%xl,%xl,%xl\r\n",
+                ProfileTrendFile.Position,
                 ProfileTrendFile.CurrentSector,
                 ProfileTrendFile.SectorOffset);
-
-
     }
 
+}
+
+char OnOffRegulation(int Setpoint, float Measured, MACHINE_STATE *machinestate) {
+    ON_OFF_REGULATION_STATE *state = &(machinestate->SimpleRegState);
+    EQUIPMENT_PROFILE *equip = &(machinestate->equipmentConfig);
+
+    //Do we need to change modes?
+    if (state->Mode == -1) {
+        if (Measured < (Setpoint - equip->coolTransition)) state->Mode = 1;
+    } else if (state->Mode == 1) {
+        if (Measured > (Setpoint + equip->heatTransition)) state->Mode = -1;
+    } else {
+        if (Measured > Setpoint) {
+            state->Mode = -1;
+        } else {
+            state->Mode = 1;
+        }
+    }
+
+    if (state->Mode == -1) { //Cooling Mode
+        if (state->lastOutput == -1) {
+            //Cooling is ON so only turn off after we've crossed the setpoint.
+            if (Measured < Setpoint) state->lastOutput = 0;
+        } else {
+            state->lastOutput = 0;
+            //Cooling is OFF so wait until the temperature rises above the setpoint+differential to turn on...
+            if (Measured > (Setpoint + equip->coolDifferential)) state->lastOutput = -1;
+        }
+    } else { //Heating Mode
+        if (state->lastOutput == 1) {
+            //Heating is ON so only turn off after we've crossed the setpoint.
+            if (Measured > Setpoint) state->lastOutput = 0;
+        } else {
+            state->lastOutput = 0;
+            //Heating is OFF so wait until the temperature falls below the setpoint+differential to turn on...
+            if (Measured < (Setpoint - equip->heatDifferential)) state->lastOutput = 1;
+        }
+    }
+    return state->lastOutput;
+}
+
+void FixedOffTimePWM(MACHINE_STATE *state) {
+    if (state->Output > 0) {
+        if (state->CoolRelay) {
+            Log(",WAITCOOLOFF");
+            //Oops - The controller is calling for heat but we are currently cooling!
+            if (state->SystemTime > state->CoolWhenCanTurnOff) {
+                state->HeatRelay = 0;
+                state->CoolRelay = 0;
+                state->CoolWhenCanTurnOn = state->SystemTime + state->equipmentConfig.CoolMinTimeOff;
+            }
+        } else if (state->HeatRelay) { //Currently Heating...
+            float TimeOn = state->SystemTime - state->TimeTurnedOn;
+            float Duty = 100 * (TimeOn / (TimeOn + state->equipmentConfig.HeatMinTimeOff));
+            Log(",HEAT,%f2", Duty);
+            if (Duty > state->Output) {
+                if (state->SystemTime > state->HeatWhenCanTurnOff) {
+                    state->HeatRelay = 0;
+                    state->CoolRelay = 0;
+                    state->HeatWhenCanTurnOn = state->SystemTime + state->equipmentConfig.HeatMinTimeOff;
+                }
+            }
+        } else {
+            float EstOnTime = state->equipmentConfig.HeatMinTimeOn;
+            if (state->Output < 99) {
+                float CmdDuty = (float) state->Output / (float) 100;
+                EstOnTime = (CmdDuty * state->equipmentConfig.HeatMinTimeOff) / (1 - CmdDuty);
+            }
+            Log(",NEED_HEAT,%f1", EstOnTime);
+            if (EstOnTime >= state->equipmentConfig.HeatMinTimeOn) {
+                if (state->SystemTime > state->HeatWhenCanTurnOn) {
+                    state->TimeTurnedOn = state->SystemTime;
+                    state->HeatRelay = 1;
+                    state->CoolRelay = 0;
+                    state->HeatWhenCanTurnOff = state->SystemTime + state->equipmentConfig.HeatMinTimeOn;
+                }
+            }
+        }
+    } else if (state->Output < 0) {
+        if (state->HeatRelay) {
+            Log(",WAITHEATOFF");
+            //Oops - The controller is calling for COOL but we are currently Heating!
+            if (state->SystemTime > state->HeatWhenCanTurnOff) {
+                state->HeatRelay = 0;
+                state->CoolRelay = 0;
+                state->HeatWhenCanTurnOn = state->SystemTime + state->equipmentConfig.HeatMinTimeOff;
+            }
+        } else if (state->CoolRelay) { //Currently Cooling...
+            float TotalTimeOn = state->SystemTime - state->TimeTurnedOn;
+            float Duty = 100 * (TotalTimeOn / (TotalTimeOn + state->equipmentConfig.CoolMinTimeOff));
+            Log(",COOL,%f2:", Duty);
+            if (Duty > -state->Output) {
+                if (state->SystemTime > state->CoolWhenCanTurnOff) {
+                    state->HeatRelay = 0;
+                    state->CoolRelay = 0;
+                    state->CoolWhenCanTurnOn = state->SystemTime + state->equipmentConfig.CoolMinTimeOff;
+                }
+            }
+        } else {
+            float EstOnTime = state->equipmentConfig.CoolMinTimeOn * 2;
+            if (state->Output > -99) {
+                float CmdDuty = (float) state->Output / (float) (-100);
+                EstOnTime = (CmdDuty * state->equipmentConfig.CoolMinTimeOff) / (1 - CmdDuty);
+            }
+            Log(",NEED_COOL,%f1", EstOnTime);
+            if (EstOnTime >= state->equipmentConfig.CoolMinTimeOn) {
+                if (state->SystemTime > state->CoolWhenCanTurnOn) {
+                    state->TimeTurnedOn = state->SystemTime;
+                    state->CoolRelay = 1;
+                    state->HeatRelay = 0;
+                    state->CoolWhenCanTurnOff = state->SystemTime + state->equipmentConfig.CoolMinTimeOn;
+                }
+            }
+        }
+    } else {
+        if (state->CoolRelay) {
+            Log(",WAITCOOLOFF");
+            if (state->SystemTime > state->CoolWhenCanTurnOff) {
+                state->HeatRelay = 0;
+                state->CoolRelay = 0;
+                state->CoolWhenCanTurnOn = state->SystemTime + state->equipmentConfig.CoolMinTimeOff;
+            }
+        }
+        if (state->HeatRelay) {
+            Log(",WAITHEATOFF");
+            if (state->SystemTime > state->HeatWhenCanTurnOff) {
+                state->HeatRelay = 0;
+                state->CoolRelay = 0;
+                state->HeatWhenCanTurnOn = state->SystemTime + state->equipmentConfig.HeatMinTimeOff;
+            }
+        }
+    }
 }
 
 void TemperatureController_Interrupt() {
@@ -590,19 +785,29 @@ void TemperatureController_Interrupt() {
 
     ReadTemperature(&globalstate);
 
+
+    Log("TICK,%ul,%i,%i", globalstate.SystemTime, globalstate.Probe0Temperature, globalstate.Probe1Temperature);
+
+    if (globalstate.Probe0Temperature < -250 || globalstate.Probe1Temperature <-250 || globalstate.Probe0Temperature > 1250 || globalstate.Probe1Temperature > 1250) {
+        Log(",INVALID_TEMP\r\n");
+        return;
+    }
+
     if (globalstate.SystemMode == SYSTEMMODE_IDLE || globalstate.SystemMode == SYSTEMMODE_ProfileEnded) {
         CommandedTemperature = -32767;
         globalstate.Output = 0;
         globalstate.HeatRelay = 0;
         globalstate.CoolRelay = 0;
-        Log("TICK, Idle:\r\n");
+        Log(",Idle");
         goto OnExit;
     } else if (globalstate.SystemMode == SYSTEMMODE_Profile) {
-        Log("TICK, PRFL:");
-        unsigned long elapsedTime = globalstate.SystemTime - globalstate.ProfileStartTime;
-        unsigned long thisTimeMinutes = elapsedTime / 60;
 
-        Log("et=%ul:", elapsedTime);
+        unsigned long elapsedTime = globalstate.SystemTime - globalstate.ProfileStartTime;
+        globalstate.totalElapsedProfileTime = elapsedTime;
+
+        unsigned long thisTimeMinutes = elapsedTime / 60;
+        //unsigned long thisTimeMinutes = elapsedTime;
+
         char ProfileComplete = 1;
         int stepIdx = 0;
         for (stepIdx = 0; stepIdx < globalstate.StepCount; stepIdx++) {
@@ -616,7 +821,7 @@ void TemperatureController_Interrupt() {
                 delta += (float) step->StartTemperature;
                 globalstate.StepTemperature = (int) delta;
                 CommandedTemperature = globalstate.StepTemperature;
-                Log("idx=%i,Remain=%ul,Temp=%i:", stepIdx, globalstate.StepTimeRemaining, globalstate.StepTemperature);
+
                 ProfileComplete = 0;
                 break;
             } else {
@@ -640,235 +845,98 @@ void TemperatureController_Interrupt() {
             if (trendBufferWrite >= TRENDBUFFER_SIZE) trendBufferWrite = 0;
         }
 
+        Log(",PRFL,%ul,%ui,%ul,%i", elapsedTime, globalstate.StepIdx, globalstate.StepTimeRemaining, globalstate.StepTemperature);
+
         if (ProfileComplete) {
-            Log("Complete:");
             globalstate.SystemMode = SYSTEMMODE_ProfileEnded;
             CommandedTemperature = -32767;
             globalstate.Output = 0;
             goto OnExit;
         }
     } else {
-        Log("TICK, Man:");
+        Log(",Man,");
         CommandedTemperature = globalstate.ManualSetPoint;
-        Log("Temp=%i:", CommandedTemperature);
+        Log(",%i", CommandedTemperature);
     }
 
     switch (globalstate.equipmentConfig.RegulationMode) {
         case REGULATIONMODE_ComplexPID:
-            Log("Cpid:");
+
             globalstate.TargetPID.Setpoint = CommandedTemperature;
             PID_Compute(&globalstate.TargetPID);
-            Log("TarOut=%f1:", globalstate.TargetPID.Output);
+
             globalstate.ProcessPID.Setpoint = globalstate.TargetPID.Output;
             PID_Compute(&globalstate.ProcessPID);
-            Log("ProcOut=%f1:", globalstate.ProcessPID.Output);
+
             globalstate.Output = (char) globalstate.ProcessPID.Output;
+            Log(",Cpid,%f2,%f2,%f2,%f2,%f2,%f2,%f2,%f2",
+                    globalstate.TargetPID.DTerm,
+                    globalstate.TargetPID.ITerm,
+                    globalstate.TargetPID.Output,
+                    globalstate.TargetPID.error,
+                    globalstate.ProcessPID.DTerm,
+                    globalstate.ProcessPID.ITerm,
+                    globalstate.ProcessPID.Output,
+                    globalstate.ProcessPID.error);
             break;
         case REGULATIONMODE_SimplePID:
-            Log("Spid:");
             globalstate.ProcessPID.Setpoint = CommandedTemperature;
             PID_Compute(&globalstate.ProcessPID);
-            Log("ProcOut=%f1:", globalstate.ProcessPID.Output);
             globalstate.Output = (char) globalstate.ProcessPID.Output;
+            Log(",Spid,%f2,%f2,%f2,%f2",
+                    globalstate.ProcessPID.error,
+                    globalstate.ProcessPID.ITerm,
+                    globalstate.ProcessPID.DTerm,
+                    globalstate.ProcessPID.Output);
             break;
         case REGULATIONMODE_SimpleThreashold:
-            Log("Simp:");
+            Log(",SimpT");
+            globalstate.Output = OnOffRegulation(CommandedTemperature, globalstate.ProcessPID.Input, &globalstate);
+            Log(",%b", globalstate.Output);
             if (globalstate.Output > 0) {
+                Log(",HEAT");
                 globalstate.Output = 100;
-                //Heat until we are above the setpoint by the threshold delta
-                if (globalstate.ProcessPID.Input > (CommandedTemperature)) {
-                    globalstate.Output = 0;
-                }
             } else if (globalstate.Output < 0) {
-                if (globalstate.ProcessPID.Input < (CommandedTemperature)) {
-                    globalstate.Output = 0;
-                }
+                Log(",COOL");
+                globalstate.Output = -100;
             } else {
-                if (globalstate.ProcessPID.Input > (CommandedTemperature + globalstate.equipmentConfig.ThresholdDelta)) {
-                    globalstate.Output = -100;
-                } else if (globalstate.ProcessPID.Input < (CommandedTemperature - globalstate.equipmentConfig.ThresholdDelta)) {
-                    globalstate.Output = 100;
-                }
+                Log(",OFF");
+                globalstate.Output = 0;
             }
-            Log("Out=%f1:", globalstate.Output);
             break;
         case REGULATIONMODE_ComplexThreshold:
-            Log("Cplx:");
             globalstate.TargetPID.Setpoint = CommandedTemperature;
             PID_Compute(&globalstate.TargetPID);
-            Log("TarOut=%f1:", globalstate.TargetPID.Output);
 
-            if (globalstate.TargetPID.error > 0) {
-                //The Target is too warm so we are in cooling mode...
-                if (globalstate.Output < 0) {
-                    //Cooling is on...so we need to look for when to turn it off
-                    if (globalstate.ProcessPID.Input < (globalstate.TargetPID.Output - globalstate.equipmentConfig.ThresholdDelta)) {
-                        globalstate.Output = 0;
-                    } else {
-                        globalstate.Output = -100;
-                    }
-                } else {
-                    if (globalstate.ProcessPID.Input > (globalstate.TargetPID.Output + globalstate.equipmentConfig.ThresholdDelta)) {
-                        globalstate.Output = -100;
-                    } else {
-                        globalstate.Output = 0;
-                    }
-                }
+            Log(",CplxT,%f2,%f2,%f2,%f2",
+                    globalstate.TargetPID.error,
+                    globalstate.TargetPID.ITerm,
+                    globalstate.TargetPID.DTerm,
+                    globalstate.TargetPID.Output);
+
+            globalstate.Output = OnOffRegulation((int) globalstate.TargetPID.Output, globalstate.ProcessPID.Input, &globalstate);
+            Log(",%b", globalstate.Output);
+            if (globalstate.Output > 0) {
+                Log(",HEAT");
+                globalstate.Output = 100;
+            } else if (globalstate.Output < 0) {
+                Log(",COOL");
+                globalstate.Output = -100;
             } else {
-                //The Target is too cold so we are in heating mode...
-                if (globalstate.Output > 0) {
-                    //Heating is on...so we need to look for when to turn it off
-                    if (globalstate.ProcessPID.Input > (globalstate.TargetPID.Output + globalstate.equipmentConfig.ThresholdDelta)) {
-                        globalstate.Output = 0;
-                    } else {
-                        globalstate.Output = 100;
-                    }
-                } else {
-                    if (globalstate.ProcessPID.Input < (globalstate.TargetPID.Output - globalstate.equipmentConfig.ThresholdDelta)) {
-                        globalstate.Output = 100;
-                    } else {
-                        globalstate.Output = 0;
-                    }
-                }
+                Log(",OFF");
+                globalstate.Output = 0;
             }
-            Log("Out=%f1:", globalstate.Output);
             break;
     }
 
-    if (globalstate.Output > 0) {
-        if (globalstate.CoolRelay) {
-            //Oops - The controller is calling for heat but we are currently cooling!
-            if (globalstate.SystemTime > globalstate.CoolWhenCanTurnOff) {
-                Log("OKOff:");
-                globalstate.HeatRelay = 0;
-                globalstate.CoolRelay = 0;
-                globalstate.CoolWhenCanTurnOn = globalstate.SystemTime + globalstate.equipmentConfig.CoolMinTimeOff;
-            } else {
-                Log("WaitOff:");
-            }
-        } else if (globalstate.HeatRelay) { //Currently Heating...
-            float TimeOn = globalstate.SystemTime - globalstate.TimeTurnedOn;
-            float Duty = 100 * (TimeOn / (TimeOn + globalstate.equipmentConfig.HeatMinTimeOff));
-            Log("Duty=%f1:", Duty);
-            if (Duty > globalstate.Output) {
-                if (globalstate.SystemTime > globalstate.HeatWhenCanTurnOff) {
-                    Log("OKOff:");
-                    globalstate.HeatRelay = 0;
-                    globalstate.CoolRelay = 0;
-                    globalstate.HeatWhenCanTurnOn = globalstate.SystemTime + globalstate.equipmentConfig.HeatMinTimeOff;
-                } else {
-                    Log("WaitOff:");
-                }
-            } else {
-                Log("More:");
-            }
-        } else {
-            float EstOnTime = globalstate.equipmentConfig.HeatMinTimeOn * 2;
-            if (globalstate.Output < 99) {
-                EstOnTime = globalstate.equipmentConfig.HeatMinTimeOff / ((100 - globalstate.Output)*0.01);
-            }
-            Log("EstOnTm:%f1", EstOnTime);
-            if (EstOnTime >= globalstate.equipmentConfig.HeatMinTimeOn) {
-                if (globalstate.SystemTime > globalstate.HeatWhenCanTurnOn) {
-                    Log("OKOn:");
-                    globalstate.TimeTurnedOn = globalstate.SystemTime;
-                    globalstate.HeatRelay = 1;
-                    globalstate.CoolRelay = 0;
-                    globalstate.HeatWhenCanTurnOff = globalstate.SystemTime + globalstate.equipmentConfig.HeatMinTimeOn;
-                } else {
-                    Log("WaitOn:");
-                }
-            } else {
-                Log("NotMinOn:");
-            }
-        }
-    } else if (globalstate.Output < 0) {
-        if (globalstate.HeatRelay) {
-            //Oops - The controller is calling for COOL but we are currently Heating!
-            if (globalstate.SystemTime > globalstate.HeatWhenCanTurnOff) {
-                Log("OKOff:");
-                globalstate.HeatRelay = 0;
-                globalstate.CoolRelay = 0;
-                globalstate.HeatWhenCanTurnOn = globalstate.SystemTime + globalstate.equipmentConfig.HeatMinTimeOff;
-            } else {
-                Log("WaitOff:");
-            }
-        } else if (globalstate.CoolRelay) { //Currently Cooling...
-            float TotalTimeOn = globalstate.SystemTime - globalstate.TimeTurnedOn;
-            float Duty = 100 * (TotalTimeOn / (TotalTimeOn + globalstate.equipmentConfig.CoolMinTimeOff));
-            Log("Duty=%f1:", Duty);
-            if (Duty > -globalstate.Output) {
-                if (globalstate.SystemTime > globalstate.CoolWhenCanTurnOff) {
-                    Log("OKOff:");
-                    globalstate.HeatRelay = 0;
-                    globalstate.CoolRelay = 0;
-                    globalstate.CoolWhenCanTurnOn = globalstate.SystemTime + globalstate.equipmentConfig.CoolMinTimeOff;
-                } else {
-                    Log("WaitOff:");
-                }
-            } else {
-                Log("More:");
-            }
-        } else {
-            float EstOnTime = globalstate.equipmentConfig.CoolMinTimeOn;
-            if (globalstate.Output > -99) {
-                EstOnTime = globalstate.equipmentConfig.CoolMinTimeOff / ((100 + globalstate.Output)*0.01);
-            }
-            Log("EstOnTm:%f1", EstOnTime);
-            if (EstOnTime >= globalstate.equipmentConfig.CoolMinTimeOn) {
-                if (globalstate.SystemTime > globalstate.CoolWhenCanTurnOn) {
-                    Log("OKOn:");
-                    globalstate.TimeTurnedOn = globalstate.SystemTime;
-                    globalstate.CoolRelay = 1;
-                    globalstate.HeatRelay = 0;
-                    globalstate.CoolWhenCanTurnOff = globalstate.SystemTime + globalstate.equipmentConfig.CoolMinTimeOn;
-                } else {
-                    Log("WaitOn:");
-                }
-            } else {
-                Log("NotMinOn:");
-            }
-        }
-    } else {
-        if (globalstate.CoolRelay) {
-            if (globalstate.SystemTime > globalstate.CoolWhenCanTurnOff) {
-                Log("OKOff:");
-                globalstate.HeatRelay = 0;
-                globalstate.CoolRelay = 0;
-                globalstate.CoolWhenCanTurnOn = globalstate.SystemTime + globalstate.equipmentConfig.CoolMinTimeOff;
-            } else {
-                Log("WaitOff:");
-            }
-        }
-
-        if (globalstate.HeatRelay) {
-            if (globalstate.SystemTime > globalstate.HeatWhenCanTurnOff) {
-                Log("OKOff:");
-                globalstate.HeatRelay = 0;
-                globalstate.CoolRelay = 0;
-                globalstate.HeatWhenCanTurnOn = globalstate.SystemTime + globalstate.equipmentConfig.HeatMinTimeOff;
-            } else {
-                Log("WaitOff:");
-            }
-        }
-
-    }
-
+    //Calculate the PWM
+    FixedOffTimePWM(&globalstate);
 
 OnExit:
     TemperatureControllerIsAlive = 1;
     SET_HEAT(globalstate.HeatRelay);
     SET_COOL(globalstate.CoolRelay);
-
-    if (globalstate.SystemMode != SYSTEMMODE_IDLE) {
-        if (globalstate.HeatRelay) {
-            Log("HEAT:\r\n");
-        } else if (globalstate.CoolRelay) {
-            Log("COOL:\r\n");
-        } else {
-            Log("\r\n");
-        }
-    }
+    Log("\r\n");
 
 }
 
@@ -888,4 +956,3 @@ int TemperatureController_Initialize() {
 
     return 1;
 }
-

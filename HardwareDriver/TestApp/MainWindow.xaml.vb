@@ -10,7 +10,9 @@ Class MainWindow
     Private Sub MainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         Dim ssdp As New Discovery.SSDP.Agents.ClientAgent()
         coms = New HttpCommsProviderWebClient
-        Dim IPAddress As String = InputBox("Controller IP Address:", "", "192.168.0.109")
+        Dim IPAddress As String = InputBox("Controller IP Address:", "", My.Settings.LastAddress)
+        My.Settings.LastAddress = IPAddress
+        My.Settings.Save()
 
         Controller = New FermentationControllerDevice(coms, "http://" & IPAddress)
 
@@ -186,15 +188,12 @@ Class MainWindow
         Dim l As New List(Of PROFILE_STEP)
         Dim rnd As New Random(Now.Millisecond)
 
-        l.Add(New PROFILE_STEP(40, 80, 86400)) '1 Days
-        l.Add(New PROFILE_STEP(80, 50, 86400)) '1 Day
-        l.Add(New PROFILE_STEP(50, 50, 86400)) '1 Day
-        l.Add(New PROFILE_STEP(50, 30, 86400)) '1 Day
-        l.Add(New PROFILE_STEP(30, 25, 3600)) '1 Hour
-        l.Add(New PROFILE_STEP(25, 25, 600)) '10 minutes
+        l.Add(New PROFILE_STEP(18.3, 18.3, 172800)) '2 Days
+        l.Add(New PROFILE_STEP(18.3, 22, 86400)) '1 Day       
+        l.Add(New PROFILE_STEP(22, 22, 1209600)) '14 Days
 
         Try
-            Await Controller.UploadProfile("testProfile2", l)
+            Await Controller.UploadProfile("Saison", l)
             response.Text = "OK"
         Catch ex As Exception
             response.Text = "Error:" & ex.ToString
@@ -343,10 +342,12 @@ Class MainWindow
                 fod.Filter = "Comma Seperated Values (*.csv)|*.csv"
                 fod.AddExtension = False
                 fod.ShowDialog()
+                Dim idx As Integer = 0
                 Using sw = New StreamWriter(fod.OpenFile())
-                    sw.WriteLine("Probe0, Probe1, SetPoint, Output")
+                    sw.WriteLine("Idx, Probe0, Probe1, SetPoint, Output, Relay")
                     For Each itm In ret
-                        sw.WriteLine(itm.ToString)
+                        sw.WriteLine(idx & "," & itm.ToString)
+                        idx += 1
                     Next
                 End Using
                 response.Text = "OK"
@@ -433,7 +434,10 @@ Class MainWindow
 
     Private Async Sub cmdFirmware_Click(sender As Object, e As RoutedEventArgs) Handles cmdFirmware.Click
         Dim dlg As New Forms.FolderBrowserDialog
-        dlg.ShowDialog()
+        dlg.SelectedPath = My.Settings.LastFirmwareFolder
+        If dlg.ShowDialog = Forms.DialogResult.Cancel Then Return
+        My.Settings.LastFirmwareFolder = dlg.SelectedPath
+        My.Settings.Save()
         Try
             response.Text = "--"
             Try
@@ -469,14 +473,46 @@ Class MainWindow
         Dim dlg As New OpenFileDialog
         dlg.ShowDialog()
 
-        Using inp = dlg.OpenFile
-            Dim fname = Path.GetFileName(dlg.FileName)
-            Await Controller.uploadFile(inp, fname)
-        End Using
+        Try
+            Using inp = dlg.OpenFile
+                Dim fname = Path.GetFileName(dlg.FileName)
+                Await Controller.uploadFile(inp, fname)
+            End Using
+        Catch ex As Exception
+
+        End Try
     End Sub
 
     Private Async Sub cmdSetTime_Click(sender As Object, e As RoutedEventArgs) Handles cmdSetTime.Click
         Await Controller.SetTime(Now)
+    End Sub
+
+    Private Async Sub cmdEditEquipmentProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdEditEquipmentProfile.Click
+        Try
+            response.Text = "Updating Profile..."
+            Dim profiles = Await Controller.GetEquipmentProfileListing()
+            Dim prflSelector = New ProfileSelector(profiles)
+            prflSelector.ShowDialog()
+            If prflSelector.isCanceled Then Return
+            Dim name = prflSelector.SelectedProfile
+            prflSelector = Nothing
+            Try
+                Dim temp = Await Controller.DownloadEquipmentProfile(name)
+                Dim edt As New EquipmentEditor
+                edt.Name = name
+                edt.data = temp
+                edt.ShowDialog()
+                If edt.Canceled Then Return
+                Await Controller.UploadEquipmentProfile(name, edt.data)
+                Await Controller.SetEquipmentProfile(name)
+                response.Text = "OK - Profile Updated"
+            Catch ex As Exception
+                response.Text = "Error:" & ex.ToString
+            End Try
+        Catch ex As Exception
+            response.Text = ex.ToString
+            Return
+        End Try
     End Sub
 End Class
 
@@ -554,12 +590,12 @@ Public Class HttpCommsProviderWebClient
                 request.ServicePoint.ConnectionLeaseTimeout = 200
                 request.ServicePoint.UseNagleAlgorithm = False
                 request.ServicePoint.Expect100Continue = False
-                request.Timeout = 5000
+                request.Timeout = 1000
                 request.Method = "PUT"
                 request.ContentLength = 0
 
                 st.Start()
-                Using response As HttpWebResponse = Await request.GetResponseAsync()
+                Using response As HttpWebResponse = request.GetResponse()
                     Using rsp = response.GetResponseStream
                         Using body As New MemoryStream
                             Dim buff(512) As Byte

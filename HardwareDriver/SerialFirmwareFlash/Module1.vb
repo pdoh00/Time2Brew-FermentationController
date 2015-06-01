@@ -294,7 +294,7 @@ Module Module1
             Environment.Exit(-1)
         End If
 
-        If EraseBackup(com) = False Then
+        If WipeChip(com) = False Then
             Environment.Exit(-2)
         End If
 

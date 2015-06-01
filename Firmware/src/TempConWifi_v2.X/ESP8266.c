@@ -15,6 +15,7 @@
 
 typedef enum {
     TCP_SEND_STATE_Idle,
+    TCP_SEND_STATE_Submitted,
     TCP_SEND_STATE_Sending,
     TCP_SEND_STATE_Success,
     TCP_SEND_STATE_Fail
@@ -68,6 +69,8 @@ typedef enum {
 #define ESP_START_MDNS_RESP 0x17
 #define ESP_START_UPNP_RESP 0x18
 
+#define ESP_SEND_GEN_MESSAGE    0x19
+
 typedef enum {
     Fail_UnableToGetSoftAP_Config = 1,
     Fail_UnableToSetSoftAP_Config = 2,
@@ -100,12 +103,14 @@ typedef enum {
     SendFail_Timeout = 29,
     SendFail_Closed = 30,
     SendFail_Reconnect = 31,
-    SendOK = 32
-
+    SendOK = 32,
+    Fail_Init_ModeIsInvalid = 33,
+    InProgress_Sending = 34,
+    Invalid_SLIP_Packet = 35
 } ESP_INIT_RESP_codes;
 
 
-MESSAGE Msg;
+ESP8266_SLIP_MESSAGE Msg;
 NOTIFY Notify;
 TCP_CHANNEL TCP_Channels[TCP_CHANNEL_COUNT], uPnP_Channel, mDNS_Channel;
 
@@ -114,11 +119,13 @@ IP_Address_type IP_Address;
 RESET_STATE ResetState = RESET_IDLE;
 int FailReason;
 
+int InvalidSlipMsgReported = 0;
+
 int StartMDNS_State = 0;
 int StartUPNP_State = 0;
 
-static void ESP_ProcessMessage(MESSAGE *msg);
-static void DisposeMessage(MESSAGE *dat);
+static void ESP_ProcessMessage(ESP8266_SLIP_MESSAGE *msg);
+static void DisposeMessage(ESP8266_SLIP_MESSAGE *dat);
 static int ESP_Reset(float PowerOffTime);
 static const char *translateESP_RESP_CODE(int code);
 
@@ -218,7 +225,7 @@ void ESP_RX_FIFO_Processor() {
                         break;
                     case 9:
                         Msg.Detail.ub[3] = rxByte;
-                        if (Msg.DataLength > 1534) {
+                        if (Msg.DataLength > ESP8266_SLIP_MESSAGE_MAX_LEN) {
                             DisposeMessage(&Msg);
                             state = WaitForMsgStart;
                         } else {
@@ -248,7 +255,7 @@ void ESP_RX_FIFO_Processor() {
     }
 }
 
-static void ESP_ProcessMessage(MESSAGE *msg) {
+static void ESP_ProcessMessage(ESP8266_SLIP_MESSAGE *msg) {
     BYTE msgID = msg->MessageType;
     BYTE ChannelID = msg->TCP_ChannelID;
     int ResponseCode = msg->ResponseCode;
@@ -292,6 +299,9 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
                 if (ResponseCode == SendOK) {
                     TCP->SendState = TCP_SEND_STATE_Success;
                     WifiCommunicationsAreAlive = 1;
+                } else if (ResponseCode == InProgress_Sending) {
+                    TCP->SendState = TCP_SEND_STATE_Sending;
+                    WifiCommunicationsAreAlive = 1;
                 } else {
                     Log("%b: TCP Send Failed: %s\r\n", ChannelID, translateESP_RESP_CODE(ResponseCode));
                     TCP->SendState = TCP_SEND_STATE_Fail;
@@ -300,14 +310,14 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             break;
         case ESP_TCP_RECIEVE:
             if (TCP != NULL) {
-                WifiCommunicationsAreAlive=1;
+                WifiCommunicationsAreAlive = 1;
                 ParseMessage_HTTP(msg);
             }
             break;
         case ESP_UPNP_SEND_RESULT:
             uPnP_Channel.SendStateDetail = ResponseCode;
             if (ResponseCode == SendOK) {
-                WifiCommunicationsAreAlive=1;
+                WifiCommunicationsAreAlive = 1;
                 uPnP_Channel.SendState = TCP_SEND_STATE_Success;
             } else {
                 Log("uPnP Send Failed: %s\r\n", translateESP_RESP_CODE(ResponseCode));
@@ -321,7 +331,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
         case ESP_MDNS_SEND_RESULT:
             mDNS_Channel.SendStateDetail = ResponseCode;
             if (ResponseCode == SendOK) {
-                WifiCommunicationsAreAlive=1;
+                WifiCommunicationsAreAlive = 1;
                 mDNS_Channel.SendState = TCP_SEND_STATE_Success;
             } else {
                 Log("mDNS Send Failed: %s\r\n", translateESP_RESP_CODE(ResponseCode));
@@ -334,12 +344,22 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             break;
         case ESP_INIT_RESP:
             if (ResponseCode == Init_OK) {
-                WifiCommunicationsAreAlive=1;
+                WifiCommunicationsAreAlive = 1;
                 ResetState = RESET_SUCESS;
             } else {
                 //Log("Reset Failed: %s\r\n", translateESP_RESP_CODE(ResponseCode));
                 ResetState = RESET_FAIL;
                 FailReason = ResponseCode;
+            }
+            break;
+        case ESP_SEND_GEN_MESSAGE:
+            if (ResponseCode == Invalid_SLIP_Packet) {
+                Log("ESP! invalid SLIP Subtype=%xb\r\n", msg->Detail.ub[0]);
+                InvalidSlipMsgReported = 1;
+            } else if (ResponseCode == InProgress_Sending) {
+                if (TCP != NULL) {
+                    TCP->SendState = TCP_SEND_STATE_Sending;
+                }
             }
             break;
         default:
@@ -348,7 +368,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
     DisposeMessage(msg);
 }
 
-static void DisposeMessage(MESSAGE *dat) {
+static void DisposeMessage(ESP8266_SLIP_MESSAGE *dat) {
     if (dat != NULL) {
 
         dat->TCP_ChannelID = 0;
@@ -582,6 +602,11 @@ int ESP_TCP_StartStream(BYTE ChannelID) {
 }
 
 int ESP_TCP_TriggerWiFi_Send(BYTE ChannelID) {
+    TCP_SEND_STATE state;
+    unsigned long tmr, timeout;
+    GetTime(tmr);
+    timeout = tmr + SYSTEM_TIMER_FREQ * 0.1;
+
     if (ChannelID > 9) return -1;
     TCP_CHANNEL * con = &TCP_Channels[ChannelID];
 
@@ -589,15 +614,49 @@ int ESP_TCP_TriggerWiFi_Send(BYTE ChannelID) {
     if (con->SendState != TCP_SEND_STATE_Idle) {
         Log("SendState!=Idle\r\n");
         ENABLE_INTERRUPTS;
-
         return -1;
     }
-    con->SendState = TCP_SEND_STATE_Sending;
+    con->SendState = TCP_SEND_STATE_Submitted;
+    InvalidSlipMsgReported = 0;
     ENABLE_INTERRUPTS;
-
     FIFO_WriteData(txFIFO, 2, ESCAPE_CHAR, END_OF_MESSAGE);
     _U1TXIF = 1;
-    return 1;
+
+    while (1) {
+        DISABLE_INTERRUPTS;
+        tmr = Timer500Hz;
+        state = con->SendState;
+        ENABLE_INTERRUPTS;
+
+        if (InvalidSlipMsgReported) {
+            Log("Invalid SLIP Message Reported!\r\n");
+            con->SendState = TCP_SEND_STATE_Idle;
+            return -1;
+        }
+
+        if (tmr > timeout) {
+            Log("Wait for acceptance Timeout\r\n");
+            con->SendState = TCP_SEND_STATE_Idle;
+            return -1;
+        }
+
+        switch (state) {
+            case TCP_SEND_STATE_Submitted:
+                DELAY_105uS;
+                continue;
+                break;
+            case TCP_SEND_STATE_Sending:
+                return 1;
+                break;
+            default:
+                Log("Error! Unknown State: %xi\r\n", state);
+                DISABLE_INTERRUPTS;
+                con->SendState = TCP_SEND_STATE_Idle;
+                ENABLE_INTERRUPTS;
+                return -1;
+                break;
+        }
+    }
 }
 
 int ESP_TCP_CancelSend(BYTE ChannelID) {
@@ -666,6 +725,8 @@ int ESP_mDNS_BeginSend() {
 
     mDNS_Channel.SendState = TCP_SEND_STATE_Sending;
     FIFO_WriteData(txFIFO, 3, ESCAPE_CHAR, START_OF_MESSAGE, MCU_MDNS_ASYNCSEND);
+
+
 
     return (1);
 }

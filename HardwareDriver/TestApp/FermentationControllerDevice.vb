@@ -258,6 +258,9 @@ Public Class FermentationControllerDevice
         Dim timeOffset = (Instance.ToUniversalTime - EPOCH).TotalSeconds
         Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/temperaturetrend?name=" & profileName & "&instance=" & timeOffset)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+        Using fs As New FileStream("C:\rawProfile.dat", FileMode.Create, FileAccess.Write)
+            fs.Write(Result.Body, 0, Result.Body.Length)
+        End Using
         Dim ret As New List(Of TREND_RECORD)
         Dim offset As Integer = 0
         While (Result.Body.Length - offset >= 8)
@@ -442,28 +445,39 @@ Public Class FermentationControllerDevice
                 first = False
                 While (1)
                     Try
-
+                        Console.Write("Push...")
                         Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
-                        If Result.StatusCode <> 200 Then Continue While ' Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                        If Result.StatusCode <> 200 Then
+                            Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                            Continue While
+                        Else
+                            Console.WriteLine("OK")
+                        End If
                         Exit While
                     Catch ex As Exception
-
+                        Console.WriteLine(ex.ToString)
                     End Try
                 End While
             Else
                 url += "&overwrite=n"
                 While (1)
                     Try
-
+                        Console.Write("Push...")
                         Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
-                        If Result.StatusCode <> 200 Then Continue While ' New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                        If Result.StatusCode <> 200 Then
+                            Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                            Continue While
+                        Else
+                            Console.WriteLine("OK")
+                        End If
                         Exit While
                     Catch ex As Exception
-
+                        Console.WriteLine(ex.ToString)
                     End Try
                 End While
             End If
         End While
+        Debug.Print("DONE")
     End Function
 
     Public Async Function uploadFile(inputFile As Stream, fname As String) As Task
@@ -495,10 +509,14 @@ Public Class FermentationControllerDevice
             url += "&content=" & ToURL_Safe_base64String(buffer, 0, bytesToSend)
             While (1)
                 Try
+                    Console.Write("Push...")
                     Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
+
                     If Result.StatusCode <> 200 Then
                         Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
                         Continue While ' Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                    Else
+                        Console.WriteLine("OK")
                     End If
                     Exit While
                 Catch ex As Exception

@@ -65,9 +65,23 @@ extern "C" {
         float Target_Kd;
         float TargetOutput_Max;
         float TargetOutput_Min;
-        float ThresholdDelta;
+        float Process_D_FilterGain;
+        float Process_D_FilterCoeff;
+        float Process_D_AdaptiveBand;
+        float Target_D_FilterGain;
+        float Target_D_FilterCoeff;
+        float Target_D_AdaptiveBand;
+        int coolDifferential;
+        int heatDifferential;
+        int coolTransition;
+        int heatTransition;
         unsigned int CheckSum;
     } EQUIPMENT_PROFILE;
+
+    typedef struct {
+        char Mode;
+        char lastOutput;
+    } ON_OFF_REGULATION_STATE;
 
     typedef struct {
         unsigned long SystemTime;
@@ -87,6 +101,8 @@ extern "C" {
         unsigned int StepIdx;
         int StepTemperature;
         unsigned long StepTimeRemaining;
+        unsigned long totalElapsedProfileTime;
+        unsigned long totalProfileRunTime;
         unsigned char StepCount;
         PROFILE_STEP ProfileSteps[64];
         int Probe0Temperature;
@@ -95,6 +111,7 @@ extern "C" {
         int ManualSetPoint;
         EQUIPMENT_PROFILE equipmentConfig;
         unsigned long signature;
+        ON_OFF_REGULATION_STATE SimpleRegState;
     } MACHINE_STATE;
 
     extern MACHINE_STATE globalstate;
@@ -114,6 +131,7 @@ extern "C" {
     void InitializeRecoveryRecord();
     int LoadProfile(const char *FileName, char *msg, MACHINE_STATE *dest);
     void WriteRecoveryRecord(MACHINE_STATE *source);
+    int GetProfileTotalDuration(const char *FileName, unsigned long *retVal);
 
 #ifdef	__cplusplus
 }

@@ -12,19 +12,25 @@
 extern "C" {
 #endif
 
+#include "IIR.h"
+
     typedef struct {
-        float lastInput, ITerm;
+        float lastError;
+        float ITerm;
         float Output;
         float kp, ki, kd;
         float Setpoint;
         float outMax, outMin;
         float Input;
         float error;
+        float DTerm;
+        float D_AdaptiveBand;
+        IIR_State D_Filter;
     } PID_CTX;
 
     void PID_Compute(PID_CTX *ctx);
     void PID_Initialize(PID_CTX *ctx);
-    void PID_SetTunings(PID_CTX *ctx, double Kp, double Ki, double Kd);
+    void PID_SetTunings(PID_CTX *ctx, float Kp, float Ki, float Kd, float D_FilterGain, float D_FilterCoeff, float D_AdaptiveBand);
     void PID_SetOutputLimits(PID_CTX *ctx, double Min, double Max);
 
 

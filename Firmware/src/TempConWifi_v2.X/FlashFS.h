@@ -64,6 +64,7 @@ extern "C" {
     int diskWriteSecure(char sector, unsigned char * in);
     int diskEraseSecure(char sector);
     void diskReadMFID(unsigned char *mfId, unsigned char *devId);
+    int GetNextSector(unsigned long sector, unsigned long *nextSector);
     unsigned char diskReadStatus1();
     unsigned char diskReadStatus2();
     unsigned char diskReadStatus3();

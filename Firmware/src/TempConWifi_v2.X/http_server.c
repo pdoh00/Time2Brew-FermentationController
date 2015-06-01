@@ -218,7 +218,7 @@ char *myStringCopyN(char *src, char *dst, int bCount) {
     return dst;
 }
 
-void ParseMessage_HTTP(MESSAGE *msg) {
+void ParseMessage_HTTP(ESP8266_SLIP_MESSAGE *msg) {
     HTTP_REQUEST *req = NULL;
     int ChannelId = msg->TCP_ChannelID;
     unsigned long tmr;
@@ -262,7 +262,7 @@ void ParseMessage_HTTP(MESSAGE *msg) {
         switch (req->ParseState) {
             case HTTP_PARSE_STATE_START: //We're looking for the first HTTP Header line
                 LineStart = MsgCursor;
-                LineLength = MoveCursorToLineEnd(&MsgCursor, 1536);
+                LineLength = MoveCursorToLineEnd(&MsgCursor, ESP8266_SLIP_MESSAGE_MAX_LEN);
                 if (LineLength < 0) {
                     goto InvalidRequest;
                 }
@@ -439,7 +439,10 @@ void Send404_NotFound(HTTP_REQUEST * req) {
             "\r\n";
     ESP_TCP_StartStream(req->TCP_ChannelID);
     circularPrintf(txFIFO, "%s", HTTP_404);
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
         Log("Failed\r\n");
     } else {
@@ -455,7 +458,10 @@ void Send405_MethodNotAllowed(HTTP_REQUEST * req, const char *AllowedMethods) {
             "Content-Length: 0\r\n"
             "Allow: %s\r\n"
             "\r\n", AllowedMethods);
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
         Log("Failed\r\n");
     } else {
@@ -472,7 +478,10 @@ void Send500_InternalServerError(HTTP_REQUEST * req, const char *Msg) {
             "Content-Length: %d\r\n"
             "\r\n"
             "%s", strlen(Msg), Msg);
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
         Log("Failed\r\n");
     } else {
@@ -487,7 +496,10 @@ void Send501_NotImplemented(HTTP_REQUEST * req) {
             "Connection: Keep-Alive\r\n"
             "Content-Length: 0\r\n"
             "\r\n");
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
         Log("Failed\r\n");
     } else {
@@ -496,29 +508,22 @@ void Send501_NotImplemented(HTTP_REQUEST * req) {
 }
 
 void Send200_OK_Simple(HTTP_REQUEST * req) {
-    Log("   %d: Send200_OK_Simple...", req->TCP_ChannelID);
+    //
     ESP_TCP_StartStream(req->TCP_ChannelID);
     circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
             "Connection: Keep-Alive\r\n"
             "Content-Length: 0\r\n"
             "\r\n");
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
-        Log("Failed\r\n");
-    } else {
-        Log("OK\r\n");
+        Log("   %d: Send200_OK_Simple...Failed!", req->TCP_ChannelID);
     }
 }
 
 void Send200_OK_Data(HTTP_REQUEST * req, unsigned char *msg, int length) {
-    Log("   %d: Send200_OK_Data...Length=%d", req->TCP_ChannelID, length);
-
-    Log("HTTP/1.1 200 OK\r\n"
-            "Connection: Keep-Alive\r\n"
-            "Content-Type: application/octet-stream\r\n"
-            "Content-Length: %i\r\n"
-            "\r\n", length);
-
     ESP_TCP_StartStream(req->TCP_ChannelID);
     circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
             "Connection: Keep-Alive\r\n"
@@ -527,27 +532,29 @@ void Send200_OK_Data(HTTP_REQUEST * req, unsigned char *msg, int length) {
             "\r\n", length);
     ESP_StreamArray(msg, length);
 
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
-        Log("Failed\r\n");
-    } else {
-        Log("OK\r\n");
+        Log("   %d: Send200_OK_Data...Length=%d | FAILED", req->TCP_ChannelID, length);
     }
 }
 
 void Send200_OK_SmallMsg(HTTP_REQUEST * req, const char *msg) {
-    Log("   %d: Send200_OK_SmallMsg...", req->TCP_ChannelID);
+
     ESP_TCP_StartStream(req->TCP_ChannelID);
     circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
             "Connection: Keep-Alive\r\n"
             "Content-Length: %i\r\n"
             "\r\n"
             "%s", strlen(msg), msg);
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
-        Log("Failed\r\n");
-    } else {
-        Log("OK\r\n");
+        Log("   %d: Send200_OK_SmallMsg...FAILED", req->TCP_ChannelID);
     }
 }
 
@@ -559,8 +566,12 @@ void Send304_NotModified(HTTP_REQUEST * req) {
             "ETag: \"%s\"\r\n"
             "Connection: Keep-Alive\r\n"
             "\r\n", req->ETag);
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
+        ESP_TCP_CloseConnection(req->TCP_ChannelID);
         Log("Failed\r\n");
     } else {
         Log("OK\r\n", req->TCP_ChannelID);
@@ -578,7 +589,10 @@ void Send401_Unathorized(HTTP_REQUEST * req, const char *nonce, const char *Stal
             "\r\n"
             "<!DOCTYPE html><html><head><title>Error</title></head><body><h1>401 Unauthorized.</h1></body></html>",
             ESP_Config.Name, nonce, Stale);
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
     if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
         Log("Failed\r\n");
     } else {
@@ -751,6 +765,7 @@ void Process_GET_File(HTTP_REQUEST * req) {
 void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long length) {
     ff_File Handle, Test;
     ff_File *handle = &Handle;
+    int retry;
 
     if (req->Resource == NULL) {
         Send500_InternalServerError(req, "Resource is NULL");
@@ -824,18 +839,44 @@ void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long 
 
     Log("      Streaming 1st Chunk:");
 
-    if (length < 7168) bytesToRead = length;
-    else bytesToRead = 7168;
+    if (length < 11000) bytesToRead = length;
+    else bytesToRead = 11000;
     ff_Read_StreamToWifi(handle, bytesToRead);
     Log(" Size=%ul...Trigger Sending...\r\n", bytesToRead);
-    ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
+
+
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        retry = 3;
+        while (retry--) {
+            ff_Seek(handle, handle->Position - bytesToRead, ff_SeekMode_Absolute);
+            ESP_TCP_StartStream(req->TCP_ChannelID);
+            circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
+                    "Connection: Keep-Alive\r\n"
+                    "Cache-Control: max-age=2592000\r\n"
+                    "ETag: \"%s\"\r\n"
+                    "Content-Type: %s\r\n"
+                    "Content-Encoding: %s\r\n"
+                    "Content-Length: %ul\r\n"
+                    "\r\n", FileETag, GetContentType(resource), ContentEncoding, length);
+            ff_Read_StreamToWifi(handle, bytesToRead);
+            if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+                continue;
+            } else {
+                break;
+            }
+        }
+        if (retry == 0) {
+            Log("Unable to Send Wifi Data...\r\n");
+            return;
+        }
+    }
     bytesSent = bytesToRead;
 
     while (bytesSent < length) {
         Log("      Streaming NEXT Chunk:");
         ESP_TCP_StartStream(req->TCP_ChannelID);
-        if ((length - bytesSent) < 7168) bytesToRead = (length - bytesSent);
-        else bytesToRead = 7168;
+        if ((length - bytesSent) < 11680) bytesToRead = (length - bytesSent);
+        else bytesToRead = 11680;
         ff_Read_StreamToWifi(handle, bytesToRead);
         Log(" Size=%ul...", bytesToRead);
 
@@ -849,10 +890,24 @@ void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long 
             return;
         }
         Log("OK...Trigger Send\r\n");
-        ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID);
-
+        if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+            retry = 3;
+            while (retry--) {
+                ff_Seek(handle, handle->Position - bytesToRead, ff_SeekMode_Absolute);
+                ESP_TCP_StartStream(req->TCP_ChannelID);
+                ff_Read_StreamToWifi(handle, bytesToRead);
+                if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            if (retry == 0) {
+                Log("Unable to Send Wifi Data...\r\n");
+                return;
+            }
+        }
         bytesSent += bytesToRead;
-
     }
     //The data has been streamed to the ESP.  Now we need to wait for the previous packet to
     //finish sending over WiFi.

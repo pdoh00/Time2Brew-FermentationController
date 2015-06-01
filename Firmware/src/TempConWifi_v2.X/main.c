@@ -18,6 +18,7 @@
 #include "RTC.h"
 #include "SystemConfiguration.h"
 #include "uPnP.h"
+#include "Pack.h"
 #include "mDNS.h"
 #include "Settings.h"
 #include "http_server.h"
@@ -34,7 +35,7 @@ _FGS(GWRP_OFF & GCP_OFF); //Turn off Code Protect
 
 const char *WiFiConfigFilename = "secure.wificonfig";
 
-const char *Version = "0.1.7";
+const char *Version = "0.1.9";
 
 unsigned long Timer500Hz;
 
@@ -46,12 +47,12 @@ int Global_Config_Mode = 0;
 
 ESP8266_CONFIG ESP_Config;
 
-BYTE __attribute__((aligned)) rxFIFOData[1536];
-FIFO_BUFFER rxFIFO_real = {rxFIFOData, rxFIFOData, rxFIFOData, rxFIFOData + 1536};
+BYTE __attribute__((aligned)) rxFIFOData[2048];
+FIFO_BUFFER rxFIFO_real = {rxFIFOData, rxFIFOData, rxFIFOData, rxFIFOData + 2048};
 FIFO_BUFFER *rxFIFO = &rxFIFO_real;
 
-BYTE __attribute__((aligned)) txFIFOData[768];
-FIFO_BUFFER txFIFO_real = {txFIFOData, txFIFOData, txFIFOData, txFIFOData + 768};
+BYTE __attribute__((aligned)) txFIFOData[2048];
+FIFO_BUFFER txFIFO_real = {txFIFOData, txFIFOData, txFIFOData, txFIFOData + 2048};
 FIFO_BUFFER *txFIFO = &txFIFO_real;
 
 BYTE __attribute__((aligned)) logFIFOData[1024];
@@ -456,6 +457,9 @@ int main(int argc, char** argv) {
     RTC_Initialize();
     Delay(1);
 
+
+
+
     TriggerConfigReset = 0;
 
     if (GlobalStartup(0) != FR_OK) {
@@ -464,6 +468,67 @@ int main(int argc, char** argv) {
             Log("Failure To Configure...Retry...\r\n");
         };
     }
+
+//    BYTE sampBuff[8];
+//    unsigned long sigVal = 0xAABBCCDD;
+//    Log("Writting Sample File...");
+//    ff_File sampleFile;
+//    int bwrit;
+//    ff_Delete("sampleTest.dat");
+//    ff_OpenByFileName(&sampleFile, "sampleTest.dat", 1);
+//    unsigned long SampleNumber = 0;
+//    unsigned long targetPos;
+//    for (SampleNumber = 0; SampleNumber < 30000UL; SampleNumber++) {
+//        targetPos = SampleNumber * 8;
+//        if (sampleFile.Position != targetPos) {
+//            ff_Seek(&sampleFile, targetPos, ff_SeekMode_Absolute);
+//        }
+//        Pack(sampBuff, "LL", SampleNumber, sigVal);
+//        ff_Append(&sampleFile, sampBuff, 8, &bwrit);
+//    }
+//    ff_UpdateLength(&sampleFile);
+//    Log("OK\r\n");
+//
+//    Log("\r\nChecking Sample File...\r\n");
+//    ff_OpenByFileName(&sampleFile, "sampleTest.dat", 0);
+//
+//    unsigned long comp;
+//    for (SampleNumber = 0; SampleNumber < 30000UL; SampleNumber++) {
+//        targetPos = SampleNumber * 8;
+//        if (sampleFile.Position != targetPos) {
+//            ff_Seek(&sampleFile, targetPos, ff_SeekMode_Absolute);
+//        }
+//        ff_Read(&sampleFile, sampBuff, 8, &bwrit);
+//        comp = sampBuff[3];
+//        comp <<= 8;
+//        comp += sampBuff[2];
+//        comp <<= 8;
+//        comp += sampBuff[1];
+//        comp <<= 8;
+//        comp += sampBuff[0];
+//        if (comp != SampleNumber) {
+//            Log("Error @ Sample#:%ul Actual=%ul\r\n", SampleNumber, comp);
+//        }
+//        if (sampBuff[7] != 0xAA || sampBuff[6] != 0xBB || sampBuff[5] != 0xCC || sampBuff[4] != 0xDD) {
+//            Log("Error @ Sample#:%ul Sig Actual=%xb %xb %xb %xb\r\n", SampleNumber, sampBuff[4], sampBuff[5], sampBuff[6], sampBuff[7]);
+//        }
+//    }
+//    Log("Done\r\n");
+//
+//    Log("Sample File Cluster Chain ", sampleFile.OriginSector);
+//    unsigned long nxtSector, curSector;
+//    curSector = sampleFile.OriginSector;
+//    while (1) {
+//        Log("->%xl", curSector);
+//        GetNextSector(curSector, &nxtSector);
+//        if (nxtSector > SECTORCOUNT || nxtSector < 4) {
+//            Log("->(%xl)\r\n", nxtSector);
+//            break;
+//        }
+//        curSector = nxtSector;
+//    }
+//
+
 
     Log("Starting WDT:...");
     if (RCONbits.WDTO) {

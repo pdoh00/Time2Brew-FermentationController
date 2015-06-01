@@ -67,7 +67,7 @@ extern "C" {
     int url_queryParse(const char *queryString, const char *parameter, char **output, int *len);
     int url_queryParse2(const char *queryString, const char *parameter, char *output, int MaxLen);
     void HTTP_ServerLoop();
-    void ParseMessage_HTTP(MESSAGE *msg);
+    void ParseMessage_HTTP(ESP8266_SLIP_MESSAGE *msg);
     void Send500_InternalServerError(HTTP_REQUEST * req, const char *Msg);
     void Send200_OK_Simple(HTTP_REQUEST * req);
     void Process_GET_File(HTTP_REQUEST * req);

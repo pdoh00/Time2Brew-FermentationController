@@ -368,10 +368,11 @@ void GET_runHistory(HTTP_REQUEST *req, const char *urlParameter) {
 void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
     char profileName[64];
     char strInstance[14];
+    int res;
 
     if (url_queryParse2(urlParameter, "name", profileName, 63)) {
         if (url_queryParse2(urlParameter, "instance", strInstance, 13)) {
-            unsigned long sendLength = ProfileTrendFile.Length;
+            unsigned long sendLength;
             sprintf(req->Resource, "trnd.%s.%s", profileName, strInstance);
             if ((globalstate.SystemMode == SYSTEMMODE_Profile) &&
                     (strcmp(ProfileTrendFile.FileName, req->Resource) == 0)) {
@@ -379,6 +380,17 @@ void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
                 et /= 60;
                 et += 1;
                 sendLength = et * 8;
+            } else {
+                sprintf(req->Resource, "inst.%s.%s", profileName, strInstance);
+                res = GetProfileTotalDuration(req->Resource, &sendLength);
+                if (res != FR_OK) {
+                    sprintf(msg, "Error: Unable to GetProfileTotalDuration: res=%s", Translate_DRESULT(res));
+                    Send500_InternalServerError(req, msg);
+                    return;
+                }
+                sendLength /= 60;
+                sendLength += 1;
+                sendLength *= 8;
             }
             sprintf(req->Resource, "/trnd.%s.%s", profileName, strInstance);
             req->ETag = NULL;
@@ -827,9 +839,61 @@ void PUT_trimFileSystem(HTTP_REQUEST *req, const char *urlParameter) {
     if (res != FR_OK) {
         sprintf(msg, "Trim Failed Res='%s'", Translate_DRESULT(res));
         Send500_InternalServerError(req, msg);
-    } else {
-        Send200_OK_Simple(req);
     }
+
+    Send200_OK_Simple(req);
+}
+
+void GET_rawSector(HTTP_REQUEST *req, const char *urlParameter) {
+    Log("GET_rawSector...");
+    int sector;
+    char strSector[32];
+    unsigned char rawBuff[256];
+
+    if (url_queryParse2(urlParameter, "sector", strSector, 16)) {
+        if (sscanf(strSector, "%d", &sector) != 1) {
+            Send500_InternalServerError(req, "Error: 'sector' is invalid");
+            return;
+        }
+    } else {
+        Send500_InternalServerError(req, "Error: 'sector' is not provided");
+        return;
+    }
+
+    Log("%xi...", sector);
+
+    ESP_TCP_StartStream(req->TCP_ChannelID);
+
+    circularPrintf(txFIFO,
+            "HTTP/1.1 200 OK\r\n"
+            "Connection: Keep-Alive\r\n"
+            "Content-Type:  application/octet-stream\r\n"
+            "Content-Length: 4096\r\n"
+            "\r\n");
+    _U1TXIF = 1;
+    int x;
+    unsigned long address;
+    address = sector;
+    address <<= 12;
+
+    for (x = 0; x < 16; x++) {
+        diskRead(address, 256, rawBuff);
+        ESP_StreamArray(rawBuff, 256);
+        address += 256;
+    }
+
+    if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) < 0) {
+        Log("Unable to Send Wifi Data...\r\n");
+        return;
+    }
+
+    if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
+        ESP_TCP_CloseConnection(req->TCP_ChannelID);
+        Log("GET_rawSectorFailed!\r\n");
+    } else {
+        Log("OK\r\n");
+    }
+
 }
 
 void PUT_deleteProfileInstance(HTTP_REQUEST *req, const char *urlParameter) {
@@ -1138,7 +1202,7 @@ void PUT_uploadFile(HTTP_REQUEST *req, const char *urlParameter) {
         }
     }
 
-    Log("UploadFile: '%s' Offset=%ul OK\r\n", fname, offset);
+    Log("UploadFile: '%s' Offset=%ul finalize='%s'...OK\r\n", fname, offset, temp);
     Send200_OK_Simple(req);
 }
 
@@ -1169,7 +1233,7 @@ void GET_FlashStats(HTTP_REQUEST *req, const char *urlParameter) {
     Send200_OK_SmallMsg(req, msg);
 }
 
-#define API_INTERFACE_COUNT    26
+#define API_INTERFACE_COUNT    27
 
 API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/echo", &GET_echo, 0, &PUT_echo, 0, 0},
@@ -1197,7 +1261,8 @@ API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/version", &GET_version, 0, NULL, 0, 0},
     {"/api/flashstats", &GET_FlashStats, 0, NULL, 0, 0},
     {"/api/uploadfile", NULL, 0, &PUT_uploadFile, 0, 0},
-    {"/api/deletefile", NULL, 0, &PUT_deleteFile, 0, 0}
+    {"/api/deletefile", NULL, 0, &PUT_deleteFile, 0, 0},
+    {"/api/rawsector", &GET_rawSector, 0, &GET_rawSector, 0, 0}
 };
 
 API_INTERFACE * GetAPI(HTTP_REQUEST * req) {

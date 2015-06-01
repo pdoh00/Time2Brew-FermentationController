@@ -71,7 +71,7 @@ void mDNS_Init(const char *Name, unsigned long IPAddress) {
     mDNS_IP[0] = (IPAddress) & 0xFF;
 }
 
-void mDNS_RecieveMsg(MESSAGE *msg) {
+void mDNS_RecieveMsg(ESP8266_SLIP_MESSAGE *msg) {
     mDNS_Header_Type header;
     BYTE *cursor = msg->Data;
     char QName[256];

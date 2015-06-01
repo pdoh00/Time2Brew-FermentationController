@@ -14,7 +14,7 @@ extern "C" {
 
     
 
-    void uPnP_RecieveMsg(MESSAGE *msg);
+    void uPnP_RecieveMsg(ESP8266_SLIP_MESSAGE *msg);
     void uPnP_ProcessLoop();
     void uPnP_Init(const char *Name, const char *UUID, unsigned long IPAddress);
 
