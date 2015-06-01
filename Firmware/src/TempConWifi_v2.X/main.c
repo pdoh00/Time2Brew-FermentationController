@@ -35,7 +35,7 @@ _FGS(GWRP_OFF & GCP_OFF); //Turn off Code Protect
 
 const char *WiFiConfigFilename = "secure.wificonfig";
 
-const char *Version = "0.1.9";
+const char *Version = "0.1.10";
 
 unsigned long Timer500Hz;
 

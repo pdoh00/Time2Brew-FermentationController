@@ -79,7 +79,6 @@ extern "C" {
     } EQUIPMENT_PROFILE;
 
     typedef struct {
-        char Mode;
         char lastOutput;
     } ON_OFF_REGULATION_STATE;
 

@@ -206,10 +206,7 @@ int SetEquipmentProfile(const char *FileName, char *msg, MACHINE_STATE *dest) {
             dest->equipmentConfig.Process_D_FilterCoeff,
             dest->equipmentConfig.Process_D_AdaptiveBand);
 
-    PID_SetOutputLimits(&dest->TargetPID,
-            dest->equipmentConfig.TargetOutput_Min,
-            dest->equipmentConfig.TargetOutput_Max);
-
+    PID_SetOutputLimits(&dest->TargetPID,-100,100);
     PID_SetOutputLimits(&dest->ProcessPID, -100, 100);
 
     ENABLE_INTERRUPTS;
@@ -641,45 +638,6 @@ void TrendBufferCommitt() {
 
 }
 
-char OnOffRegulation(int Setpoint, float Measured, MACHINE_STATE *machinestate) {
-    ON_OFF_REGULATION_STATE *state = &(machinestate->SimpleRegState);
-    EQUIPMENT_PROFILE *equip = &(machinestate->equipmentConfig);
-
-    //Do we need to change modes?
-    if (state->Mode == -1) {
-        if (Measured < (Setpoint - equip->coolTransition)) state->Mode = 1;
-    } else if (state->Mode == 1) {
-        if (Measured > (Setpoint + equip->heatTransition)) state->Mode = -1;
-    } else {
-        if (Measured > Setpoint) {
-            state->Mode = -1;
-        } else {
-            state->Mode = 1;
-        }
-    }
-
-    if (state->Mode == -1) { //Cooling Mode
-        if (state->lastOutput == -1) {
-            //Cooling is ON so only turn off after we've crossed the setpoint.
-            if (Measured < Setpoint) state->lastOutput = 0;
-        } else {
-            state->lastOutput = 0;
-            //Cooling is OFF so wait until the temperature rises above the setpoint+differential to turn on...
-            if (Measured > (Setpoint + equip->coolDifferential)) state->lastOutput = -1;
-        }
-    } else { //Heating Mode
-        if (state->lastOutput == 1) {
-            //Heating is ON so only turn off after we've crossed the setpoint.
-            if (Measured > Setpoint) state->lastOutput = 0;
-        } else {
-            state->lastOutput = 0;
-            //Heating is OFF so wait until the temperature falls below the setpoint+differential to turn on...
-            if (Measured < (Setpoint - equip->heatDifferential)) state->lastOutput = 1;
-        }
-    }
-    return state->lastOutput;
-}
-
 void FixedOffTimePWM(MACHINE_STATE *state) {
     if (state->Output > 0) {
         if (state->CoolRelay) {
@@ -778,6 +736,7 @@ void TemperatureController_Interrupt() {
     static unsigned long lastTimeMinutes = 0;
     if (isTemperatureController_Initialized == 0) return;
     int CommandedTemperature;
+    float ThresholdTemperature;
     BYTE relay = 0;
     if (globalstate.SystemTime == lastTimeSeconds) return; //Nothing to do...
 
@@ -890,19 +849,19 @@ void TemperatureController_Interrupt() {
                     globalstate.ProcessPID.Output);
             break;
         case REGULATIONMODE_SimpleThreashold:
-            Log(",SimpT");
-            globalstate.Output = OnOffRegulation(CommandedTemperature, globalstate.ProcessPID.Input, &globalstate);
-            Log(",%b", globalstate.Output);
-            if (globalstate.Output > 0) {
-                Log(",HEAT");
-                globalstate.Output = 100;
-            } else if (globalstate.Output < 0) {
-                Log(",COOL");
-                globalstate.Output = -100;
-            } else {
-                Log(",OFF");
-                globalstate.Output = 0;
-            }
+            Log(",SimpT, NOT IMPLEMENTED");
+            //            globalstate.Output = OnOffRegulation(CommandedTemperature, globalstate.ProcessPID.Input, &globalstate);
+            //            Log(",%b", globalstate.Output);
+            //            if (globalstate.Output > 0) {
+            //                Log(",HEAT");
+            //                globalstate.Output = 100;
+            //            } else if (globalstate.Output < 0) {
+            //                Log(",COOL");
+            //                globalstate.Output = -100;
+            //            } else {
+            //                Log(",OFF");
+            //                globalstate.Output = 0;
+            //            }
             break;
         case REGULATIONMODE_ComplexThreshold:
             globalstate.TargetPID.Setpoint = CommandedTemperature;
@@ -914,8 +873,36 @@ void TemperatureController_Interrupt() {
                     globalstate.TargetPID.DTerm,
                     globalstate.TargetPID.Output);
 
-            globalstate.Output = OnOffRegulation((int) globalstate.TargetPID.Output, globalstate.ProcessPID.Input, &globalstate);
-            Log(",%b", globalstate.Output);
+            ThresholdTemperature = globalstate.TargetPID.Input + ((globalstate.equipmentConfig.TargetOutput_Max - globalstate.equipmentConfig.TargetOutput_Min)*0.5)*(globalstate.TargetPID.Output / 100);
+
+            Log(",%f2", ThresholdTemperature);
+            if (ThresholdTemperature > globalstate.equipmentConfig.TargetOutput_Max) {
+                ThresholdTemperature = globalstate.equipmentConfig.TargetOutput_Max;
+            } else if (ThresholdTemperature < globalstate.equipmentConfig.TargetOutput_Min) {
+                ThresholdTemperature = globalstate.equipmentConfig.TargetOutput_Min;
+            }
+
+
+            if (globalstate.TargetPID.Output < 0) { //Cooling Mode
+                if (globalstate.Output < 0) {
+                    //Cooling is ON so only turn off after we've crossed the setpoint.
+                    if (globalstate.ProcessPID.Input < ThresholdTemperature) globalstate.Output = 0;
+                } else {
+                    globalstate.Output = 0;
+                    //Cooling is OFF so wait until the temperature rises above the setpoint+differential to turn on...
+                    if (globalstate.ProcessPID.Input > (ThresholdTemperature + globalstate.equipmentConfig.coolDifferential)) globalstate.Output = -100;
+                }
+            } else { //Heating Mode
+                if (globalstate.Output > 0) {
+                    //Heating is ON so only turn off after we've crossed the setpoint.
+                    if (globalstate.ProcessPID.Input > ThresholdTemperature) globalstate.Output = 0;
+                } else {
+                    globalstate.Output = 0;
+                    //Heating is OFF so wait until the temperature falls below the setpoint+differential to turn on...
+                    if (globalstate.ProcessPID.Input < (ThresholdTemperature - globalstate.equipmentConfig.heatDifferential)) globalstate.Output = 100;
+                }
+            }
+
             if (globalstate.Output > 0) {
                 Log(",HEAT");
                 globalstate.Output = 100;

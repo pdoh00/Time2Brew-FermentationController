@@ -428,10 +428,11 @@ Public Class FermentationControllerDevice
         End Try
     End Function
 
-    Public Async Function uploadfirmware(firmwareFile As Stream) As Task
+    Public Async Function uploadfirmware(firmwareFile As Stream, prog As Action(Of Single)) As Task
         Dim first As Boolean = True
         Dim buffer(512) As Byte
         While firmwareFile.Position < firmwareFile.Length - 1
+            prog(firmwareFile.Position / firmwareFile.Length)
             Dim offset = firmwareFile.Position
             Dim bytesToSend = Math.Min(firmwareFile.Length - firmwareFile.Position, 512)
             ReDim buffer(bytesToSend - 1)

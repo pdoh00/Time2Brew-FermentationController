@@ -1,6 +1,7 @@
 ﻿Imports System.Net
 Imports System.IO
 Imports Microsoft.Win32
+Imports System.Threading.Tasks
 
 Class MainWindow
     Private Controller As FermentationControllerDevice
@@ -79,7 +80,7 @@ Class MainWindow
             If prflSelector.isCanceled Then Return
             Dim name = prflSelector.SelectedProfile
             prflSelector = Nothing
-             Try
+            Try
                 Await Controller.SetEquipmentProfile(name)
                 response.Text = "OK"
             Catch ex As Exception
@@ -439,11 +440,15 @@ Class MainWindow
         My.Settings.LastFirmwareFolder = dlg.SelectedPath
         My.Settings.Save()
         Try
-            response.Text = "--"
+            response.Text = "Uploading Firmware..."
             Try
                 Using binFirmware = HEX_FirmwareProcessor.GenerateMasterBIN(dlg.SelectedPath)
-                    Await Controller.uploadfirmware(binFirmware)
-                    response.Text = "OK"
+                    Await Controller.uploadfirmware(binFirmware, Sub(prog As Single)
+                                                                     Dispatcher.Invoke(Sub()
+                                                                                           response.Text = "Uploading Firmware: " & (prog * 100).ToString("0.00") & "% Complete"
+                                                                                       End Sub)
+                                                                 End Sub)
+                    response.Text = "Firmware Uploaded OK"
                 End Using
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
@@ -586,16 +591,23 @@ Public Class HttpCommsProviderWebClient
         For retry = 1 To 3
             Try
                 request = WebRequest.Create(URL)
-                request.Pipelined = False
-                request.ServicePoint.ConnectionLeaseTimeout = 200
-                request.ServicePoint.UseNagleAlgorithm = False
+                'request.Pipelined = False
+                'request.ServicePoint.ConnectionLeaseTimeout = 200
+                'request.ServicePoint.UseNagleAlgorithm = False
                 request.ServicePoint.Expect100Continue = False
-                request.Timeout = 1000
+                request.Timeout = 10000
                 request.Method = "PUT"
                 request.ContentLength = 0
 
                 st.Start()
-                Using response As HttpWebResponse = request.GetResponse()
+                Dim T = request.GetResponseAsync()
+                Dim X = Await Task.WhenAny(T, Task.Delay(5000))
+                If X.Equals(T) = False Then
+                    T.Dispose()
+                    Continue For
+                End If
+
+                Using response As HttpWebResponse = T.Result
                     Using rsp = response.GetResponseStream
                         Using body As New MemoryStream
                             Dim buff(512) As Byte
@@ -609,6 +621,8 @@ Public Class HttpCommsProviderWebClient
                         End Using
                     End Using
                 End Using
+               
+
             Catch tm As TimeoutException
                 If retry = 3 Then
                     If IsNothing(request) = False Then request.Abort()
