@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+ <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <link rel="stylesheet" type="css" href="app.css">
+  <link rel="stylesheet" type="css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css">
+  <link rel="stylesheet" type="css" href="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.8.0/chartist.min.css">
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+  
+</head>
+
+<body>
+  <nav class="navbar navbar-inverse navbar-default">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.htm"><i class="fa fa-beer icon-white" onclick="updateStatus()"></i></a>
+      </div>
+      <div class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="status.htm">Device Status</a></li>
+          <li><a href="temperatureProfiles.htm">Fermentation Profiles</a></li>
+          <li><a href="equipmentProfiles.htm">Equipment Profiles</a></li>
+          <li><a href="device.htm">Device</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+
+  <div id="page-wrapper" class="container">
+
+    <div class="flex-container-col" style="width: 100%">
+
+
+      <div class="panel panel-default">
+        <div class="panel-heading  text-center">System Time</div>
+        <div class="panel-body  text-center">
+          <h3 id="systemTime"></h3>
+        </div>
+      </div>
+
+
+      <ul class="flex-container-row">
+
+        <li class="flex1">
+          <div class="panel panel-default">
+            <div class="panel-heading  text-center">Left Probe</div>
+            <div class="panel-body text-center">
+              <h3 id="probe0Temp"></h3>
+            </div>
+          </div>
+        </li>
+
+        <li class="flex1">
+          <div class="panel panel-default">
+            <div class="panel-heading  text-center">Right Probe</div>
+            <div class="panel-body text-center">
+              <h3 id="probe1Temp"></h3>
+            </div>
+          </div>
+        </li>
+
+        <li class="flex1">
+          <div class="panel panel-danger">
+            <div class="panel-heading text-center">Heat Relay</div>
+            <div class="panel-body text-center">
+              <h3 id="heatRelayStatus"></h3>
+            </div>
+          </div>
+        </li>
+
+        <li class="flex1">
+          <div class="panel panel-info">
+            <div class="panel-heading text-center">Cool Relay</div>
+            <div class="panel-body text-center">
+              <h3 id="coolRelayStatus"></h3>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+      <ul class="flex-container-row">
+        <li class="flex1">
+          <div class="panel panel-default">
+            <div class="panel-heading  text-center">Active Profile</div>
+            <div class="panel-body  text-center">
+              <h3 id="activeProfileName"></h3>
+            </div>
+          </div>
+        </li>
+
+        <li class="flex1">
+          <div class="panel panel-default">
+            <div class="panel-heading  text-center">Active Profile Step</div>
+            <div class="panel-body text-center">
+              <h3 id="currentStepIndex"></h3>
+            </div>
+          </div>
+        </li>
+
+        <li class="flex1">
+          <div class="panel panel-default">
+            <div class="panel-heading  text-center">Step Target Temperature</div>
+            <div class="panel-body text-center">
+              <h3 id="currentStepTemp"></h3>
+            </div>
+          </div>
+        </li>
+
+        <li class="flex1">
+          <div class="panel panel-default">
+            <div class="panel-heading  text-center">Step Time Remaining</div>
+            <div class="panel-body text-center">
+              <h3 id="currentStepTimeRemaining"></h3>
+            </div>
+          </div>
+        </li>
+
+      </ul>
+    </div>
+  </div>
+ 
+  <script src="statusAPI.js"></script>
+  
+  <script src="promisify.js "></script>  
+  <script src="temperatureProfileAPI.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/2.5.2/rx.all.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.0.0/mustache.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.8.0/chartist.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
+  <script>
+  var chartAPI = (function() {
+
+  var createChart = function(placeholder, data, options) {
+    var plot = $.plot(placeholder, data, options);
+  };
+
+
+  return {
+    createChart: createChart
+  };
+
+})();
+</script>
+
+  <script>
+    function updateStatus() {
+      statusAPI.getStatus().then(function(status) {
+
+        document.getElementById("systemTime").innerText =
+          status.systemTime.toLocaleDateString() + ' ' + status.systemTime.toLocaleTimeString();
+
+        document.getElementById("probe0Temp").innerText =
+          Math.round(CelciusToFahrenheit(status.probe0Temp / 10.0) * 100) / 100 +
+          ' \xB0F';
+
+        document.getElementById("probe1Temp").innerText =
+          Math.round(CelciusToFahrenheit(status.probe1Temp / 10.0) * 100) / 100 +
+          ' \xB0F';
+
+        document.getElementById("heatRelayStatus").innerText =
+          status.heatRelayOn ? "On" : "Off";
+
+        document.getElementById("coolRelayStatus").innerText =
+          status.coolRelayOn ? "On" : "Off";
+
+        if (status.systemMode === 2) {
+          document.getElementById("activeProfileName").innerText =
+            status.activeProfileName.split('.')[1];
+
+          document.getElementById("currentStepIndex").innerText =
+            status.currentStepIndex;
+
+          document.getElementById("currentStepTemp").innerText =
+            Math.round(CelciusToFahrenheit(status.currentStepTemp / 10.0) * 100) / 100 +
+            ' \xB0F';
+
+          document.getElementById("currentStepTimeRemaining").innerText =
+            status.currentStepRemainingSeconds;
+          // moment({
+          //   second: status.currentStepRemainingSeconds
+          // }, 'HH:mm:ss');
+        }else{
+          document.getElementById("activeProfileName").innerText = "No active profile";
+        }
+
+      }).catch(function(error) {
+        alert(error);
+      });
+    };
+
+    window.onload = function() {
+      Rx.Observable.timer(0, 1000).subscribe(function(x) {
+        updateStatus();
+      });
+    };
+  </script>
+</body>
+
+</html>

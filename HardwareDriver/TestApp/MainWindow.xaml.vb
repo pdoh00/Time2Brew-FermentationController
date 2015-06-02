@@ -475,16 +475,21 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdUploadFile_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadFile.Click
+
         Dim dlg As New OpenFileDialog
         dlg.ShowDialog()
+
+        response.Text = "Uploading File..."
+
 
         Try
             Using inp = dlg.OpenFile
                 Dim fname = Path.GetFileName(dlg.FileName)
                 Await Controller.uploadFile(inp, fname)
+                response.Text = "File Uploaded! OK"
             End Using
         Catch ex As Exception
-
+            response.Text = ex.ToString
         End Try
     End Sub
 
