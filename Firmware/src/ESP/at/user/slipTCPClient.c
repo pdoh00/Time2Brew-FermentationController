@@ -27,24 +27,32 @@ void ICACHE_FLASH_ATTR slipTCP_Server_OnIncommingConnection(void *arg) {
             espconn_regist_reconcb(con, slipTCPClient_OnReconnect);
             espconn_regist_disconcb(con, slipTCPClient_OnDisconnect);
             espconn_regist_sentcb(con, slipTCPClient_OnSendComplete);
+            SendMessage(ESP_TCP_CONNECT, chan->linkId, (sint16_t) con->state, 0, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
             return;
         }
     }
-
+    SendMessage(ESP_TCP_CONNECTFAIL, 0, 0, 0, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
 }
 
 void ICACHE_FLASH_ATTR slipTCPClient_OnDisconnect(void *arg) {
     struct espconn *con = (struct espconn *) arg;
-    if (con == NULL) return;
+    if (con == NULL) {
+        SendMessage(ESP_TCP_CLOSE_ERROR, 0xFF, 0, 0, 0, 0, 0, NULL, 0);
+        return;
+    }
+
     type_IP_Channel *channel = (type_IP_Channel *) con->reverse;
-    if (channel == NULL) return;
+    if (channel == NULL) {
+        SendMessage(ESP_TCP_CLOSE_ERROR, 0xFF, 1, (unsigned char) con->state, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
+        return;
+    }
 
     if (channel->isSending == true) {
         channel->isSending = false;
-        SendMessage(ESP_TCP_SEND_RESULT, channel->linkId, SendFail_Closed, 0, 0, 0, 0, NULL, 0);
+        SendMessage(ESP_TCP_SEND_RESULT, channel->linkId, SendFail_Closed, 2, 2, 2, 2, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
     }
 
-    //SendMessage(ESP_TCP_CLOSED, channel->linkId, 0, 0, 0, 0, 0, NULL, 0);
+    SendMessage(ESP_TCP_CLOSED, channel->linkId, (sint16_t) con->state, 0, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
 
     channel->linkEn = false;
     channel->pCon = NULL;
@@ -54,17 +62,25 @@ void ICACHE_FLASH_ATTR slipTCPClient_OnDisconnect(void *arg) {
 
 void ICACHE_FLASH_ATTR slipTCPClient_OnReconnect(void *arg, sint8 err) {
     struct espconn *con = (struct espconn *) arg;
-    if (con == NULL) return;
+    if (con == NULL) {
+        SendMessage(ESP_TCP_RECONNECT, 0xFF, 0, err, 0, 0, 0, NULL, 0);
+        return;
+    }
+
     type_IP_Channel *channel = (type_IP_Channel *) con->reverse;
-    if (channel == NULL) return;
+    if (channel == NULL) {
+        SendMessage(ESP_TCP_RECONNECT, 0xFF, 1, err, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
+        return;
+    }
 
     if (channel->isSending == true) {
         channel->isSending = false;
-        SendMessage(ESP_TCP_SEND_RESULT, channel->linkId, SendFail_Reconnect, 0, 0, 0, 0, NULL, 0);
+        SendMessage(ESP_TCP_SEND_RESULT, channel->linkId, SendFail_Reconnect, err, (uint8_t) con->state, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
     }
 
-    //SendMessage(ESP_TCP_CLOSED, channel->linkId, 0, 0, 0, 0, 0, NULL, 0);
+    SendMessage(ESP_TCP_RECONNECT, channel->linkId, 2, err, (uint8_t) con->state, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
 
+    //espconn_disconnect(con);
     channel->linkEn = false;
     channel->pCon = NULL;
     channel->isSending = false;
@@ -72,23 +88,48 @@ void ICACHE_FLASH_ATTR slipTCPClient_OnReconnect(void *arg, sint8 err) {
 }
 
 void ICACHE_FLASH_ATTR slipTCPClient_OnRecieve(void *arg, char *pdata, unsigned short len) {
-    if (arg == NULL) return;
     struct espconn *con = (struct espconn *) arg;
-    if (con->reverse == NULL) return;
+    if (con == NULL) {
+        SendMessage(ESP_TCP_RECV_ERROR, 0xFF, 0, 0, 0, 0, 0, (uint8_t *) pdata, len);
+        return;
+    }
+
     type_IP_Channel *channel = (type_IP_Channel *) con->reverse;
-    if (channel->pCon == NULL) return;
-    if (channel->linkEn == false) return;
+    if (channel == NULL) {
+        SendMessage(ESP_TCP_RECV_ERROR, 0xFF, 1, 0, 0, 0, 0, (uint8_t *) pdata, len);
+        return;
+    }
+
+    if (channel->linkEn == false) {
+        SendMessage(ESP_TCP_RECV_ERROR, channel->linkId, 2, 0, 0, 0, 0, (uint8_t *) pdata, len);
+        return;
+    }
+
     SendMessage(ESP_TCP_RECIEVE, channel->linkId, 0, 0, 0, 0, 0, (uint8_t *) pdata, len);
 }
 
 void ICACHE_FLASH_ATTR slipTCPClient_OnSendComplete(void *arg) {
-    if (arg == NULL) return;
+    if (arg == NULL) {
+        SendMessage(ESP_TCP_SENDCOMPLETE_ERROR, 0xFF, 0, 0, 0, 0, 0, NULL, 0);
+        return;
+    }
     struct espconn *con = (struct espconn *) arg;
-    if (con->reverse == NULL) return;
     type_IP_Channel *channel = (type_IP_Channel *) con->reverse;
-    if (channel->pCon == NULL) return;
-    if (channel->linkEn == false) return;
-    if (channel->isSending == false) return;
+    if (channel == NULL) {
+        SendMessage(ESP_TCP_SENDCOMPLETE_ERROR, 0xFF, 1, 0, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
+        return;
+    }
+
+    if (channel->linkEn == false) {
+        SendMessage(ESP_TCP_SENDCOMPLETE_ERROR, 0xFF, 2, 0, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
+        return;
+    }
+
+    if (channel->isSending == false) {
+        SendMessage(ESP_TCP_SENDCOMPLETE_ERROR, 0xFF, 3, 0, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
+        return;
+    }
+
     channel->isSending = false;
     SendMessage(ESP_TCP_SEND_RESULT, channel->linkId, SendOK, 0, 0, 0, 0, NULL, 0);
 }

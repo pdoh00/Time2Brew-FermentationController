@@ -32,12 +32,11 @@ os_event_t txTaskQueue[txTaskQueueLen];
 struct ip_info LocalIP;
 
 uint8_t rxBufferActive = 0;
-uint8_t rxBufferA[8448];
-uint8_t rxBufferB[8448];
-uint8_t rxBufferC[8448];
+uint8_t rxBufferA[11776];
+uint8_t rxBufferB[11776];
 uint8_t *rxBuffer = rxBufferA;
 uint8_t *rxCursor = rxBufferA;
-uint8_t *rxCursorEND = rxBufferA + 8448;
+uint8_t *rxCursorEND = rxBufferA + 11776;
 
 uint8_t txBuffer[4096];
 uint8_t *txWriteCursor = txBuffer;
@@ -47,7 +46,7 @@ uint8_t *txBufferEND = txBuffer + 4096;
 void user_init(void) {
     wifi_station_set_auto_connect(0);
     uint8_t x;
-    uart_init(BIT_RATE_460800, BIT_RATE_460800);
+    uart_init(BIT_RATE_921600, BIT_RATE_921600);
     current_wifiMode = wifi_get_opmode();
     system_os_task(rxTask, rxTaskPrio, rxTaskQueue, rxTaskQueueLen);
     system_os_task(txTask, txTaskPrio, txTaskQueue, txTaskQueueLen);
@@ -85,13 +84,14 @@ void ICACHE_FLASH_ATTR rxTask(ETSEvent *e) {
                             len++;
                         }
                     } else {
+                        SendMessage(ESP_SEND_GEN_MESSAGE, 0, Invalid_SLIP_Packet, 1, 1, 1, 1, NULL, 0);
                         rxCursor = rxBuffer;
                     }
                     break;
                 case END_OF_MESSAGE://End Packet Token
                     ProcessMessage(rxBuffer, len);
                     rxBufferActive++;
-                    if (rxBufferActive == 3) rxBufferActive = 0;
+                    if (rxBufferActive == 2) rxBufferActive = 0;
                     switch (rxBufferActive) {
                         case 0:
                             rxBuffer = rxBufferA;
@@ -99,12 +99,9 @@ void ICACHE_FLASH_ATTR rxTask(ETSEvent *e) {
                         case 1:
                             rxBuffer = rxBufferB;
                             break;
-                        case 2:
-                            rxBuffer = rxBufferC;
-                            break;
                     }
                     rxCursor = rxBuffer;
-                    rxCursorEND = rxBuffer + 7424;
+                    rxCursorEND = rxBuffer + 11776;
                     isStarted = false;
                     len = 0;
                     break;
@@ -116,6 +113,7 @@ void ICACHE_FLASH_ATTR rxTask(ETSEvent *e) {
                     break;
                 default: //Unknown command....ignore and start over!
                     //Maybe this should send back an error to the MCU?
+                    SendMessage(ESP_SEND_GEN_MESSAGE, 0, Invalid_SLIP_Packet, 2, 2, 2, 2, NULL, 0);
                     rxCursor = rxBuffer;
                     isStarted = false;
                     break;
@@ -132,6 +130,10 @@ void ICACHE_FLASH_ATTR rxTask(ETSEvent *e) {
                     if (rxCursor != rxCursorEND) {
                         *(rxCursor++) = rxByte; //There is-- so push it in.
                         len++;
+                    } else {
+                        SendMessage(ESP_SEND_GEN_MESSAGE, 0, Invalid_SLIP_Packet, 3, 3, 3, 3, NULL, 0);
+                        rxCursor = rxBuffer;
+                        isStarted = false;
                     }
                 }
             }
@@ -558,6 +560,8 @@ void ICACHE_FLASH_ATTR cmd_MCU_TCP_ASYNCSEND(uint8_t *buffer, uint16_t len) {
         SendMessage(ESP_TCP_SEND_RESULT, id, Fail_EspError, res, (len >> 8), (len & 0xFF), res, NULL, 0);
         return;
     }
+
+    SendMessage(ESP_TCP_SEND_RESULT, id, InProgress_Sending, res, (len >> 8), (len & 0xFF), res, NULL, 0);
 }
 
 void ICACHE_FLASH_ATTR cmd_MCU_TCP_CLOSE_CONNECTION(uint8_t *buffer, uint16_t len) {

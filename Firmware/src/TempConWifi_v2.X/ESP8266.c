@@ -57,6 +57,12 @@ typedef enum {
 
 #define MCU_TCP_CLOSE_CONNECTION  0x0D
 #define ESP_TCP_CLOSED  0x0E
+#define ESP_TCP_RECONNECT  0x1A
+#define ESP_TCP_CONNECT  0x1B
+#define ESP_TCP_CONNECTFAIL  0x1C
+#define ESP_TCP_RECV_ERROR  0x1D
+#define ESP_TCP_CLOSE_ERROR 0x1E
+#define ESP_TCP_SENDCOMPLETE_ERROR 0x1F
 
 #define MCU_INIT  0x10
 #define ESP_INIT_RESP 0x11
@@ -255,6 +261,26 @@ void ESP_RX_FIFO_Processor() {
     }
 }
 
+void LogEspCon(unsigned char *data) {
+
+    union {
+        signed int i;
+        unsigned char ub[2];
+    } temp;
+
+    temp.ub[0] = data[0];
+    temp.ub[1] = data[1];
+    Log("---Remote_Port: %i ", temp.i);
+
+    temp.ub[0] = data[2];
+    temp.ub[1] = data[3];
+    Log("Local_Port: %i\r\n", temp.i);
+
+    Log("---Local_IP: %b.%b.%b.%b Remote_IP: %b.%b.%b.%b\r\n",
+            data[4], data[5], data[6], data[7],
+            data[8], data[9], data[10], data[11]);
+}
+
 static void ESP_ProcessMessage(ESP8266_SLIP_MESSAGE *msg) {
     BYTE msgID = msg->MessageType;
     BYTE ChannelID = msg->TCP_ChannelID;
@@ -352,6 +378,73 @@ static void ESP_ProcessMessage(ESP8266_SLIP_MESSAGE *msg) {
                 FailReason = ResponseCode;
             }
             break;
+        case ESP_TCP_RECONNECT:
+            if (ResponseCode == 0) {
+                Log("RECONNECT: Arg is NULL: Err=%xb\r\n", msg->Detail.ub[0]);
+            } else if (ResponseCode == 1) {
+                Log("RECONNECT: Channel is NULL: Err=%xb\r\n", msg->Detail.ub[0]);
+                LogEspCon(msg->Data);
+            } else if (ResponseCode == 2) {
+                Log("RECONNECT: Channel=%xb Err=%b State=%b\r\n", ChannelID, msg->Detail.ub[0], msg->Detail.ub[1]);
+                LogEspCon(msg->Data);
+            } else {
+                Log("RECONNECT: Unknown ResponseCode=%i\r\n", ResponseCode);
+            }
+            break;
+        case ESP_TCP_CONNECT:
+            Log("ESP_TCP_CONNECT: Channel=%xb State=%xi\r\n", ChannelID, ResponseCode);
+            LogEspCon(msg->Data);
+            break;
+        case ESP_TCP_CLOSED:
+            Log("ESP_TCP_CLOSED: Channel=%xb State=%xi\r\n", ChannelID, ResponseCode);
+            LogEspCon(msg->Data);
+            break;
+        case ESP_TCP_CONNECTFAIL:
+            Log("ESP_TCP_CONNECTFAIL:\r\n");
+            LogEspCon(msg->Data);
+            break;
+        case ESP_TCP_RECV_ERROR:
+            if (ResponseCode == 0) {
+                Log("ESP_TCP_RECV_ERROR: Arg is NULL\r\n");
+                msg->Data[msg->DataLength] = 0;
+                Log("%s\r\n--END--\r\n", msg->Data);
+            } else if (ResponseCode == 1) {
+                Log("ESP_TCP_RECV_ERROR: Channel is NULL\r\n");
+                msg->Data[msg->DataLength] = 0;
+                Log("%s\r\n--END--\r\n", msg->Data);
+            } else if (ResponseCode == 2) {
+                Log("ESP_TCP_RECV_ERROR: ChannelID=%xb, LinkEn=FASLE\r\n", ChannelID);
+                msg->Data[msg->DataLength] = 0;
+                Log("%s\r\n--END--\r\n", msg->Data);
+            }
+            break;
+        case ESP_TCP_CLOSE_ERROR:
+            if (ResponseCode == 0) {
+                Log("TCP_CLOSE_ERROR: Arg is NULL\r\n");
+            } else if (ResponseCode == 1) {
+                Log("TCP_CLOSE_ERROR: Channel is NULL\r\n");
+                LogEspCon(msg->Data);
+            } else {
+                Log("TCP_CLOSE_ERROR: Unknown ResponseCode=%i\r\n", ResponseCode);
+            }
+            break;
+        case ESP_TCP_SENDCOMPLETE_ERROR:
+            if (ResponseCode == 0) {
+                Log("ESP_TCP_SENDCOMPLETE_ERROR: Arg is NULL\r\n");
+            } else if (ResponseCode == 1) {
+                Log("ESP_TCP_SENDCOMPLETE_ERROR: Channel is NULL\r\n");
+                LogEspCon(msg->Data);
+            } else if (ResponseCode == 2) {
+                Log("ESP_TCP_SENDCOMPLETE_ERROR: ChannelID=%xb, LinkEn=FALSE\r\n", ChannelID);
+                LogEspCon(msg->Data);
+            } else if (ResponseCode == 3) {
+                Log("ESP_TCP_SENDCOMPLETE_ERROR: ChannelID=%xb, isSending=FALSE\r\n", ChannelID);
+                LogEspCon(msg->Data);
+            } else {
+                Log("ESP_TCP_SENDCOMPLETE_ERROR: Unknown ResponseCode=%i\r\n", ResponseCode);
+            }
+            break;
+
         case ESP_SEND_GEN_MESSAGE:
             if (ResponseCode == Invalid_SLIP_Packet) {
                 Log("ESP! invalid SLIP Subtype=%xb\r\n", msg->Detail.ub[0]);
@@ -363,6 +456,7 @@ static void ESP_ProcessMessage(ESP8266_SLIP_MESSAGE *msg) {
             }
             break;
         default:
+            Log("UNKNOWN MSG: %xb\r\n", msgID);
             break;
     }
     DisposeMessage(msg);

@@ -72,10 +72,7 @@ LDLIBSOPTIONS=
 FIXDEPS=fixDeps
 
 .build-conf:  ${BUILD_SUBPROJECTS}
-ifneq ($(INFORMATION_MESSAGE), )
-	@echo $(INFORMATION_MESSAGE)
-endif
-	${MAKE}  -f nbproject/Makefile-default.mk dist/${CND_CONF}/${IMAGE_TYPE}/BootLoader.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+	${MAKE} ${MAKE_OPTIONS} -f nbproject/Makefile-default.mk dist/${CND_CONF}/${IMAGE_TYPE}/BootLoader.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
 
 MP_PROCESSOR_OPTION=33EP256MC204
 MP_LINKER_FILE_OPTION=,--script="BootLoader_p33EP256MC204.gld"
@@ -83,7 +80,7 @@ MP_LINKER_FILE_OPTION=,--script="BootLoader_p33EP256MC204.gld"
 # Rules for buildStep: assemble
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
 ${OBJECTDIR}/LoadLatch.o: LoadLatch.s  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/LoadLatch.o.d 
 	@${RM} ${OBJECTDIR}/LoadLatch.o.ok ${OBJECTDIR}/LoadLatch.o.err 
 	@${RM} ${OBJECTDIR}/LoadLatch.o 
@@ -91,7 +88,7 @@ ${OBJECTDIR}/LoadLatch.o: LoadLatch.s  nbproject/Makefile-${CND_CONF}.mk
 	
 else
 ${OBJECTDIR}/LoadLatch.o: LoadLatch.s  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/LoadLatch.o.d 
 	@${RM} ${OBJECTDIR}/LoadLatch.o.ok ${OBJECTDIR}/LoadLatch.o.err 
 	@${RM} ${OBJECTDIR}/LoadLatch.o 
@@ -109,56 +106,56 @@ endif
 # Rules for buildStep: compile
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
 ${OBJECTDIR}/bootloaderMain.o: bootloaderMain.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/bootloaderMain.o.d 
 	@${RM} ${OBJECTDIR}/bootloaderMain.o.ok ${OBJECTDIR}/bootloaderMain.o.err 
 	@${RM} ${OBJECTDIR}/bootloaderMain.o 
 	@${FIXDEPS} "${OBJECTDIR}/bootloaderMain.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/bootloaderMain.o.d" -o ${OBJECTDIR}/bootloaderMain.o bootloaderMain.c    
 	
 ${OBJECTDIR}/FlashFS.o: FlashFS.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/FlashFS.o.d 
 	@${RM} ${OBJECTDIR}/FlashFS.o.ok ${OBJECTDIR}/FlashFS.o.err 
 	@${RM} ${OBJECTDIR}/FlashFS.o 
 	@${FIXDEPS} "${OBJECTDIR}/FlashFS.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/FlashFS.o.d" -o ${OBJECTDIR}/FlashFS.o FlashFS.c    
 	
 ${OBJECTDIR}/SystemConfiguration.o: SystemConfiguration.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o.d 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o.ok ${OBJECTDIR}/SystemConfiguration.o.err 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o 
 	@${FIXDEPS} "${OBJECTDIR}/SystemConfiguration.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/SystemConfiguration.o.d" -o ${OBJECTDIR}/SystemConfiguration.o SystemConfiguration.c    
 	
 ${OBJECTDIR}/circularPrintF.o: circularPrintF.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/circularPrintF.o.d 
 	@${RM} ${OBJECTDIR}/circularPrintF.o.ok ${OBJECTDIR}/circularPrintF.o.err 
 	@${RM} ${OBJECTDIR}/circularPrintF.o 
 	@${FIXDEPS} "${OBJECTDIR}/circularPrintF.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/circularPrintF.o.d" -o ${OBJECTDIR}/circularPrintF.o circularPrintF.c    
 	
 ${OBJECTDIR}/FIFO.o: FIFO.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/FIFO.o.d 
 	@${RM} ${OBJECTDIR}/FIFO.o.ok ${OBJECTDIR}/FIFO.o.err 
 	@${RM} ${OBJECTDIR}/FIFO.o 
 	@${FIXDEPS} "${OBJECTDIR}/FIFO.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/FIFO.o.d" -o ${OBJECTDIR}/FIFO.o FIFO.c    
 	
 ${OBJECTDIR}/fletcherChecksum_1.o: fletcherChecksum_1.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o.d 
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o.ok ${OBJECTDIR}/fletcherChecksum_1.o.err 
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o 
 	@${FIXDEPS} "${OBJECTDIR}/fletcherChecksum_1.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/fletcherChecksum_1.o.d" -o ${OBJECTDIR}/fletcherChecksum_1.o fletcherChecksum_1.c    
 	
 ${OBJECTDIR}/ESP_Flash.o: ESP_Flash.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/ESP_Flash.o.d 
 	@${RM} ${OBJECTDIR}/ESP_Flash.o.ok ${OBJECTDIR}/ESP_Flash.o.err 
 	@${RM} ${OBJECTDIR}/ESP_Flash.o 
 	@${FIXDEPS} "${OBJECTDIR}/ESP_Flash.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/ESP_Flash.o.d" -o ${OBJECTDIR}/ESP_Flash.o ESP_Flash.c    
 	
 ${OBJECTDIR}/pack.o: pack.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/pack.o.d 
 	@${RM} ${OBJECTDIR}/pack.o.ok ${OBJECTDIR}/pack.o.err 
 	@${RM} ${OBJECTDIR}/pack.o 
@@ -166,56 +163,56 @@ ${OBJECTDIR}/pack.o: pack.c  nbproject/Makefile-${CND_CONF}.mk
 	
 else
 ${OBJECTDIR}/bootloaderMain.o: bootloaderMain.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/bootloaderMain.o.d 
 	@${RM} ${OBJECTDIR}/bootloaderMain.o.ok ${OBJECTDIR}/bootloaderMain.o.err 
 	@${RM} ${OBJECTDIR}/bootloaderMain.o 
 	@${FIXDEPS} "${OBJECTDIR}/bootloaderMain.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/bootloaderMain.o.d" -o ${OBJECTDIR}/bootloaderMain.o bootloaderMain.c    
 	
 ${OBJECTDIR}/FlashFS.o: FlashFS.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/FlashFS.o.d 
 	@${RM} ${OBJECTDIR}/FlashFS.o.ok ${OBJECTDIR}/FlashFS.o.err 
 	@${RM} ${OBJECTDIR}/FlashFS.o 
 	@${FIXDEPS} "${OBJECTDIR}/FlashFS.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/FlashFS.o.d" -o ${OBJECTDIR}/FlashFS.o FlashFS.c    
 	
 ${OBJECTDIR}/SystemConfiguration.o: SystemConfiguration.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o.d 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o.ok ${OBJECTDIR}/SystemConfiguration.o.err 
 	@${RM} ${OBJECTDIR}/SystemConfiguration.o 
 	@${FIXDEPS} "${OBJECTDIR}/SystemConfiguration.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/SystemConfiguration.o.d" -o ${OBJECTDIR}/SystemConfiguration.o SystemConfiguration.c    
 	
 ${OBJECTDIR}/circularPrintF.o: circularPrintF.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/circularPrintF.o.d 
 	@${RM} ${OBJECTDIR}/circularPrintF.o.ok ${OBJECTDIR}/circularPrintF.o.err 
 	@${RM} ${OBJECTDIR}/circularPrintF.o 
 	@${FIXDEPS} "${OBJECTDIR}/circularPrintF.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/circularPrintF.o.d" -o ${OBJECTDIR}/circularPrintF.o circularPrintF.c    
 	
 ${OBJECTDIR}/FIFO.o: FIFO.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/FIFO.o.d 
 	@${RM} ${OBJECTDIR}/FIFO.o.ok ${OBJECTDIR}/FIFO.o.err 
 	@${RM} ${OBJECTDIR}/FIFO.o 
 	@${FIXDEPS} "${OBJECTDIR}/FIFO.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/FIFO.o.d" -o ${OBJECTDIR}/FIFO.o FIFO.c    
 	
 ${OBJECTDIR}/fletcherChecksum_1.o: fletcherChecksum_1.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o.d 
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o.ok ${OBJECTDIR}/fletcherChecksum_1.o.err 
 	@${RM} ${OBJECTDIR}/fletcherChecksum_1.o 
 	@${FIXDEPS} "${OBJECTDIR}/fletcherChecksum_1.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/fletcherChecksum_1.o.d" -o ${OBJECTDIR}/fletcherChecksum_1.o fletcherChecksum_1.c    
 	
 ${OBJECTDIR}/ESP_Flash.o: ESP_Flash.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/ESP_Flash.o.d 
 	@${RM} ${OBJECTDIR}/ESP_Flash.o.ok ${OBJECTDIR}/ESP_Flash.o.err 
 	@${RM} ${OBJECTDIR}/ESP_Flash.o 
 	@${FIXDEPS} "${OBJECTDIR}/ESP_Flash.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -MMD -MF "${OBJECTDIR}/ESP_Flash.o.d" -o ${OBJECTDIR}/ESP_Flash.o ESP_Flash.c    
 	
 ${OBJECTDIR}/pack.o: pack.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
+	@${MKDIR} ${OBJECTDIR} 
 	@${RM} ${OBJECTDIR}/pack.o.d 
 	@${RM} ${OBJECTDIR}/pack.o.ok ${OBJECTDIR}/pack.o.err 
 	@${RM} ${OBJECTDIR}/pack.o 
