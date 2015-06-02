@@ -1,14 +1,14 @@
-var rx = require('./bower_components/rxjs/dist/rx.lite.js');
-
+var rx = require('../bower_components/rxjs/dist/rx.lite.js');
+//var baseApiAddress = 'http://ahardinger.ddns.net:24578/api/';
 var baseApiAddress = 'http://10.10.1.148/api/';
 var epoch = new Date('1 January 1970 00:00:00 UTC');
 
-var temperatureProfileAPI = (function() {
+var temperatureProfileAPI = (function(promiseAPI) {
 
   //Returns profile names as string[]
   var getAllProfiles = function() {
     return Rx.Observable.fromPromise(
-      get(baseApiAddress + 'profile', 'text')
+      promiseAPI.get(baseApiAddress + 'profile', 'text')
       .then(function(response) {
 
         //CR/LF is delimeter
@@ -30,7 +30,7 @@ var temperatureProfileAPI = (function() {
     var url = baseApiAddress + 'profile?name=' + profileName;
 
     return Rx.Observable.fromPromise(
-      get(url, 'arraybuffer')
+      promiseAPI.get(url, 'arraybuffer')
       .then(function(response) {
         var steps = [];
 
@@ -57,18 +57,39 @@ var temperatureProfileAPI = (function() {
       }));
   };
 
-  var createProfile = function(profile) {
+  var createProfile = function(profileName, steps) {
+    var fileOffset = 0;
 
+    var bufferSize = 8 * steps.length; //8 bytes per step
+    var contentBuffer = new ArrayBuffer(bufferSize);
+    var dataview = new DataView(contentBuffer);
+
+    for (var i = 0; i < steps.length; i++) {
+      var offset = 8 * i;
+      dataview.setInt16(offset, steps[i].startTemp, true);
+      dataview.setInt16(offset + 2, steps[i].endTemp, true);
+      dataview.setInt32(offset + 4, steps[i].duration, true);
+    }
+
+
+    //now read 512 bytes at a time and send them.
+    var base64String = btoa(String.fromCharCode.apply(null, new Uint8Array(contentBuffer)));
+    var chksum = fletcherChecksum(sendData, 0, length);
+
+    var url = baseAddress + '/api/profile?name=' + profileName + '&offset=' +
+      fileOffset + '&chksum=' + chksum + '&content=' + base64String;
+
+    return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   var deleteProfile = function(profileName) {
     var url = baseAddress + 'deleteprofile?name=' + profileName;
-    return put(url); //a promise
+    return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   var terminateProfile = function() {
     var url = baseAddress + 'terminateprofile';
-    return put(url); //a promise
+    return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   var truncateProfile = function(profileSteps) {
@@ -77,14 +98,14 @@ var temperatureProfileAPI = (function() {
 
   var executeProfile = function(profileName) {
     var url = baseAddress + 'executeprofile?name=' + profileName;
-    return put(url); //a promise
+    return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   //Returns Date[]. One date for each instance
   var getProfileInstances = function(profileName) {
     var url = baseApiAddress + 'runhistory?name=' + profileName;
     return Rx.Observable.fromPromise(
-      get(url, 'text')
+      promiseAPI.get(url, 'text')
       .then(function(response) {
         //CR/LF is delimeter
         //seconds from epoch in hex
@@ -95,6 +116,7 @@ var temperatureProfileAPI = (function() {
           }).map(function(secondsFromEpoch) {
             var convertedFromHex = parseInt("0x" + secondsFromEpoch);
             return new Date(convertedFromHex * 1000);
+            // return new Date(secondsFromEpoch * 1000);
           });
 
         return instances;
@@ -103,7 +125,7 @@ var temperatureProfileAPI = (function() {
 
   var deleteProfileInstance = function(profileName, profileInstanceDate) {
     var url = baseAddress + 'deleteinstance?name=' + profileName + '&instance=' + profileInstanceDate;
-    return put(url); //a promise
+    return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   //profileInstance is num seconds since epoch
@@ -112,7 +134,7 @@ var temperatureProfileAPI = (function() {
       profileName + '&instance=' + profileInstance;
 
     return Rx.Observable.fromPromise(
-      get(url, 'arraybuffer').then(function(response) {
+      promiseAPI.get(url, 'arraybuffer').then(function(response) {
         var trendData = parseTrendData(response);
         return trendData;
       }));
@@ -195,4 +217,4 @@ var temperatureProfileAPI = (function() {
     formatTime: formatTime
   };
 
-})();
+})(promiseAPI);

@@ -3,9 +3,8 @@
 
 <head>
   <link rel="stylesheet" type="css" href="./app.css">
-  <link rel="stylesheet" type="css" href="./bower_components/fontawesome/css/font-awesome.min.css">
-  <link rel="stylesheet" type="css" href="./bower_components/chartist/dist/chartist.min.css">
-  <link rel="stylesheet" type="css" href="./bower_components/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" type="css" href="../bower_components/fontawesome/css/font-awesome.min.css">
+  <link rel="stylesheet" type="css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css">
 </head>
 
 <body>
@@ -17,7 +16,7 @@
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
-        <a class="navbar-brand" href="index.html"><i class="fa fa-beer icon-white" onclick="updateStatus()"></i></a>
+        <a class="navbar-brand" href="../index.html"><i class="fa fa-beer icon-white" onclick="updateStatus()"></i></a>
       </div>
       <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
@@ -40,14 +39,14 @@
     </div>
   </div>
 
-  <script src="./configureApp.js"></script>
-  <script src="./promisify.js "></script>
-  <script src="./chartMethods.js "></script>
-  <script src="./temperatureProfileAPI.js"></script>
-  <script src="./bower_components/rxjs/dist/rx.all.js"></script>
-  <script src="./bower_components/mustache/mustache.min.js"></script>
-  <script src="./bower_components/chartist/dist/chartist.min.js"></script>
-  <script src="./bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script src="../appJS/configureApp.js"></script>
+  <script src="../appJS/promisify.js "></script>
+  <script src="../appJS/temperatureProfileAPI.js"></script>
+  <script src="../appJS/chartMethods.js "></script>
+  <script src="../bower_components/rxjs/dist/rx.all.js"></script>
+  <script src="../bower_components/mustache/mustache.min.js"></script>
+  <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+  <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
 
   <script id="profilePanelTemplate" type="x-tmpl-mustache">
     <div class="panel-heading" role="tab">
@@ -193,6 +192,18 @@
 
       var stepData = [];
       var overallDuration = 0;
+
+      // var data = [{
+      //   label: "Probe 0",
+      //   data: probe0Data
+      // }, {
+      //   label: "Probe 1",
+      //   data: probe1Data
+      // }, {
+      //   label: "Setpoint",
+      //   data: setpointData
+      // }];
+
       for (var i = 0; i < steps.length; i++) {
         var entry = document.createElement('li');
 
@@ -211,6 +222,7 @@
           entry.appendChild(stepText);
           stepList.appendChild(entry);
         }
+        // var step = {label: [[overallDuration, steps[i].startTemp], [overallDuration, steps[i].endTemp]]}
         stepData.push([overallDuration, steps[i].startTemp]);
         overallDuration += steps[i].duration;
         stepData.push([overallDuration, steps[i].endTemp]);
@@ -229,6 +241,8 @@
             }
           }
         };
+
+
         var chartPanel = $("#" + stepChartId);
         var data = [{
           label: "Steps",
