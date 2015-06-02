@@ -112,7 +112,7 @@ void GET_profile(HTTP_REQUEST *req, const char *urlParameter) {
         sprintf(req->Resource, "/prfl.%s", ProfileName);
         req->ETag[0] = 0;
         req->ContentLength = 0;
-        Process_GET_File(req);
+        Process_GET_File(req, 0);
     } else {
         if (ff_exists("ProfileListing.txt") == 0) {
             BuildProfileListing();
@@ -121,7 +121,7 @@ void GET_profile(HTTP_REQUEST *req, const char *urlParameter) {
         sprintf(req->Resource, "/ProfileListing.txt");
         req->ETag[0] = 0;
         req->ContentLength = 0;
-        Process_GET_File(req);
+        Process_GET_File(req, 0);
     }
 }
 
@@ -342,7 +342,7 @@ void GET_runHistory(HTTP_REQUEST *req, const char *urlParameter) {
             req->ETag = NULL;
             req->ContentLength = 0;
             Log("Passing to Get_File Resource=%s\r\n", req->Resource);
-            Process_GET_File(req);
+            Process_GET_File(req, 0);
         } else {
             sprintf(req->Resource, "prflinstlisting.%s", profileName);
             if (ff_exists(req->Resource) == 0) {
@@ -352,7 +352,7 @@ void GET_runHistory(HTTP_REQUEST *req, const char *urlParameter) {
             sprintf(req->Resource, "/prflinstlisting.%s", profileName);
             req->ETag = NULL;
             req->ContentLength = 0;
-            Process_GET_File(req);
+            Process_GET_File(req, 0);
             return;
         }
     } else {
@@ -360,7 +360,7 @@ void GET_runHistory(HTTP_REQUEST *req, const char *urlParameter) {
         sprintf(req->Resource, "/ProfileListing.txt");
         req->ETag = NULL;
         req->ContentLength = 0;
-        Process_GET_File(req);
+        Process_GET_File(req, 0);
         return;
     }
 }
@@ -378,7 +378,6 @@ void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
                     (strcmp(ProfileTrendFile.FileName, req->Resource) == 0)) {
                 unsigned long et = globalstate.SystemTime - globalstate.ProfileStartTime;
                 et /= 60;
-                et += 1;
                 sendLength = et * 8;
             } else {
                 sprintf(req->Resource, "inst.%s.%s", profileName, strInstance);
@@ -389,14 +388,13 @@ void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
                     return;
                 }
                 sendLength /= 60;
-                sendLength += 1;
                 sendLength *= 8;
             }
             sprintf(req->Resource, "/trnd.%s.%s", profileName, strInstance);
             req->ETag = NULL;
             req->ContentLength = 0;
             Log("Passing to Get_File Resource=%s\r\n", req->Resource);
-            Process_GET_File_ex(req, 0, sendLength);
+            Process_GET_File_ex(req, 8, sendLength, 0);
         } else {
             //No Instance provided so send a list of instances
             sprintf(req->Resource, "prflinstlisting.%s", profileName);
@@ -407,7 +405,7 @@ void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
             sprintf(req->Resource, "/prflinstlisting.%s", profileName);
             req->ETag = NULL;
             req->ContentLength = 0;
-            Process_GET_File(req);
+            Process_GET_File(req, 0);
             return;
         }
     } else {
@@ -415,7 +413,7 @@ void GET_temperatureTrend(HTTP_REQUEST *req, const char *urlParameter) {
         sprintf(req->Resource, "/ProfileListing.txt");
         req->ETag = NULL;
         req->ContentLength = 0;
-        Process_GET_File(req);
+        Process_GET_File(req, 0);
     }
 }
 
@@ -519,8 +517,9 @@ int UpdateCredentials(const char*username, const char *password) {
     Log("   Updating Credentials: \"%s\"", buff);
     MD5_CTX ctx;
     MD5_Init(&ctx);
-    MD5_Update(&ctx, msg, strlen(msg));
+    MD5_Update(&ctx, buff, strlen(buff));
     MD5_Final(ESP_Config.HA1, &ctx);
+    Log("HA1=%s\r\n", ESP_Config.HA1);
     if (SaveConfig()) {
         return 1;
     } else {
@@ -801,7 +800,7 @@ void GET_Equipment(HTTP_REQUEST *req, const char *urlParameter) {
         req->ETag = NULL;
         req->ContentLength = 0;
         Log("Passing to Get_File Resource=%s\r\n", req->Resource);
-        Process_GET_File(req);
+        Process_GET_File(req, 0);
     } else {
         if (ff_exists("EquipmentProfileListing.txt") == 0) {
             BuildEquipmentProfileListing();
@@ -809,7 +808,7 @@ void GET_Equipment(HTTP_REQUEST *req, const char *urlParameter) {
         sprintf(req->Resource, "/EquipmentProfileListing.txt");
         req->ETag = NULL;
         req->ContentLength = 0;
-        Process_GET_File(req);
+        Process_GET_File(req, 0);
         return;
     }
 }
@@ -1233,7 +1232,11 @@ void GET_FlashStats(HTTP_REQUEST *req, const char *urlParameter) {
     Send200_OK_SmallMsg(req, msg);
 }
 
-#define API_INTERFACE_COUNT    27
+void GET_SecurityTest(HTTP_REQUEST *req, const char *urlParameter) {
+    Send200_OK_SmallMsg(req, "Secure!!!");
+}
+
+#define API_INTERFACE_COUNT    28
 
 API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/echo", &GET_echo, 0, &PUT_echo, 0, 0},
@@ -1262,7 +1265,8 @@ API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/flashstats", &GET_FlashStats, 0, NULL, 0, 0},
     {"/api/uploadfile", NULL, 0, &PUT_uploadFile, 0, 0},
     {"/api/deletefile", NULL, 0, &PUT_deleteFile, 0, 0},
-    {"/api/rawsector", &GET_rawSector, 0, &GET_rawSector, 0, 0}
+    {"/api/rawsector", &GET_rawSector, 0, &GET_rawSector, 0, 0},
+    {"/api/sectest", &GET_SecurityTest, 1, &GET_SecurityTest, 1, 0}
 };
 
 API_INTERFACE * GetAPI(HTTP_REQUEST * req) {

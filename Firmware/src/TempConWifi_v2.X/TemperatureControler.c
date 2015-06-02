@@ -206,7 +206,7 @@ int SetEquipmentProfile(const char *FileName, char *msg, MACHINE_STATE *dest) {
             dest->equipmentConfig.Process_D_FilterCoeff,
             dest->equipmentConfig.Process_D_AdaptiveBand);
 
-    PID_SetOutputLimits(&dest->TargetPID,-100,100);
+    PID_SetOutputLimits(&dest->TargetPID, -100, 100);
     PID_SetOutputLimits(&dest->ProcessPID, -100, 100);
 
     ENABLE_INTERRUPTS;
@@ -641,23 +641,29 @@ void TrendBufferCommitt() {
 void FixedOffTimePWM(MACHINE_STATE *state) {
     if (state->Output > 0) {
         if (state->CoolRelay) {
-            Log(",WAITCOOLOFF");
             //Oops - The controller is calling for heat but we are currently cooling!
             if (state->SystemTime > state->CoolWhenCanTurnOff) {
                 state->HeatRelay = 0;
                 state->CoolRelay = 0;
                 state->CoolWhenCanTurnOn = state->SystemTime + state->equipmentConfig.CoolMinTimeOff;
+                Log(",COOLTURNEDOFF");
+            } else {
+                Log(",WAITCOOLOFF");
             }
         } else if (state->HeatRelay) { //Currently Heating...
             float TimeOn = state->SystemTime - state->TimeTurnedOn;
             float Duty = 100 * (TimeOn / (TimeOn + state->equipmentConfig.HeatMinTimeOff));
-            Log(",HEAT,%f2", Duty);
             if (Duty > state->Output) {
                 if (state->SystemTime > state->HeatWhenCanTurnOff) {
                     state->HeatRelay = 0;
                     state->CoolRelay = 0;
                     state->HeatWhenCanTurnOn = state->SystemTime + state->equipmentConfig.HeatMinTimeOff;
+                    Log(",HEATTURNEDOFF");
+                } else {
+                    Log(",WAITHEATOFF");
                 }
+            } else {
+                Log(",HEATING,%f2", Duty);
             }
         } else {
             float EstOnTime = state->equipmentConfig.HeatMinTimeOn;
@@ -665,35 +671,45 @@ void FixedOffTimePWM(MACHINE_STATE *state) {
                 float CmdDuty = (float) state->Output / (float) 100;
                 EstOnTime = (CmdDuty * state->equipmentConfig.HeatMinTimeOff) / (1 - CmdDuty);
             }
-            Log(",NEED_HEAT,%f1", EstOnTime);
             if (EstOnTime >= state->equipmentConfig.HeatMinTimeOn) {
                 if (state->SystemTime > state->HeatWhenCanTurnOn) {
                     state->TimeTurnedOn = state->SystemTime;
                     state->HeatRelay = 1;
                     state->CoolRelay = 0;
                     state->HeatWhenCanTurnOff = state->SystemTime + state->equipmentConfig.HeatMinTimeOn;
+                    Log(",HEATTURNEDON");
+                } else {
+                    Log(",WAITHEATON");
                 }
+            } else {
+                Log(",HEAT_TOOSHORT,%f1", EstOnTime);
             }
         }
     } else if (state->Output < 0) {
         if (state->HeatRelay) {
-            Log(",WAITHEATOFF");
             //Oops - The controller is calling for COOL but we are currently Heating!
             if (state->SystemTime > state->HeatWhenCanTurnOff) {
                 state->HeatRelay = 0;
                 state->CoolRelay = 0;
                 state->HeatWhenCanTurnOn = state->SystemTime + state->equipmentConfig.HeatMinTimeOff;
+                Log(",HEATTURNEDOFF");
+            } else {
+                Log(",WAITHEATOFF");
             }
         } else if (state->CoolRelay) { //Currently Cooling...
             float TotalTimeOn = state->SystemTime - state->TimeTurnedOn;
             float Duty = 100 * (TotalTimeOn / (TotalTimeOn + state->equipmentConfig.CoolMinTimeOff));
-            Log(",COOL,%f2:", Duty);
             if (Duty > -state->Output) {
                 if (state->SystemTime > state->CoolWhenCanTurnOff) {
                     state->HeatRelay = 0;
                     state->CoolRelay = 0;
                     state->CoolWhenCanTurnOn = state->SystemTime + state->equipmentConfig.CoolMinTimeOff;
+                    Log(",COOLTURNEDOFF");
+                } else {
+                    Log(",COOLWAITOFF");
                 }
+            } else {
+                Log(",COOLING,%f2:", Duty);
             }
         } else {
             float EstOnTime = state->equipmentConfig.CoolMinTimeOn * 2;
@@ -701,37 +717,48 @@ void FixedOffTimePWM(MACHINE_STATE *state) {
                 float CmdDuty = (float) state->Output / (float) (-100);
                 EstOnTime = (CmdDuty * state->equipmentConfig.CoolMinTimeOff) / (1 - CmdDuty);
             }
-            Log(",NEED_COOL,%f1", EstOnTime);
             if (EstOnTime >= state->equipmentConfig.CoolMinTimeOn) {
                 if (state->SystemTime > state->CoolWhenCanTurnOn) {
                     state->TimeTurnedOn = state->SystemTime;
                     state->CoolRelay = 1;
                     state->HeatRelay = 0;
                     state->CoolWhenCanTurnOff = state->SystemTime + state->equipmentConfig.CoolMinTimeOn;
+                    Log(",COOLTURNEDON");
+                } else {
+                    Log(",COOLWAITON");
                 }
+            } else {
+                Log(",COOL_TOOSHORT,%f1", EstOnTime);
             }
         }
     } else {
         if (state->CoolRelay) {
-            Log(",WAITCOOLOFF");
+
             if (state->SystemTime > state->CoolWhenCanTurnOff) {
                 state->HeatRelay = 0;
                 state->CoolRelay = 0;
                 state->CoolWhenCanTurnOn = state->SystemTime + state->equipmentConfig.CoolMinTimeOff;
+                Log(",COOLTURNEDOFF");
+            } else {
+                Log(",WAITCOOLOFF");
             }
         }
         if (state->HeatRelay) {
-            Log(",WAITHEATOFF");
+
             if (state->SystemTime > state->HeatWhenCanTurnOff) {
                 state->HeatRelay = 0;
                 state->CoolRelay = 0;
                 state->HeatWhenCanTurnOn = state->SystemTime + state->equipmentConfig.HeatMinTimeOff;
+                Log(",HEATTURNEDOFF");
+            } else {
+                Log(",WAITHEATOFF");
             }
         }
     }
 }
 
 void TemperatureController_Interrupt() {
+    static int OnOffMode = -1;
     static unsigned long lastTimeSeconds = 0;
     static unsigned long lastTimeMinutes = 0;
     if (isTemperatureController_Initialized == 0) return;
@@ -873,17 +900,29 @@ void TemperatureController_Interrupt() {
                     globalstate.TargetPID.DTerm,
                     globalstate.TargetPID.Output);
 
-            ThresholdTemperature = globalstate.TargetPID.Input + ((globalstate.equipmentConfig.TargetOutput_Max - globalstate.equipmentConfig.TargetOutput_Min)*0.5)*(globalstate.TargetPID.Output / 100);
+            ThresholdTemperature = globalstate.TargetPID.Input + globalstate.TargetPID.Output;
 
-            Log(",%f2", ThresholdTemperature);
+            if (globalstate.TargetPID.Output < (globalstate.equipmentConfig.coolDifferential * 0.1)) {
+                OnOffMode = -1;
+            } else if (globalstate.TargetPID.Output > (globalstate.equipmentConfig.heatDifferential * 0.5)) {
+                OnOffMode = 1;
+            }
+
+            if (OnOffMode < 0) {
+                ThresholdTemperature -= (globalstate.equipmentConfig.coolDifferential * 0.5);
+            } else {
+                ThresholdTemperature += (globalstate.equipmentConfig.heatDifferential * 0.5);
+            }
+
             if (ThresholdTemperature > globalstate.equipmentConfig.TargetOutput_Max) {
                 ThresholdTemperature = globalstate.equipmentConfig.TargetOutput_Max;
             } else if (ThresholdTemperature < globalstate.equipmentConfig.TargetOutput_Min) {
                 ThresholdTemperature = globalstate.equipmentConfig.TargetOutput_Min;
             }
 
+            Log(",%f2", ThresholdTemperature);
 
-            if (globalstate.TargetPID.Output < 0) { //Cooling Mode
+            if (OnOffMode < 0) { //Cooling Mode
                 if (globalstate.Output < 0) {
                     //Cooling is ON so only turn off after we've crossed the setpoint.
                     if (globalstate.ProcessPID.Input < ThresholdTemperature) globalstate.Output = 0;
@@ -893,6 +932,7 @@ void TemperatureController_Interrupt() {
                     if (globalstate.ProcessPID.Input > (ThresholdTemperature + globalstate.equipmentConfig.coolDifferential)) globalstate.Output = -100;
                 }
             } else { //Heating Mode
+
                 if (globalstate.Output > 0) {
                     //Heating is ON so only turn off after we've crossed the setpoint.
                     if (globalstate.ProcessPID.Input > ThresholdTemperature) globalstate.Output = 0;

@@ -51,18 +51,34 @@ unsigned long mDNS_Timeout;
 
 char mDNS_flagSend = 0;
 
+void toLowerCase(char *data) {
+    char token;
+    while (*data) {
+        token = *data;
+        if (token >= 'A' && token <= 'Z') {
+            token -= 'A';
+            token += 'a';
+        }
+        *data = token;
+        data++;
+    }
+}
+
 void mDNS_Init(const char *Name, unsigned long IPAddress) {
     char temp[80];
     Log("    mDNS Init: SRV Record=%s._http._tcp.local\r\n", Name);
     sprintf(temp, "%s._http._tcp.local", Name);
+    toLowerCase(temp);
     mDNS_SRV_NameLength = ToDNS_Resource(temp, mDNS_SRV_Name) - mDNS_SRV_Name;
 
     Log("    mDNS Init: A Record=%s.local\r\n", Name);
     sprintf(temp, "%s.local", Name);
+    toLowerCase(temp);
     mDNS_A_NameLength = ToDNS_Resource(temp, mDNS_A_Name) - mDNS_A_Name;
 
     Log("    mDNS Init: PTR Record=_http._tcp.local\r\n");
     sprintf(temp, "_http._tcp.local");
+    toLowerCase(temp);
     mDNS_PTR_NameLength = ToDNS_Resource(temp, mDNS_PTR_Name) - mDNS_PTR_Name;
 
     mDNS_IP[3] = (IPAddress >> 24) & 0xFF;
@@ -95,6 +111,7 @@ void mDNS_RecieveMsg(ESP8266_SLIP_MESSAGE *msg) {
 
         if (strlen(QName) == 0) continue;
 
+        toLowerCase(QName);
         if (memcmp(mDNS_PTR_Name, QName, mDNS_PTR_NameLength) == 0) {
             Log("mDNS Query: Match My PTR \r\n");
             mDNS_flagSend = 1;

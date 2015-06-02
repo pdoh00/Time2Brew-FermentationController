@@ -591,9 +591,9 @@ Public Class HttpCommsProviderWebClient
         For retry = 1 To 3
             Try
                 request = WebRequest.Create(URL)
-                'request.Pipelined = False
-                'request.ServicePoint.ConnectionLeaseTimeout = 200
-                'request.ServicePoint.UseNagleAlgorithm = False
+                request.Pipelined = False
+                request.ServicePoint.ConnectionLeaseTimeout = 10000
+                request.ServicePoint.UseNagleAlgorithm = False
                 request.ServicePoint.Expect100Continue = False
                 request.Timeout = 10000
                 request.Method = "PUT"
