@@ -127,7 +127,7 @@ var temperatureProfileAPI = (function(promiseAPI, baseAPIAddress, utils) {
   //profileInstance is num seconds since epoch
   var getTrendData = function(profileName, profileInstance) {
     var url = baseAPIAddress + 'temperaturetrend?name=' +
-      profileName + '&instance=' + profileInstance;
+      profileName + '&instance=' + profileInstance + '&reloadCacheHack=' + new Date().getTime();
 
     return Rx.Observable.fromPromise(
       promiseAPI.get(url, 'arraybuffer').then(function(response) {

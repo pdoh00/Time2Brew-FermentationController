@@ -2,6 +2,7 @@
 <html>
 
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="css" href="./app.css">
   <link rel="stylesheet" type="css" href="../bower_components/fontawesome/css/font-awesome.min.css">
   <link rel="stylesheet" type="css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css">
@@ -186,7 +187,7 @@
         collapseId: collapseId,
         stepListId: stepListId,
         stepChartId: stepChartId
-      });;
+      });
 
       var stepList = stepListPanel.querySelector('#' + stepListId);
 
@@ -315,7 +316,7 @@
                   probe0Data.push([timeStamp, instanceData.trendData[j].probe0Temp]);
                 }
                 if (instanceData.trendData[j].probe1Temp > 0) {
-                  probe1Data.push([timeStamp, instanceData.trendData[j].probe1Temp]);
+                  // probe1Data.push([timeStamp, instanceData.trendData[j].probe1Temp]);
                 }
               }
 
@@ -345,21 +346,20 @@
               };
 
               var data = [{
-                label: "Probe 0",
-                data: probe0Data
-              }, {
-                label: "Probe 1",
-                data: probe1Data
-              }, {
                 label: "Setpoint",
                 data: setpointData,
                 points: {
                   show: true
                 }
+              }, {
+                label: "Probe 0",
+                data: probe0Data
+              }, {
+                label: "Probe 1",
+                data: probe1Data
               }];
 
-              chartAPI.createChart(chartPanel, data, options);
-
+              var plot = $.plot(chartPanel, data, options);
             });
         }
       });

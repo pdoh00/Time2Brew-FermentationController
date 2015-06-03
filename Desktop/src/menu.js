@@ -19,6 +19,12 @@ var template = [{
     click: function() {
       app.quit();
     }
+  }, {
+    label: 'Reload Page',
+    accelerator: 'CommandOrControl+R',
+    click: function(){
+      WebContents.reloadIgnoringCache();
+    }
   }]
 }];
 var menu = new Menu();

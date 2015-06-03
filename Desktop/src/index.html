@@ -2,6 +2,7 @@
 <html>
 
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="css" href="./appViews/app.css">
   <link rel="stylesheet" type="css" href="./bower_components/fontawesome/css/font-awesome.min.css">
   <link rel="stylesheet" href="./bower_components/bootstrap/dist/css/bootstrap.min.css">
@@ -35,53 +36,54 @@
     <div class="flex-container-row">
       <h1>Welcome to the Time2Brew Fermentation Controller</h1>
     </div>
-    <div class="flex-container-row">
+    <div>
 
-      <ul class="flex-container-row" style="padding-right: 50px;padding-left: 50px;">
-        <li>
-          <div class="flex2 input-group">
-            <input class="form-control" type="number" min="0" placeholder="start temp" aria-describedby="minAddon">
-            <span class="input-group-addon" id="minAddon">&#176;F</span>
-          </div>
-        </li>
-        <li>
-          <div class="flex2 input-group">
-            <input class="form-control" type="number" min="0" placeholder="end temp">
-            <span class="input-group-addon">&#176;F</span>
-          </div>
-        </li>
-        <li>
-          <div class="flex1 input-group">
-            <input class="form-control" type="number" min="0" placeholder="days">
-            <span class="input-group-addon">days</span>
-          </div>
-        </li>
-        <li>
-          <div class="flex1 input-group">
-            <input class="form-control" type="number" min="0" placeholder="hours">
-            <span class="input-group-addon">hours</span>
-          </div>
-        </li>
-        <li>
-          <div class="flex1 input-group">
-            <input class="form-control" type="number" min="0" placeholder="minutes">
-            <span class="input-group-addon">minutes</span>
-          </div>
-        </li>
-        <li>
-          <div class="flex1 input-group">
-            <input class="form-control" type="number" min="0" placeholder="seconds">
-            <span class="input-group-addon">seconds</span>
-          </div>
-        </li>
-        <li>
-          <div class="flex1 input-group">
-            <button class="btn btn-default">
-              <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
-            </button>
-          </div>
-        </li>
-      </ul>
+      <!-- Make this a mustache template as soon as it's figured out -->
+      <div class="flex-container-row" style="padding-right: 50px;padding-left: 50px; align-items: center">
+        <!-- <li> -->
+        <div class="flex2 input-group" style="width: 150px">
+          <input class="form-control" type="number" min="0" placeholder="start temp" aria-describedby="minAddon">
+          <span class="input-group-addon" id="minAddon">&#176;F</span>
+        </div>
+        <!-- </li>
+        <li> -->
+        <div class="flex2 input-group" style="width: 150px">
+          <input class="form-control" type="number" min="0" placeholder="end temp">
+          <span class="input-group-addon">&#176;F</span>
+        </div>
+        <!-- </li>
+        <li> -->
+        <div class="flex1 input-group" style="width: 150px">
+          <input class="form-control" type="number" min="0" placeholder="days">
+          <span class="input-group-addon">days</span>
+        </div>
+        <!-- </li>
+        <li> -->
+        <div class="flex1 input-group" style="width: 150px">
+          <input class="form-control" type="number" min="0" placeholder="hours">
+          <span class="input-group-addon">hrs</span>
+        </div>
+        <!-- </li>
+        <li> -->
+        <div class="flex1 input-group" style="width: 150px">
+          <input class="form-control" type="number" min="0" placeholder="minutes">
+          <span class="input-group-addon">mins</span>
+        </div>
+        <!-- </li>
+        <li> -->
+        <div class="flex1 input-group" style="width: 150px">
+          <input class="form-control" type="number" min="0" placeholder="seconds">
+          <span class="input-group-addon">secs</span>
+        </div>
+        <!-- </li>
+        <li> -->
+        <div class="flex1 input-group">
+          <button class="btn btn-default">
+            <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+          </button>
+        </div>
+        <!-- </li> -->
+      </div>
     </div>
 
 
