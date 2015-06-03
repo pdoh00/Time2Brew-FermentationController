@@ -40,6 +40,7 @@
   </div>
 
   <script src="../appJS/configureApp.js"></script>
+  <script src="../appJS/utils.js"></script>
   <script src="../appJS/promisify.js "></script>
   <script src="../appJS/temperatureProfileAPI.js"></script>
   <script src="../appJS/chartMethods.js "></script>
@@ -65,7 +66,7 @@
     <div class="panel-heading">
       <h4 class="panel-title">
         <p data-toggle="collapse" data-target="#{{collapseId}}">
-          Steps
+          Current Steps
         </p>
         <h4>
     </div>
@@ -102,6 +103,7 @@
     </div>
     <div id="{{collapseId}}" class="panel-collapse collapse">
       <div class="panel-body">
+        <ol id="{{stepListId}}"></ol>
         <div id="{{chartId}}" style="width: 100%; height: 200px"></div>
       </div>
     </div>
@@ -124,20 +126,18 @@
           function(p) {
 
             var sub = Rx.Observable.forkJoin(
-              Rx.Observable.return(p),
-              temperatureProfileAPI.getProfileSteps(p.name),
-              temperatureProfileAPI.getProfileInstances(p.name));
-
-            sub
+                Rx.Observable.return(p),
+                temperatureProfileAPI.getProfileSteps(p.name),
+                temperatureProfileAPI.getProfileInstances(p.name))
               .subscribe(function(x) {
                 var profile = x[0];
                 profile.steps = x[1];
                 profile.instances = x[2];
                 createProfilePanel(profile, profileList);
-
               });
           },
           function(err) {
+            alert(err);
             console.log('Error: ' + err);
           },
           function() {
@@ -193,23 +193,12 @@
       var stepData = [];
       var overallDuration = 0;
 
-      // var data = [{
-      //   label: "Probe 0",
-      //   data: probe0Data
-      // }, {
-      //   label: "Probe 1",
-      //   data: probe1Data
-      // }, {
-      //   label: "Setpoint",
-      //   data: setpointData
-      // }];
-
       for (var i = 0; i < steps.length; i++) {
         var entry = document.createElement('li');
 
         if (steps[i].startTemp == steps[i].endTemp) {
           var stepText = document.createTextNode("Hold at: " +
-            steps[i].startTemp + ' \xB0F' + " for " + temperatureProfileAPI.formatTime(steps[i].duration));
+            steps[i].startTemp + ' \xB0F' + " for " + utils.formatTime(steps[i].duration));
           entry.appendChild(stepText);
           stepList.appendChild(entry);
         } else {
@@ -217,12 +206,11 @@
             steps[i].startTemp +
             ' \xB0F' + " to " +
             steps[i].endTemp + ' \xB0F' +
-            " over " + temperatureProfileAPI.formatTime(steps[i].duration));
+            " over " + utils.formatTime(steps[i].duration));
 
           entry.appendChild(stepText);
           stepList.appendChild(entry);
         }
-        // var step = {label: [[overallDuration, steps[i].startTemp], [overallDuration, steps[i].endTemp]]}
         stepData.push([overallDuration, steps[i].startTemp]);
         overallDuration += steps[i].duration;
         stepData.push([overallDuration, steps[i].endTemp]);
@@ -283,6 +271,7 @@
     //instanceId = seconds from epoch
     function createInstanceDataPanel(profileName, parent, instanceId, date) {
       var collapseId = 'collapse' + instanceId;
+      var stepListId = 'steps' + instanceId;
       var chartId = 'chart' + instanceId;
       var listItem = document.createElement('li');
       var instancePanel = document.createElement('div');
@@ -293,6 +282,7 @@
 
       instancePanel.innerHTML = Mustache.render(htmlTemplate, {
         collapseId: collapseId,
+        stepListId: stepListId,
         chartId: chartId,
         date: date
       });
@@ -300,30 +290,49 @@
       parent.appendChild(listItem);
 
       $("#" + collapseId).on('shown.bs.collapse', function() {
-        if ($('#' + chartId).children().length == 0) {
-          temperatureProfileAPI.getTrendData(profileName, instanceId)
-            .subscribe(function(trendData) {
+        var chartPanel = $("#" + chartId);
+        if (chartPanel.children().length == 0) {
+          var instanceSteps = temperatureProfileAPI.getInstanceSteps(profileName, instanceId);
+          var trendData = temperatureProfileAPI.getTrendData(profileName, instanceId);
+
+          Rx.Observable.zip(instanceSteps,
+              trendData,
+              function(steps, trend) {
+                return {
+                  stepData: steps,
+                  trendData: trend
+                };
+              })
+            .subscribe(function(instanceData) {
+
               var probe0Data = [];
               var probe1Data = [];
               var setpointData = [];
 
-              for (var j = 0; j < trendData.records.length; j += 5) {
-
+              for (var j = 0; j < instanceData.trendData.length; j += 5) {
                 var timeStamp = (instanceId + (j * 60)) * 1000;
-                console.log(new Date(timeStamp));
-                if (trendData.records[j].probe0Temp > 0) {
-                  probe0Data.push([timeStamp, trendData.records[j].probe0Temp]);
+                if (instanceData.trendData[j].probe0Temp > 0) {
+                  probe0Data.push([timeStamp, instanceData.trendData[j].probe0Temp]);
                 }
-                if(trendData.records[j].probe1Temp > 0){
-                  probe1Data.push([timeStamp, trendData.records[j].probe1Temp]);
+                if (instanceData.trendData[j].probe1Temp > 0) {
+                  probe1Data.push([timeStamp, instanceData.trendData[j].probe1Temp]);
                 }
-
-                setpointData.push([timeStamp, trendData.records[j].setpointTemp]);
               }
+
+              var lastStepEndTime = 0;
+              for (var i = 0; i < instanceData.stepData.length; i++) {
+                var startTime = (instanceId + lastStepEndTime) * 1000;
+                var endTime = startTime + (instanceData.stepData[i].duration * 1000);
+
+                setpointData.push([startTime, instanceData.stepData[i].startTemp]);
+                setpointData.push([endTime, instanceData.stepData[i].endTemp]);
+
+                lastStepEndTime += instanceData.stepData[i].duration;
+              }
+
               var options = {
                 xaxis: {
-                  mode: "time",
-                  timeformat: "%a %H:%M:%S"
+                  mode: "time"
                 },
                 series: {
                   lines: {
@@ -343,10 +352,14 @@
                 data: probe1Data
               }, {
                 label: "Setpoint",
-                data: setpointData
+                data: setpointData,
+                points: {
+                  show: true
+                }
               }];
-              var chartPanel = $("#" + chartId);
+
               chartAPI.createChart(chartPanel, data, options);
+
             });
         }
       });

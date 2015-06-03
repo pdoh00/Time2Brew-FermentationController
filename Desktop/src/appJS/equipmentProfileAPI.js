@@ -1,8 +1,8 @@
 var rx = require('../bower_components/rxjs/dist/rx.lite.js');
-var equipmentProfileAPI = (function() {
+var equipmentProfileAPI = (function(promiseAPI, baseAPIAddress) {
 
-  var getAllProfiles = function(promiseAPI) {
-    var url = baseApiAddress + 'equipmentprofile';
+  var getAllProfiles = function() {
+    var url = baseAPIAddress + 'equipmentprofile';
     return Rx.Observable.fromPromise(
       promiseAPI.get(url, 'text').then(function(response) {
         var equipmentProfileNames = response.split("\r\n")
@@ -14,7 +14,7 @@ var equipmentProfileAPI = (function() {
   };
 
   var getProfile = function(name) {
-    var url = baseApiAddress + 'equipmentprofile?name=' + name;
+    var url = baseAPIAddress + 'equipmentprofile?name=' + name;
     return Rx.Observable.fromPromise(
       promiseAPI.get(url, 'arraybuffer').then(function(response) {
         return parseEquipmentProfile(response);

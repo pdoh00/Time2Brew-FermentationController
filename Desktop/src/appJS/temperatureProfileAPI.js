@@ -1,14 +1,11 @@
 var rx = require('../bower_components/rxjs/dist/rx.lite.js');
-//var baseApiAddress = 'http://ahardinger.ddns.net:24578/api/';
-var baseApiAddress = 'http://10.10.1.148/api/';
-var epoch = new Date('1 January 1970 00:00:00 UTC');
 
-var temperatureProfileAPI = (function(promiseAPI) {
+var temperatureProfileAPI = (function(promiseAPI, baseAPIAddress, utils) {
 
   //Returns profile names as string[]
   var getAllProfiles = function() {
     return Rx.Observable.fromPromise(
-      promiseAPI.get(baseApiAddress + 'profile', 'text')
+      promiseAPI.get(baseAPIAddress + 'profile', 'text')
       .then(function(response) {
 
         //CR/LF is delimeter
@@ -26,34 +23,34 @@ var temperatureProfileAPI = (function(promiseAPI) {
       }));
   };
 
-  var getProfileSteps = function(profileName) {
-    var url = baseApiAddress + 'profile?name=' + profileName;
+  /*
+    getInstanceSteps
+    Gets the profile steps as configured at instance runtime
+    Returns array of step: {startTemp, endTemp, duration}
+  */
+  var getInstanceSteps = function(profileName, instanceId) {
+    var url = baseAPIAddress + 'profile?name=' + profileName +
+      '&instance=' + instanceId;
 
     return Rx.Observable.fromPromise(
       promiseAPI.get(url, 'arraybuffer')
       .then(function(response) {
-        var steps = [];
+        return parseProfileSteps(response);
+      }));
+  };
 
-        var dv = new DataView(response);
-        var aryOffset = 0;
+  /*
+  getProfileSteps
+    Gets the currently configured profile steps
+    Returns array of step: {startTemp, endTemp, duration}
+  */
+  var getProfileSteps = function(profileName) {
+    var url = baseAPIAddress + 'profile?name=' + profileName;
 
-        for (var i = 0; i < response.byteLength / 8; i++) {
-          var step = {};
-
-          var startInCelcius = dv.getInt16(aryOffset, true);
-          step.startTemp = Math.round(CelciusToFahrenheit(startInCelcius / 10.0) * 100) / 100;
-          aryOffset += 2;
-
-          var endInCelcius = dv.getInt16(aryOffset, true);
-          step.endTemp = Math.round(CelciusToFahrenheit(endInCelcius / 10.0) * 100) / 100;
-          aryOffset += 2;
-
-          step.duration = dv.getInt32(aryOffset, true);
-          aryOffset += 4;
-
-          steps.push(step);
-        }
-        return steps;
+    return Rx.Observable.fromPromise(
+      promiseAPI.get(url, 'arraybuffer')
+      .then(function(response) {
+        return parseProfileSteps(response);
       }));
   };
 
@@ -70,7 +67,6 @@ var temperatureProfileAPI = (function(promiseAPI) {
       dataview.setInt16(offset + 2, steps[i].endTemp, true);
       dataview.setInt32(offset + 4, steps[i].duration, true);
     }
-
 
     //now read 512 bytes at a time and send them.
     var base64String = btoa(String.fromCharCode.apply(null, new Uint8Array(contentBuffer)));
@@ -103,7 +99,7 @@ var temperatureProfileAPI = (function(promiseAPI) {
 
   //Returns Date[]. One date for each instance
   var getProfileInstances = function(profileName) {
-    var url = baseApiAddress + 'runhistory?name=' + profileName;
+    var url = baseAPIAddress + 'runhistory?name=' + profileName;
     return Rx.Observable.fromPromise(
       promiseAPI.get(url, 'text')
       .then(function(response) {
@@ -114,9 +110,9 @@ var temperatureProfileAPI = (function(promiseAPI) {
           .filter(function(arg) {
             return arg !== "";
           }).map(function(secondsFromEpoch) {
-            var convertedFromHex = parseInt("0x" + secondsFromEpoch);
-            return new Date(convertedFromHex * 1000);
-            // return new Date(secondsFromEpoch * 1000);
+            //var convertedFromHex = parseInt("0x" + secondsFromEpoch);
+            //return new Date(convertedFromHex * 1000);
+            return new Date(secondsFromEpoch * 1000);
           });
 
         return instances;
@@ -130,7 +126,7 @@ var temperatureProfileAPI = (function(promiseAPI) {
 
   //profileInstance is num seconds since epoch
   var getTrendData = function(profileName, profileInstance) {
-    var url = baseApiAddress + 'temperaturetrend?name=' +
+    var url = baseAPIAddress + 'temperaturetrend?name=' +
       profileName + '&instance=' + profileInstance;
 
     return Rx.Observable.fromPromise(
@@ -140,22 +136,65 @@ var temperatureProfileAPI = (function(promiseAPI) {
       }));
   };
 
+  /*
+    Parses a binary response into an array of step objects
+
+    step: {startTemp, endTemp, duration}
+
+    startTemp: degrees F
+    endTemp: degrees F
+    duration: seconds
+  */
+  function parseProfileSteps(response){
+    var steps = [];
+
+    var dv = new DataView(response);
+    var aryOffset = 0;
+
+    for (var i = 0; i < response.byteLength / 8; i++) {
+      var step = {};
+
+      var startInCelcius = dv.getInt16(aryOffset, true);
+      step.startTemp = Math.round(utils.celciusToFahrenheit(startInCelcius / 10.0) * 100) / 100;
+      aryOffset += 2;
+
+      var endInCelcius = dv.getInt16(aryOffset, true);
+      step.endTemp = Math.round(utils.celciusToFahrenheit(endInCelcius / 10.0) * 100) / 100;
+      aryOffset += 2;
+
+      step.duration = dv.getInt32(aryOffset, true);
+      aryOffset += 4;
+
+      steps.push(step);
+    }
+    return steps;
+  }
+
+  /*
+    Parses a binary response into an array of trendData objects
+
+    trendData: {probe0Temp, probe1Temp, setpointTemp, outputPercent}
+
+    probe0Temp: degrees F
+    probe1Temp: degrees F
+    setpointTemp: degrees F
+    outputPercent: percent
+  */
   function parseTrendData(response) {
     var dv = new DataView(response);
     var aryOffset = 0;
 
-    var trendData = {};
-    trendData.records = [];
+    var trendData = [];
 
     for (var i = 0; i < response.byteLength / 8; i++) {
       var record = {};
-      record.probe0Temp = Math.round(CelciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
+      record.probe0Temp = Math.round(utils.celciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
       aryOffset += 2;
 
-      record.probe1Temp = Math.round(CelciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
+      record.probe1Temp = Math.round(utils.celciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
       aryOffset += 2;
 
-      record.setpointTemp = Math.round(CelciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
+      record.setpointTemp = Math.round(utils.celciusToFahrenheit(dv.getInt16(aryOffset, true) / 10.0) * 100) / 100;
       aryOffset += 2;
 
       var tempOutputPercent = dv.getInt8(aryOffset, true);
@@ -167,45 +206,15 @@ var temperatureProfileAPI = (function(promiseAPI) {
       //var dummy = dv.getInt8(aryOffset, true);
       aryOffset += 1;
 
-      trendData.records.push(record);
+      trendData.push(record);
     }
     return trendData;
   }
 
-  function CelciusToFahrenheit(degreesC) {
-    return degreesC * (9 / 5) + 32.0;
-  }
-
-  function FahernheitToCelcius(degreesF) {
-    return (degreesF - 32.0) * (5 / 9);
-  }
-
-  var formatTime = function(seconds) {
-    var days = 0;
-    var hours = 0;
-    var minutes = 0;
-    var remainingSeconds = seconds;
-
-    if (remainingSeconds >= 86400) {
-      days = Math.floor(remainingSeconds / 86400);
-      remainingSeconds = remainingSeconds % 86400;
-    }
-    if (remainingSeconds >= 3600) {
-      hours = Math.floor(remainingSeconds / 3600);
-      remainingSeconds = remainingSeconds % 3600;
-    }
-    if (remainingSeconds >= 60) {
-      minutes = Math.floor(remainingSeconds / 60);
-      remainingSeconds = remainingSeconds % 60;
-    }
-
-    return days + " days, " + hours + " hours, " + minutes + " minutes, " + remainingSeconds + " seconds";
-  };
-
-
   return {
     getAllProfiles: getAllProfiles,
     getProfileSteps: getProfileSteps,
+    getInstanceSteps: getInstanceSteps,
     createProfile: createProfile,
     deleteProfile: deleteProfile,
     terminateProfile: terminateProfile,
@@ -213,8 +222,7 @@ var temperatureProfileAPI = (function(promiseAPI) {
     executeProfile: executeProfile,
     getProfileInstances: getProfileInstances,
     deleteProfileInstance: deleteProfileInstance,
-    getTrendData: getTrendData,
-    formatTime: formatTime
+    getTrendData: getTrendData
   };
 
-})(promiseAPI);
+}(promiseAPI, baseAPIAddress, utils));

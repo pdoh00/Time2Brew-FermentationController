@@ -1,19 +1,19 @@
 var rx = require('../bower_components/rxjs/dist/rx.lite.js');
-var deviceAPI = (function(promiseAPI) {
+var deviceAPI = (function(promiseAPI, baseAPIAddress) {
 
   var setCredentials = function(userName, password) {
-    var url = baseAddress + 'updatecredentials?username=' + username + '&password=' + password;
+    var url = baseAPIAddress + 'updatecredentials?username=' + username + '&password=' + password;
     return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   var setTime = function(time) {
     var totalSecondsFromEpoch = Math.round(time.getTime() / 1000);
-    var url = baseAddress + '/api/time?time=' + totalSecondsFromEpoch;
+    var url = baseAPIAddress + '/api/time?time=' + totalSecondsFromEpoch;
     return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   var trimFileSystem = function() {
-    var url = baseAddress + 'trimfilesystem';
+    var url = baseAPIAddress + 'trimfilesystem';
     return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
@@ -23,7 +23,7 @@ var deviceAPI = (function(promiseAPI) {
   };
 
   var getFirmwareVersion = function() {
-    var url = baseAddress + 'version';
+    var url = baseAPIAddress + 'version';
     return Rx.Observable.fromPromise(
       promiseAPI.get(url, 'text').then(function(response) {
         return response;
@@ -31,12 +31,12 @@ var deviceAPI = (function(promiseAPI) {
   };
 
   var reboot = function(userName, password) {
-    var url = baseAddress + 'restart?confirm=restart';
+    var url = baseAPIAddress + 'restart?confirm=restart';
     return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 
   var resetToFactoryDefault = function(userName, password) {
-    var url = baseAddress + 'format?confirm=format';
+    var url = baseAPIAddress + 'format?confirm=format';
     return Rx.Observable.fromPromise(promiseAPI.put(url));
   };
 

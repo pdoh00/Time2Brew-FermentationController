@@ -31,9 +31,80 @@
     </div>
   </nav>
 
-  <div id="page-wrapper" class="container">
-    <h1>Welcome to the Time2Brew Fermentation Controller</h1>
+  <div id="page-wrapper" class="container flex-container-col">
+    <div class="flex-container-row">
+      <h1>Welcome to the Time2Brew Fermentation Controller</h1>
+    </div>
+    <div class="flex-container-row">
+
+      <ul class="flex-container-row" style="padding-right: 50px;padding-left: 50px;">
+        <li>
+          <div class="flex2 input-group">
+            <input class="form-control" type="number" min="0" placeholder="start temp" aria-describedby="minAddon">
+            <span class="input-group-addon" id="minAddon">&#176;F</span>
+          </div>
+        </li>
+        <li>
+          <div class="flex2 input-group">
+            <input class="form-control" type="number" min="0" placeholder="end temp">
+            <span class="input-group-addon">&#176;F</span>
+          </div>
+        </li>
+        <li>
+          <div class="flex1 input-group">
+            <input class="form-control" type="number" min="0" placeholder="days">
+            <span class="input-group-addon">days</span>
+          </div>
+        </li>
+        <li>
+          <div class="flex1 input-group">
+            <input class="form-control" type="number" min="0" placeholder="hours">
+            <span class="input-group-addon">hours</span>
+          </div>
+        </li>
+        <li>
+          <div class="flex1 input-group">
+            <input class="form-control" type="number" min="0" placeholder="minutes">
+            <span class="input-group-addon">minutes</span>
+          </div>
+        </li>
+        <li>
+          <div class="flex1 input-group">
+            <input class="form-control" type="number" min="0" placeholder="seconds">
+            <span class="input-group-addon">seconds</span>
+          </div>
+        </li>
+        <li>
+          <div class="flex1 input-group">
+            <button class="btn btn-default">
+              <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+
+    <!-- <div>
+
+      <div class="btn-group">
+        <button class="btn btn-default btn-lg dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
+          Select Temperature Unit
+          <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+          <li>
+            <p>
+              &#176;C
+            </p>
+          </li>
+          <li>&#176;F</li>
+        </ul>
+      </div>
+    </div> -->
   </div>
+
+
   <script>
     window.$ = window.jQuery = require('./bower_components/jquery/dist/jquery.min.js');
   </script>

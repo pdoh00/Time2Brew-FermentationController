@@ -1,14 +1,10 @@
 var rx = require('../bower_components/rxjs/dist/rx.lite.js');
 
-var baseApiAddress = 'http://10.10.1.148/api/';
-//var baseApiAddress = 'http://ahardinger.ddns.net:24578/api/';
-var epoch = new Date('1 January 1970 00:00:00 UTC');
-
-var statusAPI = (function(promiseAPI) {
+var statusAPI = (function(promiseAPI, baseAPIAddress, utils) {
 
   function getStatus() {
     return Rx.Observable.fromPromise(
-      promiseAPI.get(baseApiAddress + 'status', 'arraybuffer')
+      promiseAPI.get(baseAPIAddress + 'status', 'arraybuffer')
       .then(function(response) {
         return parseStatusReponse(response);
       }));
@@ -46,7 +42,7 @@ var statusAPI = (function(promiseAPI) {
     status.coolRelayOn = dv.getInt8(aryOffset, true);
     aryOffset += 1;
 
-    status.activeProfileName = readUTF8String(response, aryOffset, 64);
+    status.activeProfileName = utils.readUTF8String(response, aryOffset, 64);
     aryOffset += 64;
 
     status.currentStepIndex = dv.getInt16(aryOffset, true);
@@ -64,34 +60,15 @@ var statusAPI = (function(promiseAPI) {
     status.profileStartTime = new Date(dv.getUint32(aryOffset, true) * 1000);
     aryOffset += 4;
 
-    status.equipmentProfileName = readUTF8String(response, aryOffset, 64);
+    status.equipmentProfileName = utils.readUTF8String(response, aryOffset, 64);
     //aryOffset += 64;
 
     return status;
   }
 
-  function readUTF8String(responseData, offset, length) {
-    var dataAry = new Int8Array(responseData, offset, length);
-    var retString = "";
-    for (var j = 0; j < dataAry.length; j++) {
-      if (dataAry[j] === 0) {
-        break;
-      } else {
-        retString += String.fromCharCode(dataAry[j]);
-      }
-    }
-    return retString;
-  }
+
 
   return {
     getStatus: getStatus
   };
-})(promiseAPI);
-
-function CelciusToFahrenheit(degreesC) {
-  return degreesC * (9 / 5) + 32.0;
-}
-
-function FahernheitToCelcius(degreesF) {
-  return (degreesF - 32.0) * (5 / 9);
-}
+}(promiseAPI, baseAPIAddress, utils));

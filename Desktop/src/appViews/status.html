@@ -122,6 +122,7 @@
   </div>
 
   <script src="../appJS/configureApp.js"></script>
+  <script src="../appJS/utils.js"></script>
   <script src="../appJS/promisify.js "></script>
   <script src="../appJS/statusAPI.js"></script>
   <script src="../bower_components/jquery/dist/jquery.min.js"></script>
@@ -136,11 +137,11 @@
             status.systemTime.toLocaleDateString() + ' ' + status.systemTime.toLocaleTimeString();
 
           document.getElementById("probe0Temp").innerText =
-            Math.round(CelciusToFahrenheit(status.probe0Temp / 10.0) * 100) / 100 +
+            Math.round(utils.celciusToFahrenheit(status.probe0Temp / 10.0) * 100) / 100 +
             ' \xB0F';
 
           document.getElementById("probe1Temp").innerText =
-            Math.round(CelciusToFahrenheit(status.probe1Temp / 10.0) * 100) / 100 +
+            Math.round(utils.celciusToFahrenheit(status.probe1Temp / 10.0) * 100) / 100 +
             ' \xB0F';
 
           document.getElementById("heatRelayStatus").innerText =
@@ -157,11 +158,11 @@
               status.currentStepIndex;
 
             document.getElementById("currentStepTemp").innerText =
-              Math.round(CelciusToFahrenheit(status.currentStepTemp / 10.0) * 100) / 100 +
+              Math.round(utils.celciusToFahrenheit(status.currentStepTemp / 10.0) * 100) / 100 +
               ' \xB0F';
 
             document.getElementById("currentStepTimeRemaining").innerText =
-              status.currentStepRemainingSeconds;
+            utils.formatTime(status.currentStepRemainingSeconds);
             // moment({
             //   second: status.currentStepRemainingSeconds
             // }, 'HH:mm:ss');
