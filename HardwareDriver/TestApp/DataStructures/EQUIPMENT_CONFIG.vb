@@ -1,6 +1,7 @@
 ﻿Imports System.IO
 
 Public Structure EQUIPMENT_PROFILE
+    Public EquipmentName As String
     Public RegulationMode As REGULATIONMODE
     Public Probe0Assignment As PROBE_ASSIGNMENT
     Public Probe1Assignment As PROBE_ASSIGNMENT
@@ -29,7 +30,15 @@ Public Structure EQUIPMENT_PROFILE
     Public heatTransition As Single
 
     Public Function Serialize() As Byte()
+        Dim bb(63) As Byte
+        For x = 0 To 63
+            bb(x) = 0
+        Next
+        Dim nameBuff() As Byte = Text.ASCIIEncoding.ASCII.GetBytes(Me.EquipmentName)
+        Array.Copy(nameBuff, 0, bb, 0, nameBuff.Length)
+
         Using ms As New MemoryStream()
+            ms.Write(bb, 0, bb.Length)
             ms.WriteByte(CByte(RegulationMode))
             ms.WriteByte(CByte(Probe0Assignment))
             ms.WriteByte(CByte(Probe1Assignment))
@@ -67,6 +76,8 @@ Public Structure EQUIPMENT_PROFILE
         Dim CalcF16 = FletcherChecksum.Fletcher16(sourceData, 0, sourceData.Length - 2)
 
         Dim offset As Integer = 0
+        EquipmentName = GetString(sourceData, 0, 64)
+        offset = 64
         RegulationMode = DirectCast(sourceData(offset), REGULATIONMODE)
         offset += 1
         Probe0Assignment = DirectCast(sourceData(offset), PROBE_ASSIGNMENT)
@@ -137,7 +148,8 @@ Public Structure EQUIPMENT_PROFILE
 
     Public Overrides Function ToString() As String
         Dim ret As String = ""
-        ret = "RegulationMode:" & Me.RegulationMode.ToString & vbCrLf
+        ret = "Name:" & Me.EquipmentName & vbCrLf
+        ret += "RegulationMode:" & Me.RegulationMode.ToString & vbCrLf
         ret += "Probe0Assignment:" & Me.Probe0Assignment.ToString & vbCrLf
         ret += "Probe1Assignment:" & Me.Probe1Assignment.ToString & vbCrLf
         ret += "HeatMinTimeOn_seconds:" & Me.HeatMinTimeOn_seconds.ToString & vbCrLf
@@ -155,5 +167,18 @@ Public Structure EQUIPMENT_PROFILE
         ret += "ThresholdDelta_C:" & Me.ThresholdDelta_C.ToString & vbCrLf
         Return ret
     End Function
+
+    Private Function GetString(dat() As Byte, offset As Integer, maxLen As Integer) As String
+        Dim realLength As Integer = 0
+        For idx = offset To offset + maxLen
+            If dat(idx) = 0 Then
+                Exit For
+            Else
+                realLength += 1
+            End If
+        Next
+        Return System.Text.UTF8Encoding.UTF8.GetString(dat, offset, realLength)
+    End Function
+
 End Structure
 

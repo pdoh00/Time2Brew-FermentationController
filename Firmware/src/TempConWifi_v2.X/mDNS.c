@@ -284,7 +284,7 @@ void mDNS_ProcessLoop() {
     if (tmr > mDNS_Timeout) mDNS_flagSend = 1;
     if (!mDNS_flagSend) return;
 
-    Log("mDNS: Sending Response/Advertisement\r\n");
+    Log("mDNS: Sending Response/Advertisement...");
 
 
     mDNS_Header_Type Header;
@@ -305,6 +305,7 @@ void mDNS_ProcessLoop() {
 
     GetTime(tmr);
     mDNS_Timeout = tmr + mDNS_Interval;
+    Log("OK\r\n");
     return;
 }
 

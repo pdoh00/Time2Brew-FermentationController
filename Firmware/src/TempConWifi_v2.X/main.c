@@ -7,6 +7,7 @@
 
 #include "mDNS.h"
 #include "TemperatureController.h"
+#include "BlobFS.h"
 #include <p33Exxxx.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,8 @@
 #include "http_server.h"
 #include "OneWireTemperature.h"
 #include "FlashFS.h"
+#include "RLE_Compressor.h"
+
 
 /** CONFIGURATION Bits **********************************************/
 _FICD(ICS_PGD3 & JTAGEN_OFF); //ICD takes place on PGD3 and PGC3 pins
@@ -42,6 +45,8 @@ unsigned long Timer500Hz;
 char TemperatureControllerIsAlive, WifiCommunicationsAreAlive, MainLoopIsAlive, WDT_Enabled;
 
 int TriggerConfigReset = 0;
+
+int TriggerWifiReset = 0;
 
 int Global_Config_Mode = 0;
 
@@ -118,6 +123,8 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
     static int CFG_MODE_COUNT = 0;
 
     _T1IF = 0;
+    asm("CLRWDT");
+
     Timer500Hz++;
     HalfSecondTick++;
     if (HalfSecondTick == 250) {
@@ -169,24 +176,30 @@ void __attribute__((__interrupt__, no_auto_psv)) _CNInterrupt(void) {
 
         if ((WDT_TIME - lastTempConRun) > 240) { //2 minute
             Log("WDT: Temperature Controller Is Not Alive!");
-            asm("RESET");
-        }
-        if ((WDT_TIME - lastWifiCommunication) > 720) { //6 minutes
-            Log("WDT: WiFi Comms Are Not Alive!");
-            asm("RESET");
-        }
-        if ((WDT_TIME - lastMainLoopRun) > 240) { //2 minutes
-            Log("WDT: Main Loop Is Not Alive!");
+            Delay(0.1);
             asm("RESET");
         }
 
-        asm("CLRWDT");
+        if ((WDT_TIME - lastWifiCommunication) > 1200) { //10 minutes
+            Log("WDT: WiFi Comms Are Not Alive!");
+            TriggerWifiReset = 1;
+            lastWifiCommunication = WDT_TIME;
+        }
+
+        if ((WDT_TIME - lastMainLoopRun) > 240) { //2 minutes
+            Log("WDT: Main Loop Is Not Alive!");
+            Delay(0.1);
+            asm("RESET");
+        }
+
+
     }
 
 
 }
 
 void __attribute__((__interrupt__, no_auto_psv)) _DMA2Interrupt(void) {
+
     static unsigned int ADC_PingPong = 0;
     int x;
 
@@ -212,6 +225,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _DMA2Interrupt(void) {
             if (ADC_BufferB[x] & 0x1) randomLong.l += 1;
         }
         if (FIFO_FreeSpace(TRNG_fifo) > 2) {
+
             FIFO_Write(TRNG_fifo, randomLong.b[0]);
             FIFO_Write(TRNG_fifo, randomLong.b[1]);
         }
@@ -428,11 +442,13 @@ void __attribute__((__interrupt__, no_auto_psv)) _T2Interrupt(void) {
             break;
         default:
             ONEWIRE_ISR_STATE = ONEWIRE_ISR_STATE_IDLE;
+
             break;
     }
 }
 
 void MakeSafe() {
+
     SET_HEAT(0);
     SET_COOL(0);
     SET_WIFI_POWER(0);
@@ -457,9 +473,6 @@ int main(int argc, char** argv) {
     RTC_Initialize();
     Delay(1);
 
-
-
-
     TriggerConfigReset = 0;
 
     if (GlobalStartup(0) != FR_OK) {
@@ -469,67 +482,10 @@ int main(int argc, char** argv) {
         };
     }
 
-//    BYTE sampBuff[8];
-//    unsigned long sigVal = 0xAABBCCDD;
-//    Log("Writting Sample File...");
-//    ff_File sampleFile;
-//    int bwrit;
-//    ff_Delete("sampleTest.dat");
-//    ff_OpenByFileName(&sampleFile, "sampleTest.dat", 1);
-//    unsigned long SampleNumber = 0;
-//    unsigned long targetPos;
-//    for (SampleNumber = 0; SampleNumber < 30000UL; SampleNumber++) {
-//        targetPos = SampleNumber * 8;
-//        if (sampleFile.Position != targetPos) {
-//            ff_Seek(&sampleFile, targetPos, ff_SeekMode_Absolute);
-//        }
-//        Pack(sampBuff, "LL", SampleNumber, sigVal);
-//        ff_Append(&sampleFile, sampBuff, 8, &bwrit);
-//    }
-//    ff_UpdateLength(&sampleFile);
-//    Log("OK\r\n");
-//
-//    Log("\r\nChecking Sample File...\r\n");
-//    ff_OpenByFileName(&sampleFile, "sampleTest.dat", 0);
-//
-//    unsigned long comp;
-//    for (SampleNumber = 0; SampleNumber < 30000UL; SampleNumber++) {
-//        targetPos = SampleNumber * 8;
-//        if (sampleFile.Position != targetPos) {
-//            ff_Seek(&sampleFile, targetPos, ff_SeekMode_Absolute);
-//        }
-//        ff_Read(&sampleFile, sampBuff, 8, &bwrit);
-//        comp = sampBuff[3];
-//        comp <<= 8;
-//        comp += sampBuff[2];
-//        comp <<= 8;
-//        comp += sampBuff[1];
-//        comp <<= 8;
-//        comp += sampBuff[0];
-//        if (comp != SampleNumber) {
-//            Log("Error @ Sample#:%ul Actual=%ul\r\n", SampleNumber, comp);
-//        }
-//        if (sampBuff[7] != 0xAA || sampBuff[6] != 0xBB || sampBuff[5] != 0xCC || sampBuff[4] != 0xDD) {
-//            Log("Error @ Sample#:%ul Sig Actual=%xb %xb %xb %xb\r\n", SampleNumber, sampBuff[4], sampBuff[5], sampBuff[6], sampBuff[7]);
-//        }
-//    }
-//    Log("Done\r\n");
-//
-//    Log("Sample File Cluster Chain ", sampleFile.OriginSector);
-//    unsigned long nxtSector, curSector;
-//    curSector = sampleFile.OriginSector;
-//    while (1) {
-//        Log("->%xl", curSector);
-//        GetNextSector(curSector, &nxtSector);
-//        if (nxtSector > SECTORCOUNT || nxtSector < 4) {
-//            Log("->(%xl)\r\n", nxtSector);
-//            break;
-//        }
-//        curSector = nxtSector;
-//    }
-//
-
-
+    Log("Testing Blob...\r\n");
+    BLOB_FILE dut;
+    BLOB_openFile(&dut, "nevergonnafindit");
+    
     Log("Starting WDT:...");
     if (RCONbits.WDTO) {
         Log("Last Restart was due to WDT Timeout!...");
@@ -542,6 +498,7 @@ int main(int argc, char** argv) {
     RCONbits.SWDTEN = 1;
     WDT_Enabled = 1;
     Log("OK\r\n");
+
 
 
     Log("\r\n**System Online**\r\n");
@@ -562,6 +519,24 @@ int main(int argc, char** argv) {
         if (TriggerConfigReset) {
             TriggerConfigReset = 0;
             GlobalStartup(1);
+        }
+
+        if (TriggerWifiReset) {
+            TriggerWifiReset = 0;
+            Log("\r\nInitializing WiFi Module\r\n");
+            if (ESP_Init() != 1) {
+                Log("Unable to initialize the ESP Module...");
+
+                return -1;
+            }
+            Log("   WiFI Module Ready. IP Address=%d.%d.%d.%d\r\n", IP_Address.b[3], IP_Address.b[2], IP_Address.b[1], IP_Address.b[0]);
+            Log("Initializing mDNS Service\r\n");
+            mDNS_Init(ESP_Config.Name, IP_Address.l);
+            Log("    mDNS Service Online\r\n");
+
+            Log("\r\nInitializing uPnP Service\r\n");
+            uPnP_Init(ESP_Config.Name, ESP_Config.UUID, IP_Address.l, 0);
+            Log("   uPnP Service Online\r\n");
         }
     }
     return (EXIT_SUCCESS);

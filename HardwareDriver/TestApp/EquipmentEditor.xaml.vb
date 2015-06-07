@@ -3,8 +3,10 @@ Public Class EquipmentEditor
     Public data As EQUIPMENT_PROFILE = New EQUIPMENT_PROFILE
     Public Canceled As Boolean = True
     Public ProfileName As String
+    Public EquipmentID As String = ""
 
     Private Sub EquipmentEditor_Activated(sender As Object, e As EventArgs) Handles Me.Loaded
+        Me.EquipmentName.Text = data.EquipmentName
         Me.RegulationMode.Text = data.RegulationMode
         Me.Probe0Assignment.Text = data.Probe0Assignment
         Me.Probe1Assignment.Text = data.Probe1Assignment
@@ -73,6 +75,7 @@ Public Class EquipmentEditor
         data.Target_D_FilterCoeff = Me.Target_D_FilterCoeff.Text
         data.Target_D_FilterGain = Me.Target_D_FilterGain.Text
 
+        data.EquipmentName = Me.EquipmentName.Text
         Me.Canceled = False
         Me.Close()
     End Sub

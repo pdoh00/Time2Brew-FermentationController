@@ -77,6 +77,7 @@ extern "C" {
     void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long length, int AllowCache);
     void Send200_OK_Data(HTTP_REQUEST * req, unsigned char *msg, int length);
     char MakeLowercase(char inp);
+    void Process_GET_File_blob(HTTP_REQUEST * req);
 #ifdef	__cplusplus
 }
 #endif

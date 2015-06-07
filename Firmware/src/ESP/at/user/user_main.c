@@ -410,7 +410,7 @@ void ICACHE_FLASH_ATTR cmd_MCU_INIT_afterWifiHasIP() {
         SendMessage(ESP_INIT_RESP, 0, Fail_UnableToStartTCPListener, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;
     }
-    res = espconn_regist_time(TCP_Server.pCon, 600, 0);
+    res = espconn_regist_time(TCP_Server.pCon, 5, 0);
     if (res != ESPCONN_OK) {
         SendMessage(ESP_INIT_RESP, 0, Fail_UnableToSetTCPTimeout, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;

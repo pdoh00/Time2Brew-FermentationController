@@ -21,6 +21,7 @@ int CreateDefaultEquipmentProfile() {
     int res;
     ff_File handle;
     EQUIPMENT_PROFILE *eq = &globalstate.equipmentConfig;
+    sprintf(eq->Name, "default");
     eq->Probe0Assignment = PROBE_ASSIGNMENT_PROCESS;
     eq->Probe1Assignment = PROBE_ASSIGNMENT_TARGET;
     eq->CoolMinTimeOff = 60;
@@ -36,10 +37,10 @@ int CreateDefaultEquipmentProfile() {
     eq->Target_Kd = 0;
     eq->TargetOutput_Max = 1000;
     eq->TargetOutput_Min = 0;
-    eq->heatDifferential = 50;  //5C or 9F
-    eq->heatTransition = 50;   //5C or 9F
-    eq->coolDifferential = 100;  //10C or 18F
-    eq->coolTransition = 100;   //10C or 18F
+    eq->heatDifferential = 50; //5C or 9F
+    eq->heatTransition = 50; //5C or 9F
+    eq->coolDifferential = 100; //10C or 18F
+    eq->coolTransition = 100; //10C or 18F
     eq->Target_D_AdaptiveBand = 25.0;
     eq->Target_D_FilterGain = 20.8776099;
     eq->Target_D_FilterCoeff = 0.9042035937;
@@ -48,12 +49,10 @@ int CreateDefaultEquipmentProfile() {
     eq->Process_D_FilterCoeff = 0.9042035937;
     eq->CheckSum = fletcher16((BYTE *) eq, sizeof (EQUIPMENT_PROFILE) - 2);
 
-    Log("Equip Size=%i Checksum=%ui\r\n", sizeof (EQUIPMENT_PROFILE), eq->CheckSum);
-
-    res = ff_Delete("equip.default");
-    res = ff_OpenByFileName(&handle, "equip.default", 1);
+    res = ff_Delete("equip.0");
+    res = ff_OpenByFileName(&handle, "equip.0", 1);
     if (res != FR_OK) {
-        Log("Unable to Open WifiConfig file! RES=%s\r\n", Translate_DRESULT(res));
+        Log("Unable to Open Default Equipment file! RES=%s\r\n", Translate_DRESULT(res));
         return res;
     }
     int bytesWritten;
@@ -241,28 +240,6 @@ int GlobalStartup(int configMode) {
 
     Log("Config Password='%s' UUID='%s'\r\n", ConfigPassword, UUID);
 
-    //    unsigned char secBuff[256];
-    //    char *ConfigPassword = (char *) &secBuff[4];
-    //    char *UUID = (char *) &secBuff[21];
-    //
-    //    diskReadSecure(1, secBuff);
-    //    if (secBuff[0] != 0x12 || secBuff[1] != 0x34) {
-    //        Log("!!!Secure MAGIC is BAD! - Create a new one\r\n");
-    //        CreateUnqiueKey();
-    //        Log("Key Created...Reading\r\n");
-    //        diskReadSecure(1, secBuff);
-    //    } else if (strlen(ConfigPassword) != 16) {
-    //        Log("!!!Secure ConfigPassword is BAD! - Create a new one\r\n");
-    //        CreateUnqiueKey();
-    //        Log("Key Created...Reading\r\n");
-    //        diskReadSecure(1, secBuff);
-    //    } else if (strlen(UUID) != 36) {
-    //        Log("!!!Secure UUID s BAD! len=%i - Create a new one\r\n", (int) strlen(UUID));
-    //        CreateUnqiueKey();
-    //        Log("Key Created...Reading\r\n");
-    //        diskReadSecure(1, secBuff);
-    //    }
-    //    Log(" OK\r\n");
 
     Log("Loading ESP Config...");
     if (ESP_ConfigLoad(&ESP_Config, WiFiConfigFilename) == 0) {
@@ -303,16 +280,16 @@ int GlobalStartup(int configMode) {
     }
     Log("   WiFI Module Ready. IP Address=%d.%d.%d.%d\r\n", IP_Address.b[3], IP_Address.b[2], IP_Address.b[1], IP_Address.b[0]);
 
-    Log("Initializing mDNS Service\r\n");
-    mDNS_Init(ESP_Config.Name, IP_Address.l);
-    Log("    mDNS Service Online\r\n");
+//    Log("Initializing mDNS Service\r\n");
+//    mDNS_Init(ESP_Config.Name, IP_Address.l);
+//    Log("    mDNS Service Online\r\n");
 
     Log("\r\nInitializing uPnP Service\r\n");
-    uPnP_Init(ESP_Config.Name, ESP_Config.UUID, IP_Address.l);
+    uPnP_Init(ESP_Config.Name, ESP_Config.UUID, IP_Address.l, 1);
     Log("   uPnP Service Online\r\n");
 
 
-    res = ff_OpenByFileName(&defaultEquip, "equip.default", 0);
+    res = ff_OpenByFileName(&defaultEquip, "equip.0", 0);
     if (res == FR_NOT_FOUND) {
         if (CreateDefaultEquipmentProfile() != FR_OK) {
             Log("GlobalStartup: Fatal Error: Unable to Create 'equip.default' = \"%s\"", Translate_DRESULT(res));

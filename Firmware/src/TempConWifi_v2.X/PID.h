@@ -29,7 +29,7 @@ extern "C" {
     } PID_CTX;
 
     void PID_Compute(PID_CTX *ctx);
-    void PID_Initialize(PID_CTX *ctx);
+    void PID_Initialize(PID_CTX *ctx, float ITerm);
     void PID_SetTunings(PID_CTX *ctx, float Kp, float Ki, float Kd, float D_FilterGain, float D_FilterCoeff, float D_AdaptiveBand);
     void PID_SetOutputLimits(PID_CTX *ctx, double Min, double Max);
 

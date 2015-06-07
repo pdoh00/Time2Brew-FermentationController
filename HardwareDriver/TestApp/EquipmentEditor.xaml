@@ -9,6 +9,11 @@
         </Grid.ColumnDefinitions>
         <StackPanel Orientation="Vertical" Grid.Column="0">
             <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Equipment Name:</TextBlock>
+                <TextBox Margin="5" Name="EquipmentName"/>
+            </StackPanel>
+            
+            <StackPanel Orientation="Horizontal">
                 <TextBlock Margin="5">Regulation Mode</TextBlock>
                 <TextBox Margin="5" Name="RegulationMode"/>
             </StackPanel>

@@ -14,6 +14,8 @@
                     <Button Margin="5" Name="cmdVersion" Content="Firmware Version"/>
                     <Button Margin="5" Name="cmdUploadFile" Content="Upload File"/>
                     <Button Margin="5" Name="cmdSetTime" Content="Set Time"/>
+                    <Button Margin="5" Name="cmdUploadBlob" Content="Upload Blob!"/>
+                    <Button Margin="5" x:Name="cmdEraseBlob" Content="Erase Blob"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical">
                     <Button Margin="5" Name="cmdGetTemp">Get Temperature</Button>
@@ -41,6 +43,7 @@
                     <Button Margin="5" Name="cmdDownloadInstance">Download Profile Instance</Button>
                     <Button Margin="5" Name="cmdDownloadTrend">Download Trend Data</Button>
                     <Button Margin="5" Name="cmdDeleteTrend">Delete Trend Data</Button>
+                    <Button Margin="5" Name="cmdTruncate" Content="Truncate"/>
                 </StackPanel>
             </StackPanel>
 

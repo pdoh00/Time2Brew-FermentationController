@@ -2,19 +2,13 @@
 <html>
 
 <head>
- <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <script src="./js/jquery.min.js"></script>
   <link rel="stylesheet" type="css" href="app.css">
-  <link rel="stylesheet" type="css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css">
-  <link rel="stylesheet" type="css" href="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.8.0/chartist.min.css">
-  <!-- Latest compiled and minified CSS -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
-
-  <!-- Optional theme -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
-
-  <!-- Latest compiled and minified JavaScript -->
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-  
+  <link rel="stylesheet" type="css" href="./css/font-awesome.min.css">
+  <link rel="stylesheet" type="css" href="./css/chartist.min.css">  
+  <link rel="stylesheet" type="css" href="./css/bootstrap.min.css">
+  <link rel="stylesheet" type="css" href="./css/bootstrap-theme.min.css">
+  <script src="./js/bootstrap.min.js"></script>
 </head>
 
 <body>
@@ -30,10 +24,10 @@
       </div>
       <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
-          <li class="active"><a href="status.htm">Device Status</a></li>
-          <li><a href="temperatureProfiles.htm">Fermentation Profiles</a></li>
-          <li><a href="equipmentProfiles.htm">Equipment Profiles</a></li>
-          <li><a href="device.htm">Device</a></li>
+          <li class="active"><a href="status.html">Device Status</a></li>
+          <li><a href="temperatureProfiles.html">Fermentation Profiles</a></li>
+          <li><a href="equipmentProfiles.html">Equipment Profiles</a></li>
+          <li><a href="device.html">Device</a></li>
         </ul>
       </div>
     </div>
@@ -133,16 +127,15 @@
     </div>
   </div>
  
-  <script src="statusAPI.js"></script>
-  
-  <script src="promisify.js "></script>  
-  <script src="temperatureProfileAPI.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/2.5.2/rx.all.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.0.0/mustache.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartist/0.8.0/chartist.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
+  <script src="./statusAPI.js"></script>
+  <script src="./promisify.js "></script>  
+  <script src="./temperatureProfileAPI.js"></script>
+  <script src="./js/rx.all.min.js"></script>
+  <script src="./js/mustache.min.js"></script>
+  <script src="./js/chartist.min.js"></script>
+  <script src="./js/Chart.min.js"></script>
+  <script src="./js/jquery.flot.min.js"></script>
+  <script src="./js/jquery.flot.time.min.js"></script>
   <script>
   var chartAPI = (function() {
 
@@ -166,11 +159,11 @@
           status.systemTime.toLocaleDateString() + ' ' + status.systemTime.toLocaleTimeString();
 
         document.getElementById("probe0Temp").innerText =
-          Math.round(CelciusToFahrenheit(status.probe0Temp / 10.0) * 100) / 100 +
+          Math.round(CelciusToFahrenheit(status.probe0Temp) * 100) / 100 +
           ' \xB0F';
 
         document.getElementById("probe1Temp").innerText =
-          Math.round(CelciusToFahrenheit(status.probe1Temp / 10.0) * 100) / 100 +
+          Math.round(CelciusToFahrenheit(status.probe1Temp) * 100) / 100 +
           ' \xB0F';
 
         document.getElementById("heatRelayStatus").innerText =
@@ -181,7 +174,7 @@
 
         if (status.systemMode === 2) {
           document.getElementById("activeProfileName").innerText =
-            status.activeProfileName.split('.')[1];
+            status.activeProfileName;
 
           document.getElementById("currentStepIndex").innerText =
             status.currentStepIndex;

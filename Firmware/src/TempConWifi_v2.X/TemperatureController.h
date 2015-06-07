@@ -10,6 +10,7 @@
 
 #include "PID.h"
 #include "FlashFS.h"
+#include "RLE_Compressor.h"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -37,9 +38,8 @@ extern "C" {
 
     typedef struct {
         unsigned long time;
-        int Probe0;
-        int Probe1;
-        int SetPoint;
+        int ProcessTemperature;
+        int TargetTemperature;
         char Output;
         unsigned char Relay;
     } TREND_RECORD;
@@ -50,6 +50,7 @@ extern "C" {
     } PROFILE_STEP;
 
     typedef struct {
+        char Name[64];
         unsigned char RegulationMode;
         unsigned char Probe0Assignment;
         unsigned char Probe1Assignment;
@@ -79,13 +80,24 @@ extern "C" {
     } EQUIPMENT_PROFILE;
 
     typedef struct {
-        char lastOutput;
-    } ON_OFF_REGULATION_STATE;
+        unsigned int ProfileID;
+        unsigned int EquipmentID;
+        unsigned long CoolWhenCanTurnOff;
+        unsigned long CoolWhenCanTurnOn;
+        unsigned long HeatWhenCanTurnOff;
+        unsigned long HeatWhenCanTurnOn;
+        int ManualSetPoint;
+        float ProcessPID_Integral;
+        unsigned long ProfileStartTime;
+        unsigned char SystemMode;
+        float TargetPID_Integral;
+        unsigned int BootMode;
+        unsigned int chkSum;
+    } RECOVERY_RECORD;
 
     typedef struct {
         unsigned long SystemTime;
-        unsigned char SystemMode; //System Mode: 0 = Sensor Only, 1 = Manual Setpoint, 2=Profile Active
-        char EquipmentName[64];
+        unsigned char SystemMode;
         char ActiveProfileName[64];
         unsigned char HeatRelay;
         unsigned char CoolRelay;
@@ -97,28 +109,36 @@ extern "C" {
         unsigned long HeatWhenCanTurnOff;
         unsigned long CoolWhenCanTurnOn;
         unsigned long CoolWhenCanTurnOff;
+
+        ff_File Profile;
+        unsigned int ProfileID;
         unsigned int StepIdx;
+        unsigned char StepCount;
         int StepTemperature;
+        unsigned long ProfileStartTime;
         unsigned long StepTimeRemaining;
         unsigned long totalElapsedProfileTime;
         unsigned long totalProfileRunTime;
-        unsigned char StepCount;
-        PROFILE_STEP ProfileSteps[64];
-        int Probe0Temperature;
-        int Probe1Temperature;
-        unsigned long ProfileStartTime;
+
+        float ProcessTemperature;
+        float TargetTemperature;
+
         int ManualSetPoint;
+
+        unsigned int equipmentProfileID;
         EQUIPMENT_PROFILE equipmentConfig;
-        unsigned long signature;
-        ON_OFF_REGULATION_STATE SimpleRegState;
+
+        RLE_State trend_RLE_State;
+        ff_File trend_RLE_FileHandle;
+
     } MACHINE_STATE;
 
     extern MACHINE_STATE globalstate;
     extern ff_File ProfileTrendFile;
 
-    int ExecuteProfile(const char *fname, char *msg);
+    int ExecuteProfile(unsigned int ProfileID, char *msg);
     int LoadEquipmentProfile(const char *FileName, char *msg, EQUIPMENT_PROFILE *dest);
-    int SetEquipmentProfile(const char *FileName, char *msg, MACHINE_STATE *dest);
+    int SetEquipmentProfile(unsigned int ID, char *msg, MACHINE_STATE *dest);
     int TerminateProfile();
     int TruncateProfile(unsigned char *NewProfileData, int len, char *msg);
     unsigned long SecondsFromEpoch(int y, int m, int d, int hour, int minute, int second);
@@ -126,11 +146,12 @@ extern "C" {
     void TemperatureController_Interrupt();
     void TrendBufferCommitt();
     int TemperatureController_Initialize();
-    int rawReadTemp(int ProbeIDX);
+    float rawReadTemp(int ProbeIDX);
     void InitializeRecoveryRecord();
-    int LoadProfile(const char *FileName, char *msg, MACHINE_STATE *dest);
+    int LoadProfileInstance(unsigned int ProfileID, unsigned long instance, char *msg, MACHINE_STATE *dest);
     void WriteRecoveryRecord(MACHINE_STATE *source);
-    int GetProfileTotalDuration(const char *FileName, unsigned long *retVal);
+    int GetProfileInstanceTotalDuration(const char *FileName, unsigned long *retVal);
+    int GetProfileName(const char *profileID, char *ProfileName);
 
 #ifdef	__cplusplus
 }

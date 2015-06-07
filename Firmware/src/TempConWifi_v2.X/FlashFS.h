@@ -31,10 +31,6 @@ extern "C" {
         unsigned long OriginSector;
     } ff_File;
 
-    typedef enum {
-        ff_SeekMode_Absolute,
-        ff_SeekMode_Relative
-    } ff_SeekMode;
 
     int ff_Overwrite(ff_File *file, const char *filename);
     int ff_OpenByFileName(ff_File *file, const char *filename, char CreateIfNotFound);
@@ -43,7 +39,7 @@ extern "C" {
     int ff_DeleteByHandle(ff_File *file);
     int ff_Read(ff_File *file, unsigned char *out, int bCount, int *bytesRead);
     int ff_Append(ff_File *file, unsigned char *in, int bCount, int *bytesWritten);
-    int ff_Seek(ff_File *file, signed long offset, ff_SeekMode mode);
+    int ff_Seek(ff_File *file, signed long offset);
     int ff_Trim();
     int ff_OpenDirectoryListing(ff_File *DirectoryIfo);
     int ff_GetNextEntryFromDirectory(ff_File *DirectoryIfo, char *fname);
@@ -55,6 +51,7 @@ extern "C" {
     int ff_RepairFS();
     int ff_CheckFS();
     int ff_exists(const char *fname);
+    int ff_copy(const char *source, unsigned long sourceOffset, const char *dest, unsigned long destOffset, unsigned long bCount, int overwrite);
 
     int diskRead(unsigned long address, int bCount, unsigned char * out);
     int diskRawWrite(unsigned long address, int bCount, unsigned char *data);

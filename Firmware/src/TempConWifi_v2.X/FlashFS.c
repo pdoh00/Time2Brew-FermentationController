@@ -311,6 +311,7 @@ int diskEraseUserArea() {
 }
 
 int AllocateSector(uint32_t parentSector, uint32_t *sectorAddress) {
+    Log("    Allocate Sector: Parent=%xl", parentSector);
     uint16_t link;
     //Search for a Free Sector Entry
     uint16_t randTemp;
@@ -324,8 +325,6 @@ int AllocateSector(uint32_t parentSector, uint32_t *sectorAddress) {
     randTemp ^= TMR4;
 
     *sectorAddress = randTemp % SECTORCOUNT; //Randomize the start search sector to implement wear leveling...
-
-    if (LoggingOn) Log("   AllocateSector: Starting Point=%xl\r\n", *sectorAddress);
     int idx;
     for (idx = 0; idx < SECTORCOUNT; idx++) {
         if ((*sectorAddress) > SECTORCOUNT) *sectorAddress = 5;
@@ -335,7 +334,7 @@ int AllocateSector(uint32_t parentSector, uint32_t *sectorAddress) {
             //Claim the sector and write it as the EOF for the chain
             uint16_t val = 0x7FFF;
             uint32_t lTemp = CAT_Address + ((*sectorAddress)*2);
-            if (LoggingOn) Log("   Free Sector Found: %xl EntryAddress=%xl\r\n", *sectorAddress, lTemp);
+            Log(" Free Sector=%xl", *sectorAddress);
             diskWrite(lTemp, 2, (BYTE*) & val);
             uint16_t check = 0;
             diskRead(lTemp, 2, (BYTE*) & check);
@@ -345,21 +344,20 @@ int AllocateSector(uint32_t parentSector, uint32_t *sectorAddress) {
                 //Go to the parent Sector's entry and change it from
                 //0x7FFF (EOF) to instead point at this new entry
                 //which is now the EOF record...
-                if (LoggingOn) Log("   Update Parent Sector @ %xl to Complete Linking\r\n", parentSector);
+                Log(" Linking...");
                 uint16_t itemp = *sectorAddress;
                 diskWrite(CAT_Address + (parentSector << 1), 2, (BYTE*) & itemp);
                 uint16_t chk2;
                 diskRead(CAT_Address + (parentSector << 1), 2, (BYTE*) & chk2);
-                if (LoggingOn) Log("        Check Parent Sector=%xi Expected=%xi\r\n", chk2, itemp);
+                Log("OK");
             }
-            if (LoggingOn) Log("   OK\r\n");
+            Log(" Done\r\n");
             return FR_OK;
         } else {
             (*sectorAddress) += 1;
         }
     }
-    Log("   FF_ERROR! Unable to Find Free Sector...\r\n");
-    LoggingOn = 0;
+    Log(" Unable to Find Free Sector...\r\n");
     return FR_DISK_FULL;
 }
 
@@ -399,7 +397,7 @@ int FindFileEntryAddress(const char *filename, uint32_t *FileTablePosition) {
     BYTE fnameLength = strlen(filename);
     int bRead;
 
-    ff_Seek(&FET, 0, ff_SeekMode_Absolute);
+    ff_Seek(&FET, 0);
 
     while (1) {
         //Read the first byte to see if this is a valid entry
@@ -407,7 +405,7 @@ int FindFileEntryAddress(const char *filename, uint32_t *FileTablePosition) {
         ff_Read(&FET, buff, 1, &bRead);
         if (buff[0] == 0) {
             if (LoggingOn) Log("   %xl: 0x00 = Erased Entry\r\n", *FileTablePosition);
-            ff_Seek(&FET, 255, ff_SeekMode_Relative);
+            ff_Seek(&FET, FET.Position + 255);
             //Erased entry... do nothing with it
         } else if (buff[0] == 0xFF) {
             if (LoggingOn) Log("   %xl: 0xFF=Found End Of Table Entry\r\n", *FileTablePosition);
@@ -426,27 +424,30 @@ int FindFileEntryAddress(const char *filename, uint32_t *FileTablePosition) {
                 return FR_OK;
             } else {
                 if (LoggingOn) Log("        Exact Entry Does NOT Match.\r\n");
-                ff_Seek(&FET, 255 - fnameLength, ff_SeekMode_Relative);
+                ff_Seek(&FET, FET.Position + 255 - fnameLength);
             }
         } else {
 
             if (LoggingOn) Log("   %xl: Filename Length Does Not Match\r\n", *FileTablePosition);
-            ff_Seek(&FET, 255, ff_SeekMode_Relative);
+            ff_Seek(&FET, FET.Position + 255);
         }
     }
 }
 
 int SeekToEndOfFET(ff_File *fet) {
+    BYTE TempBuff[256];
     int itemp;
-    ff_Seek(fet, 0, ff_SeekMode_Absolute);
+    ff_Seek(fet, 0);
     while (1) {
-        ff_Read(fet, buff, 1, &itemp);
-        if (buff[0] == 0xFF) {
-            fet->Position -= 1;
-            fet->SectorOffset -= 1;
+        if (fet->Position == fet->Length) {
+            Log("End of FET Reached... Position=Length\r\n");
             return FR_OK;
         }
-        ff_Seek(fet, 255, ff_SeekMode_Relative);
+        ff_Read(fet, TempBuff, 256, &itemp);
+        if (TempBuff[0] == 0xFF) {
+            ff_Seek(fet, fet->Position - 256);
+            return FR_OK;
+        }
     }
 }
 
@@ -486,7 +487,7 @@ int CreateFile(const char *filename, ff_File *file) {
 
     int res;
     res = AllocateSector(0, &temp.ul);
-    //Log("   -AllocateSector res=%i, ZeroParent, OriginSector=%ui\r\n", res, temp.ui);
+    Log("   -AllocateSector res=%i, ZeroParent, OriginSector=%xb %xb\r\n", res, temp.ub[0], temp.ub[1]);
     if (res != FR_OK) return res;
     *(cursor++) = temp.ub[0];
     *(cursor++) = temp.ub[1];
@@ -494,30 +495,14 @@ int CreateFile(const char *filename, ff_File *file) {
 
     SeekToEndOfFET(&FET);
     file->FileEntryAddress = FET.Position;
+    Log("   -FileEntryAddress=%xl\r\n", file->FileEntryAddress);
     buff[0] = strlen(filename);
-    ff_Append(&FET, buff, 255, &temp.i[0]);
-    //    Log("FET Entry Data: ");
-    //    int p;
-    //    for (p = 0; p < 256; p++) {
-    //        Log("%xb ", buff[p]);
-    //    }
-    //    Log("\r\n");
+    ff_Append(&FET, buff, 256, &temp.i[0]);
 
     file->SectorOffset = 0;
     file->Position = 0;
     file->CurrentSector = file->OriginSector;
     file->Length = 0;
-
-    res = ff_Seek(&FET, file->FileEntryAddress, ff_SeekMode_Absolute);
-    if (res != FR_OK) return res;
-
-    res = ff_Read(&FET, buff, 255, &temp.i[0]);
-    if (res != FR_OK) return res;
-
-    //    Log("***VERIFY RECORD BYTES: ");
-    //    for (p = 0; p < 255; p++) Log("%xb ", buff[p]);
-    //    Log("\r\n\r\n");
-
 
     return FR_OK;
 }
@@ -625,6 +610,20 @@ int ff_Initialize() {
     FET.Position = 0;
     FET.SectorOffset = 0;
 
+    int bw;
+    unsigned long FET_END;
+
+    while (1) {
+        ff_Read(&FET, buff, 256, &bw);
+        if (buff[0] == 0xFF) {
+            FET_END = FET.Position - 256;
+            break;
+        }
+    }
+    ff_Seek(&FET, 0);
+    sprintf(FET.FileName, "FET");
+    FET.Length = FET_END;
+
     Log("FlashFS_Initialize: CAT_Address=%xl\r\n\r\n", CAT_Address);
 
     return FR_OK;
@@ -656,6 +655,20 @@ int ff_Format() {
     FET.Position = 0;
     FET.SectorOffset = 0;
 
+    int bw;
+    unsigned long FET_END;
+
+    while (1) {
+        ff_Read(&FET, buff, 256, &bw);
+        if (buff[0] == 0xFF) {
+            FET_END = FET.Position - 256;
+            break;
+        }
+    }
+    ff_Seek(&FET, 0);
+    sprintf(FET.FileName, "FET");
+    FET.Length = FET_END;
+
     return 1;
 }
 
@@ -672,7 +685,7 @@ int ff_OpenByEntryAddress(ff_File *file, unsigned long FileTablePosition) {
 
     unsigned char *cursor = buff;
     file->FileEntryAddress = FileTablePosition;
-    ff_Seek(&FET, FileTablePosition, ff_SeekMode_Absolute);
+    ff_Seek(&FET, FileTablePosition);
     ff_Read(&FET, buff, 256, &tempLength.i[0]);
 
     if (*cursor > 123 || *cursor == 0x00) {
@@ -755,7 +768,7 @@ int ff_DeleteByHandle(ff_File *file) {
     if (LoggingOn) Log("ff_DeleteByHandle: Filename='%s'\r\n", file->FileName);
 
     //First Clobber the File Entry
-    res = ff_Seek(&FET, file->FileEntryAddress, ff_SeekMode_Absolute);
+    res = ff_Seek(&FET, file->FileEntryAddress);
     if (res != FR_OK) return res;
 
     res = ff_Append(&FET, (BYTE *) & val, 2, &itemp);
@@ -766,7 +779,7 @@ int ff_DeleteByHandle(ff_File *file) {
 
 int ff_Delete(const char *filename) {
     ff_File temp;
-    Log("ff_Delete: Filename='%s'\r\n", filename);
+    Log("  ff_Delete: Filename='%s'\r\n", filename);
     int res = ff_OpenByFileName(&temp, filename, 0);
     if (res != FR_OK) return res;
 
@@ -787,8 +800,10 @@ int ff_Read_StreamToWifi(ff_File *file, int bCount) {
     uint32_t nextSector;
     int subsectorBCOUNT, ssSend;
     unsigned long subsectorOffset;
+    unsigned long address;
     int res;
     while (bCount) {
+        //Log("ff_Read_StreamToWifi: Sector=%xl Offset=%xi Length=%i\r\n", file->CurrentSector, (int) file->SectorOffset, bCount);
         bytesToRead = 0x1000 - file->SectorOffset;
         //        Log("bCount=%i, FilePosition=%xl, Sector=%xl, SectorOffset=%xl, bytesToRead=%i\r\n",
         //                bCount, file->Position, file->CurrentSector, file->SectorOffset, bytesToRead);
@@ -802,7 +817,11 @@ int ff_Read_StreamToWifi(ff_File *file, int bCount) {
             } else {
                 ssSend = subsectorBCOUNT;
             }
-            diskRead((file->CurrentSector << 12) + file->SectorOffset + subsectorOffset, ssSend, sectorBuff);
+            address = file->CurrentSector << 12;
+            address += file->SectorOffset;
+            address += subsectorOffset;
+            diskRead(address, ssSend, sectorBuff);
+            //Log("ff_Read_StreamToWifi: Address=%xl Length=%i\r\n", address, ssSend);
             subsectorOffset += ssSend;
             subsectorBCOUNT -= ssSend;
             ESP_StreamArray(sectorBuff, ssSend);
@@ -873,16 +892,19 @@ int ff_Read(ff_File *file, BYTE *out, int bCount, int *bytesRead) {
 }
 
 int ff_Append(ff_File *file, BYTE *dataToWrite, int bCount, int *bytesWritten) {
-    if (LoggingOn) Log("ff_Append:\r\n");
+    if (strcmp(file->FileName, "FET") == 0) LoggingOn = 1;
+    else LoggingOn = 0;
+
+    if (LoggingOn) Log("ff_Append: '%s'\r\n", file->FileName);
     int bytesToWrite;
     uint32_t nextSector;
     int res;
     *bytesWritten = 0;
     while (bCount) {
         bytesToWrite = 0x1000 - file->SectorOffset;
-        if (LoggingOn) Log("bCount=%i, FilePosition=%xl, Sector=%xl, SectorOffset=%xl, bytesToWrite=%i\r\n",
-                bCount, file->Position, file->CurrentSector, file->SectorOffset, bytesToWrite);
         if (bytesToWrite > bCount) bytesToWrite = bCount;
+        if (LoggingOn) Log("   bCount=%i, FilePosition=%xl, Sector=%xl, SectorOffset=%xl, bytesToWrite=%i\r\n",
+                bCount, file->Position, file->CurrentSector, file->SectorOffset, bytesToWrite);
         diskWrite((file->CurrentSector << 12) + file->SectorOffset, bytesToWrite, dataToWrite);
         dataToWrite += bytesToWrite;
         *bytesWritten += bytesToWrite;
@@ -892,26 +914,37 @@ int ff_Append(ff_File *file, BYTE *dataToWrite, int bCount, int *bytesWritten) {
         file->SectorOffset += bytesToWrite;
         //Did we cross over the sector boundary?
         if (file->SectorOffset >= 0x1000) {
-            if (LoggingOn) Log("Sector Change: SectorOffset=%xl\r\n", file->SectorOffset);
+            if (LoggingOn) Log("   Sector Change: SectorOffset=%xl -> ", file->SectorOffset);
             //Okay get the next sector we should be writing to...
             res = GetNextSector(file->CurrentSector, &nextSector);
-            if (res != FR_OK && res != FR_EOF) return res;
+            if (res != FR_OK && res != FR_EOF) {
+                LoggingOn = 0;
+                return res;
+            }
+
             //Is this the last sector that's been allocated?
             if (nextSector == 0x7FFF) {
                 //Yep, so let's allocated one more...
                 res = AllocateSector(file->CurrentSector, &nextSector);
 
-                if (res != FR_OK) return res;
+                if (res != FR_OK) {
+                    LoggingOn = 0;
+                    return res;
+                }
+                if (LoggingOn) Log("((%xl))\r\n", nextSector);
+            } else {
+                if (LoggingOn) Log("%xl\r\n", nextSector);
             }
             file->CurrentSector = nextSector;
             file->SectorOffset = 0;
         }
     }
+    LoggingOn = 0;
     return FR_OK;
 }
 
 int ff_UpdateLength(ff_File *file) {
-    if (LoggingOn) Log("\r\nUpdate Length: '%s'\r\n", file->FileName);
+    Log("\r\nUpdate Length: '%s'\r\n", file->FileName);
     int res, idx, bRead;
     unsigned int zero = 0;
 
@@ -921,7 +954,7 @@ int ff_UpdateLength(ff_File *file) {
     } temp;
     temp.ul = 0;
 
-    res = ff_Seek(&FET, file->FileEntryAddress, ff_SeekMode_Absolute);
+    res = ff_Seek(&FET, file->FileEntryAddress);
     if (res != FR_OK) return res;
 
     res = ff_Read(&FET, buff, 256, &bRead);
@@ -935,9 +968,9 @@ int ff_UpdateLength(ff_File *file) {
                 *(cursor++) = temp.ub[0];
                 *(cursor++) = temp.ub[1];
                 *(cursor++) = temp.ub[2];
-                if (LoggingOn) Log("Free Slot Found At Index=%i\r\n", idx);
+                Log("   Free Slot Found At Index=%i\r\n", idx);
 
-                res = ff_Seek(&FET, file->FileEntryAddress, ff_SeekMode_Absolute);
+                res = ff_Seek(&FET, file->FileEntryAddress);
                 if (res != FR_OK) return res;
 
                 res = ff_Append(&FET, buff, 256, &bRead);
@@ -952,13 +985,10 @@ int ff_UpdateLength(ff_File *file) {
         }
     }
 
-    if (LoggingOn) Log("No Free Slots in File Record... Creating new...\r\n");
-
-    //We didn't find a free length entry... so let's create a new entry record...
-    if (LoggingOn) Log("Zero Existing Entry\r\n");
+    Log("   No Free Slots in File Record... Creating new...\r\n");
 
     //Clobber the existing file entry...
-    res = ff_Seek(&FET, file->FileEntryAddress, ff_SeekMode_Absolute);
+    res = ff_Seek(&FET, file->FileEntryAddress);
     if (res != FR_OK) return res;
     res = ff_Append(&FET, (BYTE *) & zero, 2, &bRead);
     if (res != FR_OK) return res;
@@ -977,7 +1007,7 @@ int ff_UpdateLength(ff_File *file) {
     //Now write the clean entry to disk
     //Ask the system to get the entry...since we clobbered it we'll get a not found response
     //But the address returned will be located at the tail of the file entry table...
-    if (LoggingOn) Log("Find the end of the File Entry Table...\r\n");
+    Log("   Find the end of the File Entry Table...\r\n");
     SeekToEndOfFET(&FET);
     file->FileEntryAddress = FET.Position;
     buff[0] = strlen(file->FileName);
@@ -987,19 +1017,12 @@ int ff_UpdateLength(ff_File *file) {
     return FR_OK;
 }
 
-int ff_Seek(ff_File *file, int32_t offset, ff_SeekMode mode) {
+int ff_Seek(ff_File *file, int32_t offset) {
     if (LoggingOn) Log("ff_Seek_fw: offset=%l\r\n", offset);
 
-    if (mode == ff_SeekMode_Absolute) {
-        file->Position = 0;
-        file->CurrentSector = file->OriginSector;
-        file->SectorOffset = 0;
-    } else {
-        offset = file->Position + offset;
-        file->Position = 0;
-        file->CurrentSector = file->OriginSector;
-        file->SectorOffset = 0;
-    }
+    file->Position = 0;
+    file->CurrentSector = file->OriginSector;
+    file->SectorOffset = 0;
 
     int bytesToRead;
     uint32_t nextSector;
@@ -1096,7 +1119,7 @@ int ff_Trim() {
     Log("Starting Compaction of File Entry Table\r\n");
     int bytesRead, bytesWritten;
 
-    ff_Seek(&FET, 0, ff_SeekMode_Absolute);
+    ff_Seek(&FET, 0);
 
     while (1) {
         res = ff_Read(&FET, buff, 256, &bytesRead);
@@ -1156,6 +1179,22 @@ int ff_Trim() {
     FET.CurrentSector = FET.OriginSector;
     FET.Position = 0;
     FET.SectorOffset = 0;
+    sprintf(FET.FileName, "FET");
+
+    int bw;
+    unsigned long FET_END;
+
+    while (1) {
+        ff_Read(&FET, buff, 256, &bw);
+        if (buff[0] == 0xFF) {
+            FET_END = FET.Position - 256;
+            break;
+        }
+    }
+    ff_Seek(&FET, 0);
+    sprintf(FET.FileName, "FET");
+    FET.Length = FET_END;
+
 
     Log("Erase OLD CAT\r\n");
     diskEraseSector(oldSAT);
@@ -1238,7 +1277,7 @@ int ff_RepairFS() {
                 curSector = nxtSector;
             }
         } else {
-            ff_Seek(&FET, fileEntryAddress, ff_SeekMode_Absolute);
+            ff_Seek(&FET, fileEntryAddress);
             ff_Append(&FET, (BYTE *) & val, 2, &itemp);
         }
     }
@@ -1390,6 +1429,37 @@ int ff_CheckFS() {
             return FR_CORRUPTED;
         }
     }
+}
+
+int ff_copy(const char *source, unsigned long sourceOffset, const char *dest, unsigned long destOffset, unsigned long bCount, int overwrite) {
+    BYTE copyBuff[256];
+    unsigned long bytesToRead;
+    int res, bw;
+    if (overwrite) ff_Delete(dest);
+    ff_File src, dst;
+    res = ff_OpenByFileName(&src, source, 0);
+    if (res != FR_OK) return res;
+
+    res = ff_OpenByFileName(&dst, dest, 1);
+    if (res != FR_OK) return res;
+
+    res = ff_Seek(&src, sourceOffset);
+    res = ff_Seek(&dst, destOffset);
+
+    if (bCount == 0) {
+        bCount = src.Length - sourceOffset;
+    }
+
+    while (bCount) {
+        bytesToRead = bCount;
+        if (bytesToRead > 256) bytesToRead = 256;
+        res = ff_Read(&src, copyBuff, (int) bytesToRead, &bw);
+        if (res != FR_OK) return res;
+        ff_Append(&dst, copyBuff, bytesToRead, &bw);
+        bCount -= bytesToRead;
+    }
+    ff_UpdateLength(&dst);
+    return FR_OK;
 }
 
 #ifdef FF_TEST
@@ -1650,7 +1720,7 @@ void fftest_HighLevel() {
     }
 
     Log("(APPEND) Test Seek to offset=0x1000...");
-    ret = ff_Seek(&test, 0x1000, ff_SeekMode_Absolute);
+    ret = ff_Seek(&test, 0x1000);
     if (ret == FR_OK) {
         Log("OK\r\n");
     } else {
@@ -2169,7 +2239,7 @@ void fftest_HighLevel() {
     Log("8 Byte Writing Seek File:\r\n");
     for (seekPos = 0; seekPos < 0x40000; seekPos += 8) {
         if ((seekPos & 0x7FF) == 0) Log("\r\n%xl: ", seekPos);
-        ff_Seek(&seekHandle, seekPos, ff_SeekMode_Absolute);
+        ff_Seek(&seekHandle, seekPos);
         ff_Append(&seekHandle, (BYTE *) & seekPos, 4, &bWritten);
         ff_Append(&seekHandle, (BYTE *) & seekPos, 4, &bWritten);
         if ((seekPos & 0b1111) == 0) Log(".");
@@ -2179,7 +2249,7 @@ void fftest_HighLevel() {
     Log("Done\r\n8 Byte Checking Seek File:\r\n");
     for (seekPos = 0; seekPos < 0x40000; seekPos += 8) {
         if ((seekPos & 0x7FF) == 0) Log("\r\n%xl: ", seekPos);
-        ff_Seek(&seekHandle, seekPos, ff_SeekMode_Absolute);
+        ff_Seek(&seekHandle, seekPos);
         ff_Read(&seekHandle, (BYTE *) & seekCheck, 4, &bWritten);
         ff_Read(&seekHandle, (BYTE *) & seekCheck2, 4, &bWritten);
         if (seekCheck == seekPos && seekCheck == seekCheck2) {
@@ -2204,7 +2274,7 @@ void fftest_HighLevel() {
     Log("8 Byte Checking Seek File:\r\n");
     for (seekPos = 0; seekPos < 0x40000; seekPos += 8) {
         if ((seekPos & 0x7FF) == 0) Log("\r\n%xl: ", seekPos);
-        ff_Seek(&seekHandle, seekPos, ff_SeekMode_Absolute);
+        ff_Seek(&seekHandle, seekPos);
         ff_Read(&seekHandle, (BYTE *) & seekCheck, 4, &bWritten);
         if (seekCheck == seekPos) {
             if ((seekPos & 0b1111) == 0) Log(".");

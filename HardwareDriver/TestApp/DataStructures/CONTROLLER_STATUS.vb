@@ -42,12 +42,12 @@
 
         Probe0Assigment = DirectCast(sourceData(offset), PROBE_ASSIGNMENT)
         offset += 1
-        Probe0Temperature_C = CDbl(BitConverter.ToInt16(sourceData, offset)) * 0.1
-        offset += 2
+        Probe0Temperature_C = CDbl(BitConverter.ToSingle(sourceData, offset))
+        offset += 4
         Probe1Assigment = DirectCast(sourceData(offset), PROBE_ASSIGNMENT)
         offset += 1
-        Probe1Temperature_C = CDbl(BitConverter.ToInt16(sourceData, offset)) * 0.1
-        offset += 2
+        Probe1Temperature_C = CDbl(BitConverter.ToSingle(sourceData, offset))
+        offset += 4
         HeatRelay_On = sourceData(offset)
         offset += 1
         CoolRelay_On = sourceData(offset)

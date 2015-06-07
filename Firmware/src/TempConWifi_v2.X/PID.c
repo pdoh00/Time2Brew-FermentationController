@@ -21,12 +21,8 @@ void PID_SetTunings(PID_CTX *ctx, float Kp, float Ki, float Kd, float D_FilterGa
     ctx->D_AdaptiveBand = D_AdaptiveBand;
 }
 
-void PID_Initialize(PID_CTX *ctx) {
-    if (ctx->ki != 0) {
-        ctx->ITerm = ctx->Output;
-    } else {
-        ctx->ITerm = 0;
-    }
+void PID_Initialize(PID_CTX *ctx, float ITerm) {
+    ctx->ITerm = ITerm;
     if (ctx->ITerm > ctx->outMax) ctx->ITerm = ctx->outMax;
     else if (ctx->ITerm < ctx->outMin) ctx->ITerm = ctx->outMin;
     ctx->D_Filter.xv[0] = 0;

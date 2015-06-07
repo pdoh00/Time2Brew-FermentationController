@@ -102,9 +102,8 @@ Module Module1
                 resp = com.ReadByte
                 If resp = ACK Then Exit While
             End If
-            While com.BytesToWrite
-            End While
         End While
+        com.ReadExisting()
         Console.WriteLine("OK")
         Return True
     End Function
@@ -294,7 +293,7 @@ Module Module1
             Environment.Exit(-1)
         End If
 
-        If WipeChip(com) = False Then
+        If EraseBackup(com) = False Then
             Environment.Exit(-2)
         End If
 

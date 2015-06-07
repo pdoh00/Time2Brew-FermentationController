@@ -95,18 +95,13 @@ Public Class FermentationControllerDevice
     ''' Downloads the given profile from the controller.  The profile must exist otherwise an exception will be thrown.
     ''' For a list of profiles see the GetProfileListing command. Can be called any time. Does not require authentication.
     ''' </summary>
-    ''' <param name="profileName"></param>
+    ''' <param name="profileID"></param>
     ''' <returns></returns>
     ''' <remarks></remarks>
-    Public Async Function DownloadProfile(profileName As String) As Task(Of List(Of PROFILE_STEP))
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/profile?name=" & profileName)
+    Public Async Function DownloadProfile(profileID As String) As Task(Of TEMPERATURE_PROFILE)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/profile?id=" & profileID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
-        Dim ret As New List(Of PROFILE_STEP)
-        Dim offset As Integer = 0
-        While (Result.Body.Length - offset >= 8)
-            ret.Add(New PROFILE_STEP(Result.Body, offset))
-            offset += 8
-        End While
+        Dim ret As New TEMPERATURE_PROFILE(Result.Body)
         Return ret
     End Function
 
@@ -115,28 +110,37 @@ Public Class FermentationControllerDevice
     ''' Uploads a temperature profile to the controller.  If the profile already exists it will be overwritten without warning.
     ''' Can be called any time. Requires Authentication.
     ''' </summary>
-    ''' <param name="profileName"></param>
-    ''' <param name="profileSteps"></param>
+    ''' <param name="profileID"></param>
+    ''' <param name="profileData"></param>
     ''' <returns></returns>
     ''' <remarks></remarks>
-    Public Async Function UploadProfile(profileName As String, profileSteps As List(Of PROFILE_STEP)) As Task(Of Boolean)
+    Public Async Function UploadProfile(profileID As String, profileData As TEMPERATURE_PROFILE) As Task(Of Boolean)
         Dim FileOffset As UInt32 = 0
         Dim readBuffer(511) As Byte
-        Using ms As New MemoryStream()
-            For Each prflStep In profileSteps
-                ms.Write(prflStep.Serialize, 0, 8)
-            Next
+        Dim firstChunk As Boolean = True
+        Dim url As String
+        Using ms As New MemoryStream(profileData.Serialize)
             ms.Position = 0
             While (ms.Position < ms.Length)
                 Dim bytesRead = ms.Read(readBuffer, 0, 512)
                 Dim sendData(bytesRead - 1) As Byte
                 Array.Copy(readBuffer, sendData, bytesRead)
                 Dim chksum = FletcherChecksum.Fletcher16(sendData, 0, sendData.Length)
-                Dim url As String = RootAddress & "/api/profile?name=" & profileName & "&offset=" & FileOffset
-                url += "&chksum=" & chksum
+
+                If (firstChunk) Then
+                    If (profileID = "") Then
+                        url = RootAddress & "/api/profile?chksum=" & chksum
+                    Else
+                        url = RootAddress & "/api/profile?id=" & profileID & "chksum=" & chksum
+                    End If
+                    firstChunk = False
+                Else
+                    url = RootAddress & "/api/profile?id=" & profileID & "chksum=" & chksum & "&offset=" & FileOffset
+                End If
                 url += "&content=" & ToURL_Safe_base64String(sendData)
                 Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
                 If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                profileID = Text.ASCIIEncoding.ASCII.GetString(Result.Body)
                 FileOffset += bytesRead
             End While
         End Using
@@ -147,15 +151,15 @@ Public Class FermentationControllerDevice
     ''' Starts the given profile.  The controller must be in manual mode before executing this command otherwise an exception will be thrown.
     ''' Requires authentication.
     ''' </summary>
-    ''' <param name="profileName"></param>
+    ''' <param name="profileID"></param>
     ''' <remarks></remarks>
-    Public Async Function ExecuteProfile(profileName As String) As Task
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/executeprofile?name=" & profileName)
+    Public Async Function ExecuteProfile(profileID As String) As Task
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/executeprofile?id=" & profileID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
     End Function
 
-    Public Async Function DeleteProfile(profileName As String) As Task
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/deleteprofile?name=" & profileName)
+    Public Async Function DeleteProfile(profileID As String) As Task
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/deleteprofile?id=" & profileID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
     End Function
 
@@ -197,9 +201,9 @@ Public Class FermentationControllerDevice
     ''' <param name="profileName"></param>
     ''' <returns></returns>
     ''' <remarks></remarks>
-    Public Async Function GetInstanceListing(profileName As String) As Task(Of List(Of DateTime))
+    Public Async Function GetInstanceListing(profileID As String) As Task(Of List(Of DateTime))
         Dim ret As New List(Of DateTime)
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/runhistory?name=" & profileName)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/runhistory?id=" & profileID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Using ms As New MemoryStream(Result.Body)
             Using rdr As New StreamReader(ms, Text.UTF8Encoding.UTF8)
@@ -221,13 +225,13 @@ Public Class FermentationControllerDevice
     ''' For a list of instances of a profile see the GetInstanceListing command
     ''' Can be called anytime. Does not require authentication.
     ''' </summary>
-    ''' <param name="profileName"></param>
+    ''' <param name="profileID"></param>
     ''' <param name="Instance"></param>
     ''' <returns></returns>
     ''' <remarks></remarks>
-    Public Async Function DownloadInstance(profileName As String, Instance As DateTime) As Task(Of List(Of PROFILE_STEP))
+    Public Async Function DownloadInstance(profileID As String, Instance As DateTime) As Task(Of List(Of PROFILE_STEP))
         Dim timeOffset = (Instance.ToUniversalTime - EPOCH).TotalSeconds
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/runhistory?name=" & profileName & "&instance=" & timeOffset)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/runhistory?id=" & profileID & "&instance=" & timeOffset)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Dim ret As New List(Of PROFILE_STEP)
         Dim offset As Integer = 0
@@ -238,9 +242,9 @@ Public Class FermentationControllerDevice
         Return ret
     End Function
 
-    Public Async Function DeleteInstance(profileName As String, Instance As DateTime) As Task
+    Public Async Function DeleteInstance(profileID As String, Instance As DateTime) As Task
         Dim timeOffset = (Instance.ToUniversalTime - EPOCH).TotalSeconds
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/deleteinstance?name=" & profileName & "&instance=" & timeOffset)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/deleteinstance?id=" & profileID & "&instance=" & timeOffset)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
     End Function
 
@@ -250,22 +254,22 @@ Public Class FermentationControllerDevice
     ''' For a list of instances of a profile see the GetInstanceListing command
     ''' Can be called anytime. Does not require authentication.
     ''' </summary>
-    ''' <param name="profileName"></param>
+    ''' <param name="profileID"></param>
     ''' <param name="Instance"></param>
     ''' <returns>A list of trend records originating from Instance Date/Time, one sample every minute</returns>
     ''' <remarks></remarks>
-    Public Async Function DownloadTrendData(profileName As String, Instance As DateTime) As Task(Of List(Of TREND_RECORD))
+    Public Async Function DownloadTrendData(profileID As String, Instance As DateTime) As Task(Of List(Of TREND_RECORD))
         Dim timeOffset = (Instance.ToUniversalTime - EPOCH).TotalSeconds
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/temperaturetrend?name=" & profileName & "&instance=" & timeOffset)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/temperaturetrend?id=" & profileID & "&instance=" & timeOffset)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Using fs As New FileStream("C:\rawProfile.dat", FileMode.Create, FileAccess.Write)
             fs.Write(Result.Body, 0, Result.Body.Length)
         End Using
         Dim ret As New List(Of TREND_RECORD)
         Dim offset As Integer = 0
-        While (Result.Body.Length - offset >= 8)
+        While (Result.Body.Length - offset >= 7)
             ret.Add(New TREND_RECORD(Result.Body, offset))
-            offset += 8
+            offset += 7
         End While
         Return ret
     End Function
@@ -280,7 +284,7 @@ Public Class FermentationControllerDevice
     Public Async Function GetTemperature(ProbeID As Integer) As Task(Of Double)
         Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/temperature?probe=" & ProbeID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
-        Return Double.Parse(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Length)) * 0.1
+        Return Double.Parse(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Length)) * 0.01
     End Function
 
     ''' <summary>
@@ -319,11 +323,11 @@ Public Class FermentationControllerDevice
     ''' If the profile does not exist a FermCtrlCommsException will be thrown.
     ''' Can be called anytime. Does not require authentication.
     ''' </summary>
-    ''' <param name="equipmentProfileName">Up to 63 characters are allowed.</param>
+    ''' <param name="equipmentID">Up to 63 characters are allowed.</param>
     ''' <returns></returns>
     ''' <remarks></remarks>
-    Public Async Function DownloadEquipmentProfile(equipmentProfileName As String) As Task(Of EQUIPMENT_PROFILE)
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/equipmentprofile?name=" & equipmentProfileName)
+    Public Async Function DownloadEquipmentProfile(equipmentID As String) As Task(Of EQUIPMENT_PROFILE)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/equipmentprofile?id=" & equipmentID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Dim ret As New EQUIPMENT_PROFILE(Result.Body)
         Return ret
@@ -333,15 +337,22 @@ Public Class FermentationControllerDevice
     ''' Uploads an equipment profile to the controller.  If the profile already exists it will be overwritten without warning.
     ''' Can be called anytime. Requires authentication.
     ''' </summary>
-    ''' <param name="equipmentProfileName">Up to 63 characters are allowed.</param>
+    ''' <param name="equipmentProfileID">Up to 63 characters are allowed.</param>
     ''' <param name="equipmentProfile"></param>
     ''' <remarks></remarks>
-    Public Async Function UploadEquipmentProfile(equipmentProfileName As String, equipmentProfile As EQUIPMENT_PROFILE) As Task
+    Public Async Function UploadEquipmentProfile(equipmentProfileID As String, equipmentProfile As EQUIPMENT_PROFILE) As Task
         Dim sendData = equipmentProfile.Serialize()
         Dim chksum = FletcherChecksum.Fletcher16(sendData, 0, sendData.Length)
-        Dim url As String = RootAddress & "/api/equipmentprofile?name=" & equipmentProfileName
-        url += "&chksum=" & chksum
-        url += "&content=" & ToURL_Safe_base64String(sendData)
+        Dim url As String
+        If equipmentProfileID = "" Then
+            url = RootAddress & "/api/equipmentprofile?chksum=" & chksum
+            url += "&content=" & ToURL_Safe_base64String(sendData)
+        Else
+            url = RootAddress & "/api/equipmentprofile?id=" & equipmentProfileID
+            url += "&chksum=" & chksum
+            url += "&content=" & ToURL_Safe_base64String(sendData)
+        End If
+
         Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
     End Function
@@ -351,15 +362,15 @@ Public Class FermentationControllerDevice
     ''' If the profile does not exist a FermCtrlCommsException will be thrown.
     ''' Can be called anytime. Requires authentication.
     ''' </summary>
-    ''' <param name="equipmentProfileName">Name of the equipment profile.  For a listing of profiles see GetEquipmentProfileListing command</param>
+    ''' <param name="equipmentProfileID">Name of the equipment profile.  For a listing of profiles see GetEquipmentProfileListing command</param>
     ''' <remarks></remarks>
-    Public Async Function SetEquipmentProfile(equipmentProfileName As String) As Task
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/setequipmentprofile?name=" & equipmentProfileName)
+    Public Async Function SetEquipmentProfile(equipmentProfileID As String) As Task
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/setequipmentprofile?id=" & equipmentProfileID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
     End Function
 
-    Public Async Function DeleteEquipmentProfile(equipmentProfileName As String) As Task
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/deleteequipmentprofile?name=" & equipmentProfileName)
+    Public Async Function DeleteEquipmentProfile(equipmentProfileID As String) As Task
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/deleteequipmentprofile?id=" & equipmentProfileID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
     End Function
 
@@ -427,6 +438,17 @@ Public Class FermentationControllerDevice
 
         End Try
     End Function
+
+    Public Async Function EraseBLOB() As Task
+        Try
+            Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/eraseblob")
+            If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+        Catch ex As Exception
+
+        End Try
+    End Function
+
+
 
     Public Async Function uploadfirmware(firmwareFile As Stream, prog As Action(Of Single)) As Task
         Dim first As Boolean = True
@@ -525,6 +547,39 @@ Public Class FermentationControllerDevice
                 End Try
             End While
         End While
+    End Function
+
+    Public Async Function uploadBlob(blobFile As Stream, prog As Action(Of Single)) As Task
+        Dim first As Boolean = True
+        Dim buffer(512) As Byte
+        blobFile.Position = 0
+        While blobFile.Position < blobFile.Length - 1
+            prog(blobFile.Position / blobFile.Length)
+            Dim offset = blobFile.Position
+            Dim bytesToSend = Math.Min(blobFile.Length - blobFile.Position, 512)
+            ReDim buffer(bytesToSend - 1)
+            blobFile.Read(buffer, 0, bytesToSend)
+            Dim chksum As UInt16 = FletcherChecksum.Fletcher16(buffer, 0, bytesToSend)
+            Dim url As String = RootAddress & "/api/uploadblob?offset=" & offset
+            url += "&chksum=" & chksum
+            url += "&content=" & ToURL_Safe_base64String(buffer, 0, bytesToSend)
+            While (1)
+                Try
+                    Console.Write("Push...")
+                    Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
+                    If Result.StatusCode <> 200 Then
+                        Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+                        Continue While
+                    Else
+                        Console.WriteLine("OK")
+                    End If
+                    Exit While
+                Catch ex As Exception
+                    Console.WriteLine(ex.ToString)
+                End Try
+            End While
+        End While
+        Debug.Print("DONE")
     End Function
 
     Public Async Function GetVersion() As Task(Of String)

@@ -78,7 +78,7 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim name = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
                 Await Controller.SetEquipmentProfile(name)
@@ -108,9 +108,8 @@ Class MainWindow
 
     Private Async Sub cmdUploadEquipmentProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadEquipmentProfile.Click
         response.Text = "--"
-        Dim name = InputBox("Equipment Profile Name")
-        If name = "" Then Return
         Dim edt As New EquipmentEditor()
+        edt.EquipmentID = ""
         edt.ShowDialog()
         If edt.Canceled Then Return
 
@@ -130,12 +129,12 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim ID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
-                Dim temp = Await Controller.DownloadEquipmentProfile(name)
+                Dim temp = Await Controller.DownloadEquipmentProfile(ID)
                 Dim edt As New EquipmentEditor
-                edt.Name = name
+                edt.EquipmentID = ID
                 edt.data = temp
                 edt.ShowDialog()
                 If edt.Canceled Then Return
@@ -193,8 +192,10 @@ Class MainWindow
         l.Add(New PROFILE_STEP(18.3, 22, 86400)) '1 Day       
         l.Add(New PROFILE_STEP(22, 22, 1209600)) '14 Days
 
+        Dim tprfl As New TEMPERATURE_PROFILE("Saison222", l)
+
         Try
-            Await Controller.UploadProfile("Saison", l)
+            Await Controller.UploadProfile("", tprfl)
             response.Text = "OK"
         Catch ex As Exception
             response.Text = "Error:" & ex.ToString
@@ -210,14 +211,11 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim profileID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
-                Dim lst = Await Controller.DownloadProfile(name)
-                response.Text = ""
-                For Each itm In lst
-                    response.Text += itm.ToString & vbCrLf
-                Next
+                Dim profile = Await Controller.DownloadProfile(profileID)
+                response.Text = profile.ToString
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
             End Try
@@ -234,10 +232,10 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim profileID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
-                Await Controller.ExecuteProfile(name)
+                Await Controller.ExecuteProfile(profileID)
                 response.Text = "OK"
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
@@ -268,11 +266,11 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim profileID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
 
             Try
-                Dim lst = Await Controller.GetInstanceListing(name)
+                Dim lst = Await Controller.GetInstanceListing(profileID)
                 response.Text = ""
                 For Each itm In lst
                     response.Text += itm.ToString & vbCrLf
@@ -294,17 +292,18 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim profileID = prflSelector.SelectedProfile.Split(",")(0)
+
             prflSelector = Nothing
 
             Try
-                Dim lst = Await Controller.GetInstanceListing(name)
+                Dim lst = Await Controller.GetInstanceListing(profileID)
 
                 Dim selector As New InstanceSelector(lst)
                 selector.ShowDialog()
                 If selector.isCanceled Then Return
 
-                Dim ret = Await Controller.DownloadInstance(name, selector.SelectedDate)
+                Dim ret = Await Controller.DownloadInstance(profileID, selector.SelectedDate)
                 response.Text = ""
                 For Each itm In ret
                     response.Text += itm.ToString & vbCrLf
@@ -327,17 +326,18 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim profileID = prflSelector.SelectedProfile.Split(",")(0)
+
             prflSelector = Nothing
 
             Try
-                Dim lst = Await Controller.GetInstanceListing(name)
+                Dim lst = Await Controller.GetInstanceListing(profileID)
 
                 Dim selector As New InstanceSelector(lst)
                 selector.ShowDialog()
                 If selector.isCanceled Then Return
 
-                Dim ret = Await Controller.DownloadTrendData(name, selector.SelectedDate)
+                Dim ret = Await Controller.DownloadTrendData(profileID, selector.SelectedDate)
 
                 Dim fod = New SaveFileDialog
                 fod.Filter = "Comma Seperated Values (*.csv)|*.csv"
@@ -345,14 +345,16 @@ Class MainWindow
                 fod.ShowDialog()
                 Dim idx As Integer = 0
                 Using sw = New StreamWriter(fod.OpenFile())
-                    sw.WriteLine("Idx, Probe0, Probe1, SetPoint, Output, Relay")
+                    sw.WriteLine("Idx, Probe0, Probe1, Output, Relay")
                     For Each itm In ret
-                        sw.WriteLine(idx & "," & itm.ToString)
-                        idx += 1
+                        If itm.Duration > 0 Then
+                            sw.WriteLine(idx & "," & itm.ToString)
+                            idx += itm.Duration
+                        End If
                     Next
                 End Using
                 response.Text = "OK"
-
+                Process.Start(fod.FileName)
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
                 Return
@@ -371,10 +373,10 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(EquipmentProfiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim equipmentID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
-                Await Controller.DeleteEquipmentProfile(name)
+                Await Controller.DeleteEquipmentProfile(equipmentID)
                 response.Text = "OK"
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
@@ -392,10 +394,10 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim profileID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
-                Await Controller.DeleteProfile(name)
+                Await Controller.DeleteProfile(profileID)
                 response.Text = "OK"
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
@@ -413,16 +415,16 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim profileID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
-                Dim lst = Await Controller.GetInstanceListing(name)
+                Dim lst = Await Controller.GetInstanceListing(profileID)
 
                 Dim selector As New InstanceSelector(lst)
                 selector.ShowDialog()
                 If selector.isCanceled Then Return
 
-                Await Controller.DeleteInstance(name, selector.SelectedDate)
+                Await Controller.DeleteInstance(profileID, selector.SelectedDate)
                 response.Text = "OK"
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
@@ -504,17 +506,17 @@ Class MainWindow
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
             If prflSelector.isCanceled Then Return
-            Dim name = prflSelector.SelectedProfile
+            Dim EquipmentID = prflSelector.SelectedProfile.Split(",")(0)
             prflSelector = Nothing
             Try
-                Dim temp = Await Controller.DownloadEquipmentProfile(name)
+                Dim temp = Await Controller.DownloadEquipmentProfile(EquipmentID)
                 Dim edt As New EquipmentEditor
-                edt.Name = name
+                edt.EquipmentID = EquipmentID
                 edt.data = temp
                 edt.ShowDialog()
                 If edt.Canceled Then Return
-                Await Controller.UploadEquipmentProfile(name, edt.data)
-                Await Controller.SetEquipmentProfile(name)
+                Await Controller.UploadEquipmentProfile(EquipmentID, edt.data)
+                Await Controller.SetEquipmentProfile(EquipmentID)
                 response.Text = "OK - Profile Updated"
             Catch ex As Exception
                 response.Text = "Error:" & ex.ToString
@@ -523,6 +525,46 @@ Class MainWindow
             response.Text = ex.ToString
             Return
         End Try
+    End Sub
+
+    Private Async Sub cmdTruncate_Click(sender As Object, e As RoutedEventArgs) Handles cmdTruncate.Click
+        response.Text = "--"
+        Dim l As New List(Of PROFILE_STEP)
+        l.Add(New PROFILE_STEP(18.3, 30, 120)) '3 Hours
+        l.Add(New PROFILE_STEP(30, 30, 120)) '10 Minutes
+        l.Add(New PROFILE_STEP(30, 15, 120)) '4 Hours
+        l.Add(New PROFILE_STEP(15, 15, 120)) '5 Days
+
+        Try
+            Await Controller.TruncateProfile(l)
+            response.Text = "OK"
+        Catch ex As Exception
+            response.Text = "Error:" & ex.ToString
+        End Try
+
+    End Sub
+
+    Private Async Sub cmdUploadBlob_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadBlob.Click
+        Dim dlg = New Forms.FolderBrowserDialog
+        dlg.ShowDialog()
+        Dim blob = blobify.BlobThis(dlg.SelectedPath)
+        Using fs As New FileStream("C:\blob.dat", FileMode.Create, FileAccess.ReadWrite)
+            blob.Position = 0
+            blob.CopyTo(fs)
+        End Using
+
+        Await Controller.uploadBlob(blob, Sub(prog As Single)
+                                              Dispatcher.Invoke(Sub()
+                                                                    response.Text = "Uploading Blob: " & (prog * 100).ToString("0.00") & "% Complete"
+                                                                End Sub)
+                                          End Sub)
+
+        response.Text = "Blob Upload Completed OK"
+
+    End Sub
+
+    Private Async Sub cmdEraseBlob_Click(sender As Object, e As RoutedEventArgs) Handles cmdEraseBlob.Click
+        Await Controller.EraseBLOB
     End Sub
 End Class
 
@@ -536,10 +578,10 @@ Public Class HttpCommsProviderWebClient
             Try
                 request = WebRequest.Create(URL)
                 request.Pipelined = False
-                request.ServicePoint.ConnectionLeaseTimeout = 200
+                request.ServicePoint.ConnectionLeaseTimeout = 20000
                 request.ServicePoint.UseNagleAlgorithm = False
                 request.ServicePoint.Expect100Continue = False
-                request.Timeout = 1000
+                request.Timeout = 20000
                 request.Method = "GET"
                 request.ContentLength = 0
 
@@ -562,6 +604,7 @@ Public Class HttpCommsProviderWebClient
                 End Using
 
             Catch tm As TimeoutException
+                request.Abort()
                 If retry = 3 Then
                     Throw tm
                 Else
@@ -569,6 +612,7 @@ Public Class HttpCommsProviderWebClient
                     System.Threading.Thread.Sleep(100)
                 End If
             Catch we As WebException
+                request.Abort()
                 Dim ret As New HTTP_Comms_Result()
                 Dim resp As HttpWebResponse = we.Response
                 ret.StatusCode = resp.StatusCode
@@ -583,6 +627,7 @@ Public Class HttpCommsProviderWebClient
                 End Using
                 Return ret
             Catch ex As Exception
+                request.Abort()
                 Console.WriteLine(ex.ToString)
             End Try
 
@@ -597,10 +642,10 @@ Public Class HttpCommsProviderWebClient
             Try
                 request = WebRequest.Create(URL)
                 request.Pipelined = False
-                request.ServicePoint.ConnectionLeaseTimeout = 10000
+                request.ServicePoint.ConnectionLeaseTimeout = 20000
                 request.ServicePoint.UseNagleAlgorithm = False
                 request.ServicePoint.Expect100Continue = False
-                request.Timeout = 10000
+                request.Timeout = 20000
                 request.Method = "PUT"
                 request.ContentLength = 0
 
@@ -608,6 +653,7 @@ Public Class HttpCommsProviderWebClient
                 Dim T = request.GetResponseAsync()
                 Dim X = Await Task.WhenAny(T, Task.Delay(5000))
                 If X.Equals(T) = False Then
+                    request.Abort()
                     T.Dispose()
                     Continue For
                 End If
@@ -626,9 +672,10 @@ Public Class HttpCommsProviderWebClient
                         End Using
                     End Using
                 End Using
-               
+
 
             Catch tm As TimeoutException
+                request.Abort()
                 If retry = 3 Then
                     If IsNothing(request) = False Then request.Abort()
                     System.Threading.Thread.Sleep(100)
@@ -638,6 +685,7 @@ Public Class HttpCommsProviderWebClient
                     System.Threading.Thread.Sleep(100)
                 End If
             Catch we As WebException
+                request.Abort()
                 If we.Status = WebExceptionStatus.Timeout Then
                     If retry = 3 Then
                         Throw New TimeoutException
@@ -659,6 +707,7 @@ Public Class HttpCommsProviderWebClient
                     Return ret
                 End If
             Catch ex As Exception
+                request.Abort()
                 Debug.WriteLine(ex.ToString)
             End Try
 

@@ -26,6 +26,8 @@
       <itemPath>fletcherChecksum.h</itemPath>
       <itemPath>Pack.h</itemPath>
       <itemPath>IIR.h</itemPath>
+      <itemPath>RLE_Compressor.h</itemPath>
+      <itemPath>BlobFS.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -36,10 +38,10 @@
                    displayName="Source Files"
                    projectFiles="true">
       <logicalFolder name="f3" displayName="hardwareProtocols" projectFiles="true">
-        <itemPath>I2C.c</itemPath>
         <itemPath>OneWire.c</itemPath>
-        <itemPath>rtc.c</itemPath>
         <itemPath>ESP8266.c</itemPath>
+        <itemPath>rtc.c</itemPath>
+        <itemPath>I2C.c</itemPath>
       </logicalFolder>
       <logicalFolder name="f2" displayName="networking" projectFiles="true">
         <itemPath>uPnP.c</itemPath>
@@ -57,6 +59,8 @@
         <itemPath>FlashFS.c</itemPath>
         <itemPath>PID.c</itemPath>
         <itemPath>IIR.c</itemPath>
+        <itemPath>RLE_Compressor.c</itemPath>
+        <itemPath>BlobFS.c</itemPath>
       </logicalFolder>
       <itemPath>Http_API.c</itemPath>
       <itemPath>Settings.c</itemPath>
@@ -89,8 +93,11 @@
           <linkerLibItems>
           </linkerLibItems>
         </linkerTool>
+        <archiverTool>
+        </archiverTool>
         <loading>
           <useAlternateLoadableFile>false</useAlternateLoadableFile>
+          <parseOnProdLoad>true</parseOnProdLoad>
           <alternateLoadableFile></alternateLoadableFile>
         </loading>
       </compileType>
@@ -210,7 +217,6 @@
         <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
         <property key="UART 1" value="true"/>
         <property key="UART 2" value="true"/>
-        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>
