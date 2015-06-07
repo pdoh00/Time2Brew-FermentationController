@@ -22,7 +22,7 @@ MODULES		= driver user
 EXTRA_INCDIR	= include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc hal phy net80211 lwip wpa main json ssl upgrade at pp smartconfig
+LIBS		= c gcc hal phy net80211 lwip wpa main json ssl upgrade at pp smartconfig at smartconfig
 
 # compiler flags using during compilation of source files
 CFLAGS		= -Os -g -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH

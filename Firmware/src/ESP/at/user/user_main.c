@@ -25,6 +25,7 @@ struct softap_config apConfig;
 os_timer_t tmr_WifiConnectCompletedCheck;
 os_timer_t tmr_WifiHasIPCheck;
 os_timer_t tmr_SyncSend;
+os_timer_t tmr_mDNS_Advertise;
 
 os_event_t rxTaskQueue[rxTaskQueueLen];
 os_event_t txTaskQueue[txTaskQueueLen];
@@ -42,6 +43,8 @@ uint8_t txBuffer[4096];
 uint8_t *txWriteCursor = txBuffer;
 uint8_t *txReadCursor = txBuffer;
 uint8_t *txBufferEND = txBuffer + 4096;
+
+char mDNS_HOSTNAME[64];
 
 void user_init(void) {
     wifi_station_set_auto_connect(0);
@@ -202,7 +205,7 @@ void ICACHE_FLASH_ATTR ProcessMessage(uint8_t *buffer, uint16_t len) {
             cmd_MCU_TCP_CLOSE_CONNECTION(&buffer[1], len - 1);
             break;
         case MCU_START_MDNS:
-            cmd_MCU_Start_mDNS();
+            cmd_MCU_Start_mDNS(&buffer[1], len - 1);
             break;
         case MCU_START_UPNP:
             cmd_MCU_Start_uPnP();
@@ -377,6 +380,8 @@ void ICACHE_FLASH_ATTR WifiConnectCompletedCheck_OnTimer(void *timer_arg) {
     }
 }
 
+struct mdns_info *this_mdns_info;
+
 void ICACHE_FLASH_ATTR cmd_MCU_INIT_afterWifiHasIP() {
     sint8 res;
     SendMessage(0xEE, 7, 7, 0, 0, 0, 0, NULL, 0);
@@ -410,7 +415,7 @@ void ICACHE_FLASH_ATTR cmd_MCU_INIT_afterWifiHasIP() {
         SendMessage(ESP_INIT_RESP, 0, Fail_UnableToStartTCPListener, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;
     }
-    res = espconn_regist_time(TCP_Server.pCon, 5, 0);
+    res = espconn_regist_time(TCP_Server.pCon, 15, 0);
     if (res != ESPCONN_OK) {
         SendMessage(ESP_INIT_RESP, 0, Fail_UnableToSetTCPTimeout, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;
@@ -420,9 +425,26 @@ void ICACHE_FLASH_ATTR cmd_MCU_INIT_afterWifiHasIP() {
     SendMessage(ESP_INIT_RESP, 0, Init_OK, 0, 0, 0, 0, NULL, 0);
 }
 
-void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS() {
+void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS(uint8_t *buffer, uint16_t len) {
     sint8 res;
     struct ip_info mDNS_MulticastIP;
+
+    struct mdns_info *info = (struct mdns_info *) os_zalloc(sizeof (struct mdns_info));
+    char *cursor = (char *) buffer;
+    char *out = mDNS_HOSTNAME;
+    while (*cursor) {
+        *(out++) = *(cursor++);
+    }
+    *(out++) = 0;
+
+    info->host_name = mDNS_HOSTNAME;
+    info->ipAddr = LocalIP.ip.addr; //ESP8266 station IP
+    info->server_name = "http";
+    info->server_port = 80;
+    info->txt_data = "version = now";
+    espconn_mdns_init(info);
+    espconn_mdns_server_register();
+    espconn_mdns_enable();
 
     /*-----------------------------------------
      * Start mDNS Connection
@@ -573,18 +595,18 @@ void ICACHE_FLASH_ATTR cmd_MCU_TCP_CLOSE_CONNECTION(uint8_t *buffer, uint16_t le
 }
 
 void ICACHE_FLASH_ATTR cmd_MCU_mDNS_ASYNCSEND(uint8 *buffer, uint16 len) {
-    if (mDNS_Con.isSending == true) {
-        SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_SendInProgress, 0, 0, 0, 0, NULL, 0);
-        return;
-    }
-    mDNS_Con.isSending = true;
-
-    sint8_t res = espconn_sent(mDNS_Con.pCon, buffer, len);
-    if (res != ESPCONN_OK) {
-        mDNS_Con.isSending = false;
-        SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_EspError, res, (len >> 8), (len & 0xFF), res, NULL, 0);
-        return;
-    }
+        if (mDNS_Con.isSending == true) {
+            SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_SendInProgress, 0, 0, 0, 0, NULL, 0);
+            return;
+        }
+        mDNS_Con.isSending = true;
+    
+        sint8_t res = espconn_sent(mDNS_Con.pCon, buffer, len);
+        if (res != ESPCONN_OK) {
+            mDNS_Con.isSending = false;
+            SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_EspError, res, (len >> 8), (len & 0xFF), res, NULL, 0);
+            return;
+        }
 }
 
 void ICACHE_FLASH_ATTR cmd_MCU_uPnP_ASYNCSEND(uint8_t *buffer, uint16_t len) {
@@ -636,4 +658,10 @@ void ICACHE_FLASH_ATTR SyncSend_OnTimer(void *timer_arg) {
     if (isSyncFinished == true) return;
     uart_tx_one_char(UART0, 'U');
     os_timer_arm(&tmr_SyncSend, 10, 0);
+}
+
+void ICACHE_FLASH_ATTR mDNS_Advertise_OnTimer(void *timer_arg) {
+    os_timer_disarm(&tmr_mDNS_Advertise);
+    espconn_mdns_server_register();
+    os_timer_arm(&tmr_mDNS_Advertise, 1000, 0);
 }

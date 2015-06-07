@@ -49,7 +49,7 @@ extern "C" {
     void ICACHE_FLASH_ATTR cmd_MCU_TCP_CLOSE_CONNECTION(uint8_t *buffer, uint16_t len);
     void ICACHE_FLASH_ATTR cmd_MCU_uPnP_ASYNCSEND(uint8_t *buffer, uint16_t len);
     void ICACHE_FLASH_ATTR cmd_MCU_mDNS_ASYNCSEND(uint8_t *buffer, uint16_t len);
-    void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS();
+    void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS(uint8_t *buffer, uint16_t len);
     void ICACHE_FLASH_ATTR cmd_MCU_Start_uPnP();
     void ICACHE_FLASH_ATTR cmd_MCU_GetIP();
     void ICACHE_FLASH_ATTR SendMessage(uint8_t MessageID, uint8_t ChannelID, sint16_t ResponseCode,

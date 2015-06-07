@@ -89,8 +89,26 @@ bool system_rtc_mem_write(uint8 des_addr, const void *src_addr, uint16 save_size
 void system_uart_swap(void);
 
 uint16 system_adc_read(void);
+uint16 system_get_vdd33(void);
 
 const char *system_get_sdk_version(void);
+
+#define SYS_BOOT_ENHANCE_MODE	0
+#define SYS_BOOT_NORMAL_MODE	1
+
+#define SYS_BOOT_NORMAL_BIN		0
+#define SYS_BOOT_TEST_BIN		1
+
+uint8 system_get_boot_version(void);
+uint32 system_get_userbin_addr(void);
+uint8 system_get_boot_mode(void);
+bool system_restart_enhance(uint8 bin_type, uint32 bin_addr);
+
+#define SYS_CPU_80MHZ	80
+#define SYS_CPU_160MHZ	160
+
+bool system_update_cpu_freq(uint8 freq);
+uint8 system_get_cpu_freq(void);
 
 #define NULL_MODE       0x00
 #define STATION_MODE    0x01
@@ -107,7 +125,11 @@ typedef enum _auth_mode {
 } AUTH_MODE;
 
 uint8 wifi_get_opmode(void);
+uint8 wifi_get_opmode_default(void);
 bool wifi_set_opmode(uint8 opmode);
+bool wifi_set_opmode_current(uint8 opmode);
+uint8 wifi_get_broadcast_if(void);
+bool wifi_set_broadcast_if(uint8 interface);
 
 struct bss_info {
     STAILQ_ENTRY(bss_info)     next;
@@ -140,7 +162,9 @@ struct station_config {
 };
 
 bool wifi_station_get_config(struct station_config *config);
+bool wifi_station_get_config_default(struct station_config *config);
 bool wifi_station_set_config(struct station_config *config);
+bool wifi_station_set_config_current(struct station_config *config);
 
 bool wifi_station_connect(void);
 bool wifi_station_disconnect(void);
@@ -156,6 +180,8 @@ bool wifi_station_scan(struct scan_config *config, scan_done_cb_t cb);
 
 uint8 wifi_station_get_auto_connect(void);
 bool wifi_station_set_auto_connect(uint8 set);
+
+bool wifi_station_set_reconnect_policy(bool set);
 
 enum {
     STATION_IDLE = 0,
@@ -193,7 +219,9 @@ struct softap_config {
 };
 
 bool wifi_softap_get_config(struct softap_config *config);
+bool wifi_softap_get_config_default(struct softap_config *config);
 bool wifi_softap_set_config(struct softap_config *config);
+bool wifi_softap_set_config_current(struct softap_config *config);
 
 struct station_info {
 	STAILQ_ENTRY(station_info)	next;
@@ -203,8 +231,14 @@ struct station_info {
 };
 
 struct dhcps_lease {
-	uint32 start_ip;
-	uint32 end_ip;
+	struct ip_addr start_ip;
+	struct ip_addr end_ip;
+};
+
+enum dhcps_offer_option{
+	OFFER_START = 0x00,
+	OFFER_ROUTER = 0x01,
+	OFFER_END
 };
 
 struct station_info * wifi_softap_get_station_info(void);
@@ -215,6 +249,7 @@ bool wifi_softap_dhcps_start(void);
 bool wifi_softap_dhcps_stop(void);
 bool wifi_softap_set_dhcps_lease(struct dhcps_lease *please);
 enum dhcp_status wifi_softap_dhcps_status(void);
+bool wifi_softap_dhcps_set_offer_option(uint8 level, void* optarg);
 
 #define STATION_IF      0x00
 #define SOFTAP_IF       0x01
@@ -240,6 +275,8 @@ typedef void (* wifi_promiscuous_cb_t)(uint8 *buf, uint16 len);
 
 void wifi_set_promiscuous_rx_cb(wifi_promiscuous_cb_t cb);
 
+void wifi_promiscuous_set_mac(const uint8_t *address);
+
 enum phy_mode {
 	PHY_MODE_11B	= 1,
 	PHY_MODE_11G	= 2,
@@ -257,5 +294,97 @@ enum sleep_type {
 
 bool wifi_set_sleep_type(enum sleep_type type);
 enum sleep_type wifi_get_sleep_type(void);
+
+enum {
+    EVENT_STAMODE_CONNECTED = 0,
+    EVENT_STAMODE_DISCONNECTED,
+    EVENT_STAMODE_AUTHMODE_CHANGE,
+    EVENT_STAMODE_GOT_IP,
+    EVENT_SOFTAPMODE_STACONNECTED,
+	EVENT_SOFTAPMODE_STADISCONNECTED,
+    EVENT_MAX
+};
+
+enum {
+	REASON_UNSPECIFIED              = 1,
+	REASON_AUTH_EXPIRE              = 2,
+	REASON_AUTH_LEAVE               = 3,
+	REASON_ASSOC_EXPIRE             = 4,
+	REASON_ASSOC_TOOMANY            = 5,
+	REASON_NOT_AUTHED               = 6,
+	REASON_NOT_ASSOCED              = 7,
+	REASON_ASSOC_LEAVE              = 8,
+	REASON_ASSOC_NOT_AUTHED         = 9,
+	REASON_DISASSOC_PWRCAP_BAD      = 10,  /* 11h */
+	REASON_DISASSOC_SUPCHAN_BAD     = 11,  /* 11h */
+	REASON_IE_INVALID               = 13,  /* 11i */
+	REASON_MIC_FAILURE              = 14,  /* 11i */
+	REASON_4WAY_HANDSHAKE_TIMEOUT   = 15,  /* 11i */
+	REASON_GROUP_KEY_UPDATE_TIMEOUT = 16,  /* 11i */
+	REASON_IE_IN_4WAY_DIFFERS       = 17,  /* 11i */
+	REASON_GROUP_CIPHER_INVALID     = 18,  /* 11i */
+	REASON_PAIRWISE_CIPHER_INVALID  = 19,  /* 11i */
+	REASON_AKMP_INVALID             = 20,  /* 11i */
+	REASON_UNSUPP_RSN_IE_VERSION    = 21,  /* 11i */
+	REASON_INVALID_RSN_IE_CAP       = 22,  /* 11i */
+	REASON_802_1X_AUTH_FAILED       = 23,  /* 11i */
+	REASON_CIPHER_SUITE_REJECTED    = 24,  /* 11i */
+
+	REASON_BEACON_TIMEOUT           = 200,
+	REASON_NO_AP_FOUND              = 201,
+};
+
+typedef struct {
+	uint8 ssid[32];
+	uint8 ssid_len;
+	uint8 bssid[6];
+	uint8 channel;
+} Event_StaMode_Connected_t;
+
+typedef struct {
+	uint8 ssid[32];
+	uint8 ssid_len;
+	uint8 bssid[6];
+	uint8 reason;
+} Event_StaMode_Disconnected_t;
+
+typedef struct {
+	uint8 old_mode;
+	uint8 new_mode;
+} Event_StaMode_AuthMode_Change_t;
+
+typedef struct {
+	struct ip_addr ip;
+	struct ip_addr mask;
+	struct ip_addr gw;
+} Event_StaMode_Got_IP_t;
+
+typedef struct {
+	uint8 mac[6];
+	uint8 aid;
+} Event_SoftAPMode_StaConnected_t;
+
+typedef struct {
+	uint8 mac[6];
+	uint8 aid;
+} Event_SoftAPMode_StaDisconnected_t;
+
+typedef union {
+	Event_StaMode_Connected_t			connected;
+	Event_StaMode_Disconnected_t		disconnected;
+	Event_StaMode_AuthMode_Change_t		auth_change;
+	Event_StaMode_Got_IP_t				got_ip;
+	Event_SoftAPMode_StaConnected_t		sta_connected;
+	Event_SoftAPMode_StaDisconnected_t	sta_disconnected;
+} Event_Info_u;
+
+typedef struct _esp_event {
+    uint32 event;
+    Event_Info_u event_info;
+} System_Event_t;
+
+typedef void (* wifi_event_handler_cb_t)(System_Event_t *event);
+
+void wifi_set_event_handler_cb(wifi_event_handler_cb_t cb);
 
 #endif
