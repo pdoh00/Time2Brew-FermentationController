@@ -5,7 +5,7 @@
 #include "SystemConfiguration.h"
 #include "ESP8266.h"
 
-#define mDNS_Interval 150000ul   //Every 5 minutes...
+#define mDNS_Interval 15000ul   //Every 30 seconds...
 
 typedef struct {
     unsigned int TransactionID;
@@ -51,18 +51,34 @@ unsigned long mDNS_Timeout;
 
 char mDNS_flagSend = 0;
 
+void toLowerCase(char *data) {
+    char token;
+    while (*data) {
+        token = *data;
+        if (token >= 'A' && token <= 'Z') {
+            token -= 'A';
+            token += 'a';
+        }
+        *data = token;
+        data++;
+    }
+}
+
 void mDNS_Init(const char *Name, unsigned long IPAddress) {
     char temp[80];
     Log("    mDNS Init: SRV Record=%s._http._tcp.local\r\n", Name);
     sprintf(temp, "%s._http._tcp.local", Name);
+    toLowerCase(temp);
     mDNS_SRV_NameLength = ToDNS_Resource(temp, mDNS_SRV_Name) - mDNS_SRV_Name;
 
     Log("    mDNS Init: A Record=%s.local\r\n", Name);
     sprintf(temp, "%s.local", Name);
+    toLowerCase(temp);
     mDNS_A_NameLength = ToDNS_Resource(temp, mDNS_A_Name) - mDNS_A_Name;
 
     Log("    mDNS Init: PTR Record=_http._tcp.local\r\n");
     sprintf(temp, "_http._tcp.local");
+    toLowerCase(temp);
     mDNS_PTR_NameLength = ToDNS_Resource(temp, mDNS_PTR_Name) - mDNS_PTR_Name;
 
     mDNS_IP[3] = (IPAddress >> 24) & 0xFF;
@@ -71,12 +87,12 @@ void mDNS_Init(const char *Name, unsigned long IPAddress) {
     mDNS_IP[0] = (IPAddress) & 0xFF;
 }
 
-void mDNS_RecieveMsg(MESSAGE *msg) {
+void mDNS_RecieveMsg(ESP8266_SLIP_MESSAGE *msg) {
     mDNS_Header_Type header;
     BYTE *cursor = msg->Data;
-    char QName[256];
+    char QName[384];
     unsigned int QType, QClass;
-
+    Log("mDNS_RecieveMsg\r\n");
     cursor = mDNS_DeserializeHeader(&header, cursor);
 
     if (header.IsResponse) {
@@ -87,14 +103,19 @@ void mDNS_RecieveMsg(MESSAGE *msg) {
         return;
     }
 
+    mDNS_flagSend = 1;
+    return;
+
     while (header.QDCount--) {
         cursor = mDNS_Extract_DNS_Resource(msg->Data, cursor, QName);
+        Log("   mDNS_RecieveMsg: QName='%s'\r\n", QName);
 
         READ_UINT16(QType, cursor);
         READ_UINT16(QClass, cursor);
 
         if (strlen(QName) == 0) continue;
 
+        toLowerCase(QName);
         if (memcmp(mDNS_PTR_Name, QName, mDNS_PTR_NameLength) == 0) {
             Log("mDNS Query: Match My PTR \r\n");
             mDNS_flagSend = 1;
@@ -267,7 +288,7 @@ void mDNS_ProcessLoop() {
     if (tmr > mDNS_Timeout) mDNS_flagSend = 1;
     if (!mDNS_flagSend) return;
 
-    Log("mDNS: Sending Response/Advertisement\r\n");
+    Log("mDNS: Sending Response/Advertisement...\r\n");
 
 
     mDNS_Header_Type Header;
@@ -288,6 +309,7 @@ void mDNS_ProcessLoop() {
 
     GetTime(tmr);
     mDNS_Timeout = tmr + mDNS_Interval;
+    //Log("OK\r\n");
     return;
 }
 
@@ -327,6 +349,8 @@ BYTE * mDNS_Extract_DNS_Resource(BYTE *MessageStart, BYTE *source, char *dst) {
     BYTE segLength = 0;
     char isCompressed = 0;
 
+    char *dstEnd = dst + 256;
+
     union {
         unsigned int ui;
         unsigned char ub[2];
@@ -354,6 +378,14 @@ BYTE * mDNS_Extract_DNS_Resource(BYTE *MessageStart, BYTE *source, char *dst) {
 
         while (segLength--) {
             *(dst++) = *(source++);
+            if (dst >= dstEnd) {
+                *dst = 0;
+                if (isCompressed) {
+                    return retCursor;
+                } else {
+                    return source;
+                }
+            }
         }
     }
 }

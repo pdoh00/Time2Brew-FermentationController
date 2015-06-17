@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include "../../sdk/include/user_interface.h"
+
 #define ChannelCount        10
 #define rxTaskPrio          1
 #define rxTaskQueueLen      64
@@ -38,6 +40,7 @@ extern "C" {
     extern type_IP_Channel mDNS_Con, uPnP_Con;
 
     void user_init(void);
+    void user_rf_pre_init(void);
     void ICACHE_FLASH_ATTR rxTask(ETSEvent *e);
     void ICACHE_FLASH_ATTR txTask(ETSEvent * e);
     void ICACHE_FLASH_ATTR ProcessMessage(uint8_t *buffer, uint16_t len);
@@ -49,7 +52,7 @@ extern "C" {
     void ICACHE_FLASH_ATTR cmd_MCU_TCP_CLOSE_CONNECTION(uint8_t *buffer, uint16_t len);
     void ICACHE_FLASH_ATTR cmd_MCU_uPnP_ASYNCSEND(uint8_t *buffer, uint16_t len);
     void ICACHE_FLASH_ATTR cmd_MCU_mDNS_ASYNCSEND(uint8_t *buffer, uint16_t len);
-    void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS();
+    void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS(uint8_t *buffer, uint16_t len);
     void ICACHE_FLASH_ATTR cmd_MCU_Start_uPnP();
     void ICACHE_FLASH_ATTR cmd_MCU_GetIP();
     void ICACHE_FLASH_ATTR SendMessage(uint8_t MessageID, uint8_t ChannelID, sint16_t ResponseCode,
@@ -66,6 +69,10 @@ extern "C" {
     void ICACHE_FLASH_ATTR slip_uPnP_OnSendComplete(void *arg);
     void ICACHE_FLASH_ATTR slipTCPClient_OnReconnect(void *arg, sint8 err);
     void ICACHE_FLASH_ATTR SyncSend_OnTimer(void *timer_arg);
+    void wifi_handle_event_cb(System_Event_t *evt);
+    void onSystemInitDone(void);    
+    void ICACHE_FLASH_ATTR OnBeaconRecieve(void *arg, char *pusrdata, unsigned short length);
+    void ICACHE_FLASH_ATTR Beacon_Init(void);
 
 #ifdef	__cplusplus
 }

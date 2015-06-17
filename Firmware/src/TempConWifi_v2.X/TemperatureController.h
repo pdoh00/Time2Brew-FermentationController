@@ -10,10 +10,13 @@
 
 #include "PID.h"
 #include "FlashFS.h"
+#include "RLE_Compressor.h"
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
+
+#define TREND_RECORD_SIZE 4
 
     typedef enum {
         SYSTEMMODE_IDLE = 0,
@@ -37,19 +40,19 @@ extern "C" {
 
     typedef struct {
         unsigned long time;
-        int Probe0;
-        int Probe1;
-        int SetPoint;
-        char Output;
+        float ProcessTemperature;
+        float TargetTemperature;
+        float Output;
         unsigned char Relay;
     } TREND_RECORD;
 
     typedef struct {
-        int StartTemperature, EndTemperature;
+        float StartTemperature, EndTemperature;
         unsigned long Duration;
     } PROFILE_STEP;
 
     typedef struct {
+        char Name[64];
         unsigned char RegulationMode;
         unsigned char Probe0Assignment;
         unsigned char Probe1Assignment;
@@ -65,18 +68,42 @@ extern "C" {
         float Target_Kd;
         float TargetOutput_Max;
         float TargetOutput_Min;
-        float ThresholdDelta;
+        float Process_D_FilterGain;
+        float Process_D_FilterCoeff;
+        float Process_D_AdaptiveBand;
+        float Target_D_FilterGain;
+        float Target_D_FilterCoeff;
+        float Target_D_AdaptiveBand;
+        float coolDifferential;
+        float heatDifferential;
+        float coolTransition;
+        float heatTransition;
         unsigned int CheckSum;
     } EQUIPMENT_PROFILE;
 
     typedef struct {
+        unsigned int ProfileID;
+        unsigned int EquipmentID;
+        unsigned long CoolWhenCanTurnOff;
+        unsigned long CoolWhenCanTurnOn;
+        unsigned long HeatWhenCanTurnOff;
+        unsigned long HeatWhenCanTurnOn;
+        float ManualSetPoint;
+        float ProcessPID_Integral;
+        unsigned long ProfileStartTime;
+        float TargetPID_Integral;
+        unsigned int BootMode;
+        unsigned int chkSum;
+        unsigned char SystemMode;
+    } RECOVERY_RECORD;
+
+    typedef struct {
         unsigned long SystemTime;
-        unsigned char SystemMode; //System Mode: 0 = Sensor Only, 1 = Manual Setpoint, 2=Profile Active
-        char EquipmentName[64];
+        unsigned char SystemMode;
         char ActiveProfileName[64];
         unsigned char HeatRelay;
         unsigned char CoolRelay;
-        signed char Output;
+        float Output;
         PID_CTX TargetPID;
         PID_CTX ProcessPID;
         unsigned long TimeTurnedOn;
@@ -84,35 +111,50 @@ extern "C" {
         unsigned long HeatWhenCanTurnOff;
         unsigned long CoolWhenCanTurnOn;
         unsigned long CoolWhenCanTurnOff;
+
+        ff_File Profile;
+        unsigned int ProfileID;
         unsigned int StepIdx;
-        int StepTemperature;
-        unsigned long StepTimeRemaining;
         unsigned char StepCount;
-        PROFILE_STEP ProfileSteps[64];
-        int Probe0Temperature;
-        int Probe1Temperature;
+        float StepTemperature;
         unsigned long ProfileStartTime;
-        int ManualSetPoint;
+        unsigned long StepTimeRemaining;
+        unsigned long totalElapsedProfileTime;
+        unsigned long totalProfileRunTime;
+
+        float ProcessTemperature;
+        float TargetTemperature;
+
+        float ManualSetPoint;
+
+        unsigned int equipmentProfileID;
         EQUIPMENT_PROFILE equipmentConfig;
-        unsigned long signature;
+
+        //RLE_State trend_RLE_State;
+        //ff_File trend_RLE_FileHandle;
+
+        ff_File trendFile;
+
     } MACHINE_STATE;
 
     extern MACHINE_STATE globalstate;
     extern ff_File ProfileTrendFile;
 
-    int ExecuteProfile(const char *fname, char *msg);
+    int ExecuteProfile(unsigned int ProfileID, char *msg);
     int LoadEquipmentProfile(const char *FileName, char *msg, EQUIPMENT_PROFILE *dest);
-    int SetEquipmentProfile(const char *FileName, char *msg, MACHINE_STATE *dest);
+    int SetEquipmentProfile(unsigned int ID, char *msg, MACHINE_STATE *dest);
     int TerminateProfile();
     int TruncateProfile(unsigned char *NewProfileData, int len, char *msg);
     unsigned long SecondsFromEpoch(int y, int m, int d, int hour, int minute, int second);
-    int SetManualMode(int Setpoint, char *msg);
-    void TemperatureController_Interrupt();
-    void TrendBufferCommitt();
+    int SetManualMode(float Setpoint, char *msg);
+    void TemperatureController_ProcessLoop();    
     int TemperatureController_Initialize();
-    int rawReadTemp(int ProbeIDX);
+    float rawReadTemp(int ProbeIDX);
     void InitializeRecoveryRecord();
-    int LoadProfile(const char *FileName, char *msg, MACHINE_STATE *dest);
+    int LoadProfileInstance(unsigned int ProfileID, unsigned long instance, char *msg, MACHINE_STATE *dest);
+    void WriteRecoveryRecord(MACHINE_STATE *source);
+    int GetProfileInstanceTotalDuration(const char *FileName, unsigned long *retVal);
+    int GetProfileName(const char *profileID, char *ProfileName);
 
 #ifdef	__cplusplus
 }

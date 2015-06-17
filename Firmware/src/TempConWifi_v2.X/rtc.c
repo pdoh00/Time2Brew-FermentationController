@@ -3,6 +3,8 @@
 #include "SystemConfiguration.h"
 #include "TemperatureController.h"
 
+char RTCBusy = 0;
+
 unsigned long SecondsFromEpoch(int y, int m, int d, int hour, int minute, int second) {
     if (y < 1970) return 0;
     if (m == 0 || d == 0) return 0;
@@ -131,7 +133,7 @@ unsigned char i2c_read_byte(int nack, int send_stop) {
 }
 
 int RTC_Initialize() {
-    Delay(0.2);
+    Delay(0.5);
 
     i2c_start_cond();
     i2c_write_byte(0, 0, 0b11011110);
@@ -170,7 +172,7 @@ int RTC_Initialize() {
         }
 
         i2c_stop_cond();
-        Log("ST Should be Runnin\r\n");
+        Log("RTC Clock Started\r\n");
     }
 
     globalstate.SystemTime = RTC_GetTime();
@@ -181,6 +183,13 @@ int RTC_Initialize() {
 
 unsigned long RTC_GetTime() {
     //Set the Read Address to 0x00
+    if (RTCBusy) {
+        Log("\r\n RTC_GetTime: Already Busy...Halted!");
+        while (1) {
+            asm("CLRWDT");
+        }
+    }
+    RTCBusy = 1;
     i2c_start_cond();
     i2c_write_byte(0, 0, 0b11011110);
     i2c_write_byte(0, 0, 0x0);
@@ -196,8 +205,9 @@ unsigned long RTC_GetTime() {
     unsigned char RTCMTH = i2c_read_byte(0, 0);
     unsigned char RTCYEAR = i2c_read_byte(1, 1);
     i2c_stop_cond();
+    RTCBusy = 0;
 
-    //Log("GET S=%xb M=%xb H=%xb D=%xb M=%xb Y=%xb\r\n", RTCSEC, RTCMIN, RTCHOUR, RTCDATE, RTCMTH, RTCYEAR);
+    if (debugRTC) Log("GET S=%xb M=%xb H=%xb D=%xb M=%xb Y=%xb\r\n", RTCSEC, RTCMIN, RTCHOUR, RTCDATE, RTCMTH, RTCYEAR);
 
     int second = ((RTCSEC & 0b01110000) >> 4)*10;
     second += (RTCSEC & 0b00001111);
@@ -218,55 +228,56 @@ unsigned long RTC_GetTime() {
     y += (RTCYEAR & 0b00001111);
     y += 2000;
 
-    //Log("Time=%i/%i/%i - %i:%i:%i\r\n", m, d, y, hour, minute, second);
+    if (debugRTC) Log("Time=%i/%i/%i - %i:%i:%i\r\n", m, d, y, hour, minute, second);
+
 
     return SecondsFromEpoch(y, m, d, hour, minute, second);
 }
 
 int RTC_SetTime(unsigned long time) {
     unsigned long g = (time / 86400);
-    Log("g=%ul\r\n", g);
+    if (debugRTC) Log("g=%ul\r\n", g);
     unsigned long second = time - (g * 86400);
-    Log("second=%ul\r\n", second);
+    if (debugRTC) Log("second=%ul\r\n", second);
 
     g += 719468; //Derefference from Epoch 1970-01-01
-    Log("g=%ul\r\n", g);
+    if (debugRTC) Log("g=%ul\r\n", g);
 
     float yTemp = g;
     yTemp += 1.478;
     yTemp /= 365.2425;
     long year = (long) (yTemp);
-    Log("yTemp=%f3 year=%ul", yTemp, year);
+    if (debugRTC) Log("yTemp=%f3 year=%ul", yTemp, year);
     long ddd = g - ((365 * year) + (year / 4) - (year / 100) + (year / 400));
-    Log("ddd=%ul\r\n", ddd);
+    if (debugRTC) Log("ddd=%ul\r\n", ddd);
     if (ddd < 0) {
         year--;
-        Log("year=%ul\r\n", year);
+        if (debugRTC) Log("year=%ul\r\n", year);
         ddd = g - ((365 * year) + (year / 4) - (year / 100) + (year / 400));
-        Log("ddd=%ul\r\n", ddd);
+        if (debugRTC) Log("ddd=%ul\r\n", ddd);
     }
 
     long mi = ((100 * ddd) + 52) / 3060;
-    Log("mi=%ul\r\n", mi);
+    if (debugRTC) Log("mi=%ul\r\n", mi);
     long month = (mi + 2) % 12 + 1;
-    Log("month=%ul\r\n", month);
+    if (debugRTC) Log("month=%ul\r\n", month);
     year = year + (mi + 2) / 12;
-    Log("year=%ul\r\n", year);
+    if (debugRTC) Log("year=%ul\r\n", year);
     long day = ddd - (mi * 306 + 5) / 10 + 1;
-    Log("day=%ul\r\n", day);
+    if (debugRTC) Log("day=%ul\r\n", day);
     long hour = second / 3600;
-    Log("hour=%ul\r\n", hour);
+    if (debugRTC) Log("hour=%ul\r\n", hour);
     second -= (hour * 3600);
-    Log("second=%ul\r\n", second);
+    if (debugRTC) Log("second=%ul\r\n", second);
     long minute = second / 60;
-    Log("minute=%ul\r\n", minute);
+    if (debugRTC) Log("minute=%ul\r\n", minute);
     second -= (minute * 60);
-    Log("second=%ul\r\n", second);
+    if (debugRTC) Log("second=%ul\r\n", second);
     year = year % 100;
-    Log("year=%ul\r\n", year);
+    if (debugRTC) Log("year=%ul\r\n", year);
 
 
-    Log("SET %l/%l/%l - %l:%l:%l\r\n", month, day, year, hour, minute, second);
+    if (debugRTC) Log("SET %l/%l/%l - %l:%l:%l\r\n", month, day, year, hour, minute, second);
 
     unsigned char RTCSEC = ((second / 10) << 4);
     RTCSEC |= (second % 10);
@@ -282,7 +293,15 @@ int RTC_SetTime(unsigned long time) {
     unsigned char RTCYEAR = ((year / 10) << 4);
     RTCYEAR |= (year % 10);
 
-    Log("SET S=%xb M=%xb H=%xb D=%xb M=%xb Y=%xb\r\n", RTCSEC, RTCMIN, RTCHOUR, RTCDATE, RTCMTH, RTCYEAR);
+    if (debugRTC) Log("SET S=%xb M=%xb H=%xb D=%xb M=%xb Y=%xb\r\n", RTCSEC, RTCMIN, RTCHOUR, RTCDATE, RTCMTH, RTCYEAR);
+
+    if (RTCBusy) {
+        Log("\r\n RTC_SetTime: Already Busy...Halted!");
+        while (1) {
+            asm("CLRWDT");
+        }
+    }
+    RTCBusy = 1;
 
     i2c_start_cond();
     i2c_write_byte(0, 0, 0b11011110);
@@ -302,6 +321,7 @@ int RTC_SetTime(unsigned long time) {
     RTCSEC |= 0b10000000;
     i2c_write_byte(0, 0, RTCSEC);
     i2c_stop_cond();
+    RTCBusy = 0;
 
     return 1;
 }
@@ -311,17 +331,29 @@ int nvsRAM_Read(unsigned char *dst, unsigned char Address, unsigned char bCount)
     unsigned char dat;
     Address += 0x20;
 
+    if (debugRTC) Log("nvsRAM_Read Address=%ub bCount=%ub\r\n", Address, bCount);
+
     //Set the Read Address to 0x00
+    if (RTCBusy) {
+        Log("\r\n nvsRAM_Read: Already Busy...Halted!");
+        while (1) {
+            asm("CLRWDT");
+        }
+    }
+    RTCBusy = 1;
+
     i2c_start_cond();
     nack = i2c_write_byte(0, 0, 0b11011110);
     if (nack) {
         Log("nvsRAM_Read NACK Addressing for Write\r\n");
+        RTCBusy = 0;
         return 0;
     }
 
     nack = i2c_write_byte(0, 0, Address);
     if (nack) {
         Log("nvsRAM_Read NACK Setting Address\r\n");
+        RTCBusy = 0;
         return 0;
     }
 
@@ -329,6 +361,7 @@ int nvsRAM_Read(unsigned char *dst, unsigned char Address, unsigned char bCount)
     nack = i2c_write_byte(0, 0, 0b11011111);
     if (nack) {
         Log("nvsRAM_Read NACK Addressing for Read\r\n");
+        RTCBusy = 0;
         return 0;
     }
 
@@ -340,6 +373,7 @@ int nvsRAM_Read(unsigned char *dst, unsigned char Address, unsigned char bCount)
     dat = i2c_read_byte(1, 1);
     *(dst++) = dat;
     i2c_stop_cond();
+    RTCBusy = 0;
     return 1;
 }
 
@@ -347,7 +381,17 @@ int nvsRAM_Write(unsigned char *buffer, unsigned char Address, unsigned char bCo
     int nack;
     Address += 0x20;
 
+    if (debugRTC) Log("nvsRAM_Write Address=%ub bCount=%ub\r\n", Address, bCount);
+
     //Set the Read Address to 0x00
+    if (RTCBusy) {
+        Log("\r\n nvsRAM_Write: Already Busy...Halted!");
+        while (1) {
+            asm("CLRWDT");
+        }
+    }
+    RTCBusy = 1;
+
     i2c_start_cond();
     i2c_write_byte(0, 0, 0b11011110);
     i2c_write_byte(0, 0, Address);
@@ -356,11 +400,13 @@ int nvsRAM_Write(unsigned char *buffer, unsigned char Address, unsigned char bCo
         nack = i2c_write_byte(0, 0, *buffer);
         if (nack) {
             Log("nvsRAM_Write: NACK\r\n");
+            RTCBusy = 0;
             return 0;
         }
         buffer++;
     }
     i2c_stop_cond();
+    RTCBusy = 0;
     return 1;
 }
 

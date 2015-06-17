@@ -5,6 +5,7 @@
 #include "driver/uart_register.h"
 #include "user_main.h"
 
+
 // UartDev is defined and initialized in rom code.
 extern UartDevice UartDev;
 

@@ -102,9 +102,8 @@ Module Module1
                 resp = com.ReadByte
                 If resp = ACK Then Exit While
             End If
-            While com.BytesToWrite
-            End While
         End While
+        com.ReadExisting()
         Console.WriteLine("OK")
         Return True
     End Function

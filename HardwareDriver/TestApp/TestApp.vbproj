@@ -77,9 +77,12 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="BeaconDiscovery.vb" />
+    <Compile Include="blobify.vb" />
     <Compile Include="DataStructures\CONTROLLER_STATUS.vb" />
     <Compile Include="DataStructures\EQUIPMENT_CONFIG.vb" />
     <Compile Include="DataStructures\PROBE_ASSIGNMENT.vb" />
+    <Compile Include="DataStructures\TEMPERATURE_PROFILE.vb" />
     <Compile Include="DataStructures\PROFILE_STEP.vb" />
     <Compile Include="DataStructures\REGULATIONMODE.vb" />
     <Compile Include="DataStructures\SYSTEMMODE.vb" />

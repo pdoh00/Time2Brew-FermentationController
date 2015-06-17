@@ -33,6 +33,12 @@ extern "C" {
 
 #define MCU_TCP_CLOSE_CONNECTION  0x0D
 #define ESP_TCP_CLOSED  0x0E
+#define ESP_TCP_RECONNECT  0x1A
+#define ESP_TCP_CONNECT  0x1B
+#define ESP_TCP_CONNECTFAIL  0x1C
+#define ESP_TCP_RECV_ERROR  0x1D
+#define ESP_TCP_CLOSE_ERROR 0x1E
+#define ESP_TCP_SENDCOMPLETE_ERROR 0x1F
 
 #define MCU_INIT  0x10
 #define ESP_INIT_RESP 0x11
@@ -44,6 +50,11 @@ extern "C" {
 #define MCU_START_UPNP 0x16
 #define ESP_START_MDNS_RESP 0x17
 #define ESP_START_UPNP_RESP 0x18
+
+#define ESP_SEND_GEN_MESSAGE    0x19
+
+#define ESP_WIFI_EVENT  0x20
+#define ESP_BEACON_SENT 0x21
 
     typedef enum {
         Fail_UnableToGetSoftAP_Config = 1,
@@ -78,8 +89,9 @@ extern "C" {
         SendFail_Closed = 30,
         SendFail_Reconnect = 31,
         SendOK = 32,
-        Fail_Init_ModeIsInvalid = 33
-
+        Fail_Init_ModeIsInvalid = 33,
+        InProgress_Sending = 34,
+        Invalid_SLIP_Packet = 35
     } ESP_INIT_RESP_codes;
 
 

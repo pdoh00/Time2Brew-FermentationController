@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="css" href="app.css">
+    <link rel="stylesheet" type="css" href="../external.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-inverse navbar-default">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="../index.html"><i class="fa fa-beer icon-white" onclick="updateStatus()"></i></a>
+            </div>
+            <div class="collapse navbar-collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="status.html">Device Status</a></li>
+                    <li class="active"><a href="temperatureProfiles.html">Fermentation Profiles</a></li>
+                    <li><a href="equipmentProfiles.html">Equipment Profiles</a></li>
+                    <li><a href="device.html">Device</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="page-wrapper" class="container">
+        <div class="flex-container-col" style="width: 100%">
+
+            <h1>Temperature Profiles</h1>
+
+            <div class="panel-group" id="accordion"></div>
+
+        </div>
+    </div>
+
+
+    <script src="../appJS/configureApp.js"></script>
+    <script src="../appJS/utils.js"></script>
+    <script src="../appJS/promisify.js "></script>
+    <script src="../appJS/temperatureProfileAPI.js"></script>
+    <script src="../externJS/rx.all.min.js"></script>
+    <script src="../externJS/mustache.min.js"></script>
+    <script src="../externJS/jquery.min.js"></script>
+    <script src="../externJS/bootstrap.min.js"></script>	
+    <script src="../externJS/jquery.flot.min.js"></script>
+    <script src="../externJS/jquery.flot.time.min.js"></script>  
+
+    <script id="profilePanelTemplate" type="x-tmpl-mustache">
+        <div class="panel-heading" role="tab">
+            <h4 class="panel-title">
+                <p id="profCol" data-toggle="collapse" data-parent="#accordion" data-target="#{{collapseId}}">
+                    {{profileName}}
+                </p>
+                <h4>
+        </div>
+        <div id="{{collapseId}}" class="panel-collapse collapse" role="tabpanel">
+            <div class="panel-body" id="{{bodyId}}"></div>
+        </div>
+    </script>
+
+    <script id="profileStepsPanelTemplate" type="x-tmpl-mustache">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <p data-toggle="collapse" data-target="#{{collapseId}}">
+                    Current Steps
+                </p>
+                <h4>
+        </div>
+        <div id="{{collapseId}}" class="panel-collapse collapse">
+            <div class="panel-body">
+                <ol id="{{stepListId}}"></ol>
+                <div id="{{stepChartId}}" style="width: 100%; height: 200px"></div>
+            </div>
+        </div>
+    </script>
+
+    <script id="profileInstancesPanelTemplate" type="x-tmpl-mustache">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <p data-toggle="collapse" data-target="#{{collapseId}}">
+                    Profile Runs
+                </p>
+                <h4>
+        </div>
+        <div id="{{collapseId}}" class="panel-collapse collapse">
+            <div class="panel-body">
+                <ul id="{{instanceListId}}"></ul>
+            </div>
+        </div>
+    </script>
+
+    <script id="instanceDataPanelTemplate" type="x-tmpl-mustache">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <p data-toggle="collapse" data-target="#{{collapseId}}">
+                    <i class="fa fa-line-chart"></i> {{date}}
+                </p>
+                <h4>
+        </div>
+        <div id="{{collapseId}}" class="panel-collapse collapse">
+            <div class="panel-body">
+                <ol id="{{stepListId}}"></ol>
+                <div id="{{chartId}}" style="width: 100%; height: 200px"></div>
+            </div>
+        </div>
+    </script>
+
+    <script>
+        function updateProfiles() {
+            var profileList = document.getElementById('accordion');
+            //clear the list
+            while (profileList.firstChild) {
+                profileList.removeChild(profileList.firstChild);
+            }
+
+            temperatureProfileAPI.getAllProfiles()
+              .selectMany(
+                function (profile) {
+                    return profile;
+                })
+              .subscribe(
+                function (p) {
+
+                    var sub = Rx.Observable.forkJoin(
+                        Rx.Observable.return(p),
+                        temperatureProfileAPI.getProfileSteps(p.id),
+                        temperatureProfileAPI.getProfileInstances(p.id))
+                      .subscribe(function (x) {
+                          var profile = x[0];
+                          profile.steps = x[1];
+                          profile.instances = x[2];
+                          createProfilePanel(profile, profileList);
+                      });
+                },
+                function (err) {
+                    alert(err);
+                    console.log('Error: ' + err);
+                },
+                function () {
+                    console.log('Complete');
+                });
+        }
+
+        function createProfilePanel(profile, parent) {
+
+            var profilePanel = document.createElement('div');
+            profilePanel.setAttribute('class', 'panel panel-default');
+
+            var htmlTemplate = document.getElementById('profilePanelTemplate').innerHTML;
+            Mustache.parse(htmlTemplate);
+
+            var collapseId = 'collapse' + profile.name.replace(/\s+/g, '');
+            var bodyId = 'body' + profile.name.replace(/\s+/g, '');
+            profilePanel.innerHTML = Mustache.render(htmlTemplate, {
+                profileName: profile.name,
+                collapseId: collapseId,
+                bodyId: bodyId,
+                profileId: profile.id
+            });
+
+            parent.appendChild(profilePanel);
+
+            var stepsParent = profilePanel.querySelector('#' + bodyId);
+            createStepsPanel(profile.name, profile.steps, stepsParent);
+
+            var instPnlParent = profilePanel.querySelector('#' + bodyId);
+            createInstancePanel(profile.id, profile.name, profile.instances, instPnlParent);
+
+        }
+
+        function createStepsPanel(profileName, steps, parent) {
+            var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Steps';
+            var stepListId = profileName.replace(/\s+/g, '') + 'StepList';
+            var stepChartId = profileName.replace(/\s+/g, '') + 'StepListChartId';
+
+            var stepListPanel = document.createElement('div');
+            stepListPanel.setAttribute('class', 'panel panel-default');
+
+            var htmlTemplate = document.getElementById('profileStepsPanelTemplate').innerHTML;
+            Mustache.parse(htmlTemplate);
+
+            stepListPanel.innerHTML = Mustache.render(htmlTemplate, {
+                collapseId: collapseId,
+                stepListId: stepListId,
+                stepChartId: stepChartId
+            });
+
+            var stepList = stepListPanel.querySelector('#' + stepListId);
+
+            var stepData = [];
+            var overallDuration = 0;
+
+            for (var i = 0; i < steps.length; i++) {
+                var entry = document.createElement('li');
+
+                if (steps[i].startTemp == steps[i].endTemp) {
+                    var stepText = document.createTextNode("Hold at: " +
+                      steps[i].startTemp + ' \xB0F' + " for " + utils.formatTime(steps[i].duration));
+                    entry.appendChild(stepText);
+                    stepList.appendChild(entry);
+                } else {
+                    var stepText = document.createTextNode("Ramp from " +
+                      steps[i].startTemp +
+                      ' \xB0F' + " to " +
+                      steps[i].endTemp + ' \xB0F' +
+                      " over " + utils.formatTime(steps[i].duration));
+
+                    entry.appendChild(stepText);
+                    stepList.appendChild(entry);
+                }
+                stepData.push([overallDuration, steps[i].startTemp]);
+                overallDuration += steps[i].duration;
+                stepData.push([overallDuration, steps[i].endTemp]);
+            }
+
+            parent.appendChild(stepListPanel);
+
+            $("#" + collapseId).on('shown.bs.collapse', function () {
+                var options = {
+                    series: {
+                        lines: {
+                            show: true
+                        },
+                        points: {
+                            show: true
+                        }
+                    }
+                };
+
+
+                var chartPanel = $("#" + stepChartId);
+                var data = [{
+                    label: "Steps",
+                    data: stepData
+                }];
+                var plot = $.plot(chartPanel, data, options);
+
+            });
+        }
+
+        function createInstancePanel(profileId, profileName, instances, parent) {
+            var collapseId = 'collapse' + profileName.replace(/\s+/g, '') + 'Instances';
+            var instanceListId = profileName.replace(/\s+/g, '') + 'InstanceList';
+            var instanceListPanel = document.createElement('div');
+            instanceListPanel.setAttribute('class', 'panel panel-default');
+
+            var htmlTemplate = document.getElementById('profileInstancesPanelTemplate').innerHTML;
+            Mustache.parse(htmlTemplate);
+
+            instanceListPanel.innerHTML = Mustache.render(htmlTemplate, {
+                collapseId: collapseId,
+                instanceListId: instanceListId
+            });
+
+            parent.appendChild(instanceListPanel);
+
+            temperatureProfileAPI.getProfileInstances(profileId)
+            .subscribe(function (dates) {
+                for (var i = 0; i < dates.length; i++) {
+                    var instanceId = dates[i].getTime() / 1000;
+                    var date = new Date(instanceId * 1000);
+                    var instanceList = $("#" + instanceListId)[0];
+                    createInstanceDataPanel(profileId, profileName, instanceList, instanceId, date)
+                }
+            });
+        }
+
+        //instanceId = seconds from epoch
+        function createInstanceDataPanel(profileId, profileName, parent, instanceId, date) {
+            var collapseId = 'collapse' + instanceId;
+            var stepListId = 'steps' + instanceId;
+            var chartId = 'chart' + instanceId;
+            var listItem = document.createElement('li');
+            var instancePanel = document.createElement('div');
+            instancePanel.setAttribute('class', 'panel panel-default');
+
+            var htmlTemplate = document.getElementById('instanceDataPanelTemplate').innerHTML;
+            Mustache.parse(htmlTemplate);
+
+            instancePanel.innerHTML = Mustache.render(htmlTemplate, {
+                collapseId: collapseId,
+                stepListId: stepListId,
+                chartId: chartId,
+                date: date
+            });
+            listItem.appendChild(instancePanel);
+            parent.appendChild(listItem);
+
+            $("#" + collapseId).on('shown.bs.collapse', function () {
+                var chartPanel = $("#" + chartId);
+                if (chartPanel.children().length == 0) {
+                    var instanceSteps = temperatureProfileAPI.getInstanceSteps(profileId, instanceId);
+                    var trendData = temperatureProfileAPI.getTrendData(profileId, instanceId);
+
+                    Rx.Observable.zip(instanceSteps,
+                        trendData,
+                        function (steps, trend) {
+                            return {
+                                stepData: steps,
+                                trendData: trend
+                            };
+                        })
+                      .subscribe(function (instanceData) {
+
+                          var probe0Data = [];
+                          var probe1Data = [];
+                          var setpointData = [];						 
+                          for (var j = 0; j < instanceData.trendData.length; j += 1) {
+                              var timeStamp = (instanceId + (instanceData.trendData[j].SampleIdx * 60)) * 1000;						
+                              if (instanceData.trendData[j].probe0Temp > 0) {
+                                  probe0Data.push([timeStamp, instanceData.trendData[j].probe0Temp]);
+                              }
+                              if (instanceData.trendData[j].probe1Temp > 0) {
+                                  probe1Data.push([timeStamp, instanceData.trendData[j].probe1Temp]);
+                              }
+                          }
+
+                          var startTime = instanceId;
+                          var endTime = startTime;
+                          for (var i = 0; i < instanceData.stepData.length; i++) {
+                              endTime += instanceData.stepData[i].duration;
+
+                              var msStart = startTime * 1000;
+                              var msEnd = endTime * 1000;
+
+                              setpointData.push([msStart, instanceData.stepData[i].startTemp]);
+                              setpointData.push([msEnd, instanceData.stepData[i].endTemp]);
+                              startTime += instanceData.stepData[i].duration;
+                          }
+
+                          var options = {
+                              xaxis: {
+                                  mode: "time"
+                              },
+                              series: {
+                                  lines: {
+                                      show: true
+                                  },
+                                  points: {
+                                      show: false
+                                  }
+                              }
+                          };
+
+                          var data = [{
+                              label: "Setpoint",
+                              data: setpointData,
+                              points: {
+                                  show: true
+                              }
+                          }, {
+                              label: "Probe 0",
+                              data: probe0Data
+                          }, {
+                              label: "Probe 1",
+                              data: probe1Data
+                          }];
+
+                          var plot = $.plot(chartPanel, data, options);
+                      });
+                }
+            });
+        }
+
+        window.onload = function () {
+            updateProfiles();
+
+        };
+    </script>
+</body>
+
+</html>

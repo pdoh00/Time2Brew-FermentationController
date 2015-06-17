@@ -52,6 +52,42 @@ Partial Friend NotInheritable Class MySettings
             Return defaultInstance
         End Get
     End Property
+    
+    <Global.System.Configuration.UserScopedSettingAttribute(),  _
+     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+     Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+    Public Property LastFirmwareFolder() As String
+        Get
+            Return CType(Me("LastFirmwareFolder"),String)
+        End Get
+        Set
+            Me("LastFirmwareFolder") = value
+        End Set
+    End Property
+    
+    <Global.System.Configuration.UserScopedSettingAttribute(),  _
+     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+     Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+    Public Property LastAddress() As String
+        Get
+            Return CType(Me("LastAddress"),String)
+        End Get
+        Set
+            Me("LastAddress") = value
+        End Set
+    End Property
+    
+    <Global.System.Configuration.UserScopedSettingAttribute(),  _
+     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+     Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+    Public Property LastBlob() As String
+        Get
+            Return CType(Me("LastBlob"),String)
+        End Get
+        Set
+            Me("LastBlob") = value
+        End Set
+    End Property
 End Class
 
 Namespace My

@@ -6,6 +6,7 @@
 #include "circularPrintF.h"
 #include "SystemConfiguration.h"
 #include "FlashFS.h"
+#include "http_server.h"
 
 #define uPnP_Interval 150000ul; //Every 5 minutes
 const char *XML_TEMPLATE = "<?xml version=\"1.0\"?>"
@@ -36,7 +37,7 @@ const char *XML_TEMPLATE = "<?xml version=\"1.0\"?>"
         "<url>/favicon.ico</url>"
         "</icon> "
         "</iconList>"
-        "<presentationURL>/index.htm</presentationURL>"
+        "<presentationURL>/index.html</presentationURL>"
         "</device></root>";
 
 char uPnP_str_IPAddress[17];
@@ -50,7 +51,7 @@ void SendUUIDNotify();
 void SendURNNotify();
 int uPnP_GenerateDeviceXML();
 
-void uPnP_RecieveMsg(MESSAGE *msg) {
+void uPnP_RecieveMsg(ESP8266_SLIP_MESSAGE *msg) {
 
     if (memcmp(msg->Data, "M-SEARCH * HTTP", 15) != 0) {
         //Log("   uPnP is NOT an M-SEARCH * HTTP Request\r\n");
@@ -128,7 +129,7 @@ void uPnP_ProcessLoop() {
 
 }
 
-void uPnP_Init(const char *Name, const char *UUID, unsigned long IPAddress) {
+void uPnP_Init(const char *Name, const char *UUID, unsigned long IPAddress, char GenerateNewXML) {
     unsigned long tmr;
     GetTime(tmr);
 
@@ -143,83 +144,12 @@ void uPnP_Init(const char *Name, const char *UUID, unsigned long IPAddress) {
     sprintf(uPnP_str_UUID, "%s", UUID);
     sprintf(uPnP_str_Name, "%s", Name);
 
-    uPnP_GenerateDeviceXML();
+    //if (GenerateNewXML) uPnP_GenerateDeviceXML();
 
     tmrSendRoot = tmr + SYSTEM_TIMER_FREQ;
     tmrSendUUID = tmrSendRoot + (SYSTEM_TIMER_FREQ * 0.1);
     tmrSendURN = tmrSendUUID + (SYSTEM_TIMER_FREQ * 0.1);
 
-}
-
-int uPnP_GenerateDeviceXML() {
-    char buff[128];
-    ff_File XML_Handle;
-    int res, bytesRead;
-
-    res = ff_Delete("device.xml");
-    res = ff_OpenByFileName(&XML_Handle, "device.xml", 1);
-    if (res != FR_OK) {
-        Log("Unable to Create/Open \"device.xml\" ERR=%s\r\n", Translate_DRESULT(res));
-        return 0;
-    }
-
-    const char *inputCursor = XML_TEMPLATE;
-    while (*inputCursor) {
-        char token = *(inputCursor++);
-        if (token == '@') {
-            token = *(inputCursor++);
-            switch (token) {
-                case 'I':
-                    sprintf(buff, "%s", uPnP_str_IPAddress);
-                    res = ff_Append(&XML_Handle, (unsigned char *) buff, strlen(buff), &bytesRead);
-                    if (res != FR_OK) {
-                        Log("Unable to Append \"device.xml\" ERR=%s\r\n", Translate_DRESULT(res));
-                        return 0;
-                    }
-                    break;
-                case 'N':
-                    sprintf(buff, "%s", uPnP_str_Name);
-                    res = ff_Append(&XML_Handle, (unsigned char *) buff, strlen(buff), &bytesRead);
-                    if (res != FR_OK) {
-                        Log("Unable to Append \"device.xml\" ERR=%s\r\n", Translate_DRESULT(res));
-                        return 0;
-                    }
-                    break;
-                case 'U':
-                    sprintf(buff, "%s", uPnP_str_UUID);
-                    res = ff_Append(&XML_Handle, (unsigned char *) buff, strlen(buff), &bytesRead);
-                    if (res != FR_OK) {
-                        Log("Unable to Append \"device.xml\" ERR=%s\r\n", Translate_DRESULT(res));
-                        return 0;
-                    }
-                    break;
-                default:
-                    buff[0] = '@';
-                    buff[1] = token;
-                    res = ff_Append(&XML_Handle, (unsigned char *) buff, 2, &bytesRead);
-                    if (res != FR_OK) {
-                        Log("Unable to Append \"device.xml\" ERR=%s\r\n", Translate_DRESULT(res));
-                        return 0;
-                    }
-                    break;
-            }
-        } else {
-            buff[0] = token;
-            res = ff_Append(&XML_Handle, (unsigned char *) buff, 1, &bytesRead);
-            if (res != FR_OK) {
-                Log("Unable to Append \"device.xml\" ERR=%s\r\n", Translate_DRESULT(res));
-                return 0;
-            }
-        }
-    }
-    res = ff_UpdateLength(&XML_Handle);
-    if (res != FR_OK) {
-        Log("Unable to Update Length \"device.xml\" ERR=%s\r\n", Translate_DRESULT(res));
-        return 0;
-    }
-
-    Log("uPnP Device.xml file created OK \r\n");
-    return 1;
 }
 
 void SendRootNotify() {
@@ -259,5 +189,33 @@ void SendURNNotify() {
             "SERVER: CinefluxEmbedded/1.0 UPnP/1.0 Radian/1.0\r\n"
             "USN: uuid:%s::urn:schemas-upnp-org:device:Basic:1\r\n"
             "\r\n", uPnP_str_IPAddress, uPnP_str_UUID);
+}
+
+void uPnP_GetDeviceXML(char *outCursor) {
+    const char *inputCursor = XML_TEMPLATE;
+    while (*inputCursor) {
+        char token = *(inputCursor++);
+        if (token == '@') {
+            token = *(inputCursor++);
+            switch (token) {
+                case 'I':
+                    outCursor += sprintf(outCursor, "%s", uPnP_str_IPAddress);
+                    break;
+                case 'N':
+                    outCursor += sprintf(outCursor, "%s", uPnP_str_Name);
+                    break;
+                case 'U':
+                    outCursor += sprintf(outCursor, "%s", uPnP_str_UUID);
+                    break;
+                default:
+                    *(outCursor++) = '@';
+                    *(outCursor++) = token;
+                    break;
+            }
+        } else {
+            *(outCursor++) = token;
+        }
+    }
+    *(outCursor++) = 0; //Null Terminate
 }
 

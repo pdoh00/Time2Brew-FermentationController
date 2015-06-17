@@ -35,10 +35,13 @@ extern unsigned int ADC_BufferA[32] __attribute__((aligned(64)));
 extern unsigned int ADC_BufferB[32] __attribute__((aligned(64)));
 extern unsigned long V;
 extern int Global_Config_Mode;
+extern char TemperatureControllerIsAlive, WifiCommunicationsAreAlive;
 
 #define HW_REV_E
 
-#define SECTORCOUNT   3830
+#define SECTORCOUNT   3318
+#define BLOB_START_ADDRESS 13594624UL
+#define BLOB_LENGTH 2097152UL
 #define FIRMWARE_PRIMARY_ADDRESS 15691776UL
 #define FIRMWARE_BACKUP_ADDRESS 16232448UL
 #define FIRMWARE_RESERVED_SIZE  540672UL

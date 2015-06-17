@@ -1,11 +1,12 @@
-﻿Imports FermentationControllerHardwareDriver
-
+﻿
 Public Class EquipmentEditor
     Public data As EQUIPMENT_PROFILE = New EQUIPMENT_PROFILE
     Public Canceled As Boolean = True
     Public ProfileName As String
+    Public EquipmentID As String = ""
 
-    Private Sub EquipmentEditor_Activated(sender As Object, e As EventArgs) Handles Me.Activated
+    Private Sub EquipmentEditor_Activated(sender As Object, e As EventArgs) Handles Me.Loaded
+        Me.EquipmentName.Text = data.EquipmentName
         Me.RegulationMode.Text = data.RegulationMode
         Me.Probe0Assignment.Text = data.Probe0Assignment
         Me.Probe1Assignment.Text = data.Probe1Assignment
@@ -24,7 +25,20 @@ Public Class EquipmentEditor
 
         Me.TargetOutput_Max_C.Text = data.TargetOutput_Max_C
         Me.TargetOutput_Min_C.Text = data.TargetOutput_Min_C
-        Me.ThresholdDelta_C.Text = data.ThresholdDelta_C
+
+        Me.coolDifferential.Text = data.coolDifferential
+        Me.coolTransition.Text = data.coolTransition
+        Me.heatDifferential.Text = data.heatDifferential
+        Me.heatTransition.Text = data.heatTransition
+
+        Me.Process_D_AdaptiveBand.Text = data.Process_D_AdaptiveBand
+        Me.Process_D_FilterCoeff.Text = data.Process_D_FilterCoeff
+        Me.Process_D_FilterGain.Text = data.Process_D_FilterGain
+
+        Me.Target_D_AdaptiveBand.Text = data.Target_D_AdaptiveBand
+        Me.Target_D_FilterCoeff.Text = data.Target_D_FilterCoeff
+        Me.Target_D_FilterGain.Text = data.Target_D_FilterGain
+
 
     End Sub
 
@@ -47,8 +61,21 @@ Public Class EquipmentEditor
 
         data.TargetOutput_Max_C = Me.TargetOutput_Max_C.Text
         data.TargetOutput_Min_C = Me.TargetOutput_Min_C.Text
-        data.ThresholdDelta_C = Me.ThresholdDelta_C.Text
 
+        data.coolDifferential = Me.coolDifferential.Text
+        data.coolTransition = Me.coolTransition.Text
+        data.heatDifferential = Me.heatDifferential.Text
+        data.heatTransition = Me.heatTransition.Text
+
+        data.Process_D_AdaptiveBand = Me.Process_D_AdaptiveBand.Text
+        data.Process_D_FilterCoeff = Me.Process_D_FilterCoeff.Text
+        data.Process_D_FilterGain = Me.Process_D_FilterGain.Text
+
+        data.Target_D_AdaptiveBand = Me.Target_D_AdaptiveBand.Text
+        data.Target_D_FilterCoeff = Me.Target_D_FilterCoeff.Text
+        data.Target_D_FilterGain = Me.Target_D_FilterGain.Text
+
+        data.EquipmentName = Me.EquipmentName.Text
         Me.Canceled = False
         Me.Close()
     End Sub

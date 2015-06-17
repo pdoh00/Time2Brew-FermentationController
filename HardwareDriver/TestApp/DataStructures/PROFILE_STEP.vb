@@ -6,12 +6,9 @@ Public Structure PROFILE_STEP
 
     Public Duration_seconds As UInt32
     Public Function Serialize() As Byte()
-        Dim temp As UInt16
         Using ms As New MemoryStream()
-            temp = (StartTemperature_C * 10)
-            ms.Write(BitConverter.GetBytes(temp), 0, 2)
-            temp = (EndTemperature_C * 10)
-            ms.Write(BitConverter.GetBytes(temp), 0, 2)
+            ms.Write(BitConverter.GetBytes(StartTemperature_C), 0, 4)
+            ms.Write(BitConverter.GetBytes(EndTemperature_C), 0, 4)
             ms.Write(BitConverter.GetBytes(Duration_seconds), 0, 4)
             Return ms.ToArray()
         End Using
@@ -19,10 +16,10 @@ Public Structure PROFILE_STEP
 
     Public Sub New(sourceData As Byte(), sourceOffset As Integer)
         Dim offset As Integer = sourceOffset
-        StartTemperature_C = CSng(BitConverter.ToInt16(sourceData, offset)) * 0.1
-        offset += 2
-        EndTemperature_C = CSng(BitConverter.ToInt16(sourceData, offset)) * 0.1
-        offset += 2
+        StartTemperature_C = CSng(BitConverter.ToSingle(sourceData, offset))
+        offset += 4
+        EndTemperature_C = CSng(BitConverter.ToSingle(sourceData, offset))
+        offset += 4
         Duration_seconds = BitConverter.ToUInt32(sourceData, offset)
         offset += 4
     End Sub

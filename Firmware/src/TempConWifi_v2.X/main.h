@@ -72,6 +72,9 @@ extern "C" {
     extern const char *WiFiConfigFilename;
     extern const char *Version;
 
+    extern char debugESP_BaseMessages, debugFlashFS, debugTemperatureController, debugHTTPServer, debugHTTP_API, debugRTC;
+
+
 #ifdef	__cplusplus
 }
 #endif

@@ -15,6 +15,17 @@
 #define DELAY_CONVERSION 750000
 #define COUNTS_PER_US   8
 
+int OneWireIsBusShorted() {
+    PROBE0_RELEASE;
+    PROBE1_RELEASE;
+    DELAY_105uS;
+    int x;
+    for (x = 0; x < 10; x++) {
+        if (PROBE0_PORT != 1 || PROBE1_PORT != 1) return 1;
+    }
+    return 0;
+}
+
 int OneWireReset(int ProbeId) {
     int ret = 0;
     OneWireISR_Probe = ProbeId;

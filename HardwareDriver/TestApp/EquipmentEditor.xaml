@@ -1,13 +1,18 @@
 ﻿<Window x:Class="EquipmentEditor"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="EquipmentEditor" Height="500" Width="391">
+    Title="EquipmentEditor" Height="588.235" Width="391">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="20*"/>
-            <ColumnDefinition Width="53*"/>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="1*"/>
         </Grid.ColumnDefinitions>
-        <StackPanel Orientation="Vertical" Grid.ColumnSpan="2">
+        <StackPanel Orientation="Vertical" Grid.Column="0">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Equipment Name:</TextBlock>
+                <TextBox Margin="5" Name="EquipmentName"/>
+            </StackPanel>
+            
             <StackPanel Orientation="Horizontal">
                 <TextBlock Margin="5">Regulation Mode</TextBlock>
                 <TextBox Margin="5" Name="RegulationMode"/>
@@ -81,15 +86,58 @@
                 <TextBlock Margin="5">TargetOutput_Min_C</TextBlock>
                 <TextBox Margin="5" Name="TargetOutput_Min_C"/>
             </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Margin="5">ThresholdDelta_C</TextBlock>
-                <TextBox Margin="5" Name="ThresholdDelta_C"/>
-            </StackPanel>
-
+           
             <StackPanel Orientation="Horizontal">
                 <Button Margin="5" Name="cmdOK">OK</Button>
                 <Button Margin="5" Name="cmdCancel">Cancel</Button>
             </StackPanel>
+        </StackPanel>
+        <StackPanel Orientation="Vertical" Grid.Column="1">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Process_D_FilterGain</TextBlock>
+                <TextBox Margin="5" Name="Process_D_FilterGain"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Process_D_FilterCoeff</TextBlock>
+                <TextBox Margin="5" Name="Process_D_FilterCoeff"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Process_D_AdaptiveBand</TextBlock>
+                <TextBox Margin="5" Name="Process_D_AdaptiveBand"/>
+            </StackPanel>
+
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Target_D_FilterGain</TextBlock>
+                <TextBox Margin="5" Name="Target_D_FilterGain"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Target_D_FilterCoeff</TextBlock>
+                <TextBox Margin="5" Name="Target_D_FilterCoeff"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">Target_D_AdaptiveBand</TextBlock>
+                <TextBox Margin="5" Name="Target_D_AdaptiveBand"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">coolDifferential</TextBlock>
+                <TextBox Margin="5" Name="coolDifferential"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">coolTransition</TextBlock>
+                <TextBox Margin="5" Name="coolTransition"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">heatDifferential</TextBlock>
+                <TextBox Margin="5" Name="heatDifferential"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="5">heatTransition</TextBlock>
+                <TextBox Margin="5" Name="heatTransition"/>
+            </StackPanel>
+
         </StackPanel>
     </Grid>
 </Window>

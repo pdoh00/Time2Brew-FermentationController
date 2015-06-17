@@ -16,7 +16,7 @@ extern "C" {
 #include "integer.h"
 #include "ESP8266.h"
 
-    void mDNS_RecieveMsg(MESSAGE *msg);
+    void mDNS_RecieveMsg(ESP8266_SLIP_MESSAGE *msg);
     void mDNS_ProcessLoop();
     void mDNS_Init(const char *Name, unsigned long IPAddress);
 

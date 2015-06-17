@@ -15,6 +15,7 @@
 
 typedef enum {
     TCP_SEND_STATE_Idle,
+    TCP_SEND_STATE_Submitted,
     TCP_SEND_STATE_Sending,
     TCP_SEND_STATE_Success,
     TCP_SEND_STATE_Fail
@@ -34,6 +35,99 @@ typedef enum {
     RESET_FAIL,
     RESET_SUCESS
 } RESET_STATE;
+
+struct ip_addr {
+    unsigned long addr;
+};
+
+typedef struct {
+    unsigned char ssid[32];
+    unsigned char ssid_len;
+    unsigned char bssid[6];
+    unsigned char channel;
+} Event_StaMode_Connected_t;
+
+typedef struct {
+    unsigned char ssid[32];
+    unsigned char ssid_len;
+    unsigned char bssid[6];
+    unsigned char reason;
+} Event_StaMode_Disconnected_t;
+
+typedef struct {
+    unsigned char old_mode;
+    unsigned char new_mode;
+} Event_StaMode_AuthMode_Change_t;
+
+typedef struct {
+    struct ip_addr ip;
+    struct ip_addr mask;
+    struct ip_addr gw;
+} Event_StaMode_Got_IP_t;
+
+typedef struct {
+    unsigned char mac[6];
+    unsigned char aid;
+} Event_SoftAPMode_StaConnected_t;
+
+typedef struct {
+    unsigned char mac[6];
+    unsigned char aid;
+} Event_SoftAPMode_StaDisconnected_t;
+
+typedef union {
+    Event_StaMode_Connected_t connected;
+    Event_StaMode_Disconnected_t disconnected;
+    Event_StaMode_AuthMode_Change_t auth_change;
+    Event_StaMode_Got_IP_t got_ip;
+    Event_SoftAPMode_StaConnected_t sta_connected;
+    Event_SoftAPMode_StaDisconnected_t sta_disconnected;
+} Event_Info_u;
+
+typedef struct _esp_event {
+    unsigned long event;
+    Event_Info_u event_info;
+} System_Event_t;
+
+enum {
+    EVENT_STAMODE_CONNECTED = 0,
+    EVENT_STAMODE_DISCONNECTED,
+    EVENT_STAMODE_AUTHMODE_CHANGE,
+    EVENT_STAMODE_GOT_IP,
+    EVENT_SOFTAPMODE_STACONNECTED,
+    EVENT_SOFTAPMODE_STADISCONNECTED,
+    EVENT_MAX
+};
+
+enum {
+    REASON_UNSPECIFIED = 1,
+    REASON_AUTH_EXPIRE = 2,
+    REASON_AUTH_LEAVE = 3,
+    REASON_ASSOC_EXPIRE = 4,
+    REASON_ASSOC_TOOMANY = 5,
+    REASON_NOT_AUTHED = 6,
+    REASON_NOT_ASSOCED = 7,
+    REASON_ASSOC_LEAVE = 8,
+    REASON_ASSOC_NOT_AUTHED = 9,
+    REASON_DISASSOC_PWRCAP_BAD = 10, /* 11h */
+    REASON_DISASSOC_SUPCHAN_BAD = 11, /* 11h */
+    REASON_IE_INVALID = 13, /* 11i */
+    REASON_MIC_FAILURE = 14, /* 11i */
+    REASON_4WAY_HANDSHAKE_TIMEOUT = 15, /* 11i */
+    REASON_GROUP_KEY_UPDATE_TIMEOUT = 16, /* 11i */
+    REASON_IE_IN_4WAY_DIFFERS = 17, /* 11i */
+    REASON_GROUP_CIPHER_INVALID = 18, /* 11i */
+    REASON_PAIRWISE_CIPHER_INVALID = 19, /* 11i */
+    REASON_AKMP_INVALID = 20, /* 11i */
+    REASON_UNSUPP_RSN_IE_VERSION = 21, /* 11i */
+    REASON_INVALID_RSN_IE_CAP = 22, /* 11i */
+    REASON_802_1X_AUTH_FAILED = 23, /* 11i */
+    REASON_CIPHER_SUITE_REJECTED = 24, /* 11i */
+
+    REASON_BEACON_TIMEOUT = 200,
+    REASON_NO_AP_FOUND = 201,
+};
+
 
 #define ESCAPE_CHAR 0xAA
 #define START_OF_MESSAGE    0x66
@@ -56,6 +150,12 @@ typedef enum {
 
 #define MCU_TCP_CLOSE_CONNECTION  0x0D
 #define ESP_TCP_CLOSED  0x0E
+#define ESP_TCP_RECONNECT  0x1A
+#define ESP_TCP_CONNECT  0x1B
+#define ESP_TCP_CONNECTFAIL  0x1C
+#define ESP_TCP_RECV_ERROR  0x1D
+#define ESP_TCP_CLOSE_ERROR 0x1E
+#define ESP_TCP_SENDCOMPLETE_ERROR 0x1F
 
 #define MCU_INIT  0x10
 #define ESP_INIT_RESP 0x11
@@ -67,6 +167,11 @@ typedef enum {
 #define MCU_START_UPNP 0x16
 #define ESP_START_MDNS_RESP 0x17
 #define ESP_START_UPNP_RESP 0x18
+
+#define ESP_SEND_GEN_MESSAGE    0x19
+
+#define ESP_WIFI_EVENT  0x20
+#define ESP_BEACON_SENT 0x21
 
 typedef enum {
     Fail_UnableToGetSoftAP_Config = 1,
@@ -100,12 +205,14 @@ typedef enum {
     SendFail_Timeout = 29,
     SendFail_Closed = 30,
     SendFail_Reconnect = 31,
-    SendOK = 32
-
+    SendOK = 32,
+    Fail_Init_ModeIsInvalid = 33,
+    InProgress_Sending = 34,
+    Invalid_SLIP_Packet = 35
 } ESP_INIT_RESP_codes;
 
 
-MESSAGE Msg;
+ESP8266_SLIP_MESSAGE Msg;
 NOTIFY Notify;
 TCP_CHANNEL TCP_Channels[TCP_CHANNEL_COUNT], uPnP_Channel, mDNS_Channel;
 
@@ -114,11 +221,13 @@ IP_Address_type IP_Address;
 RESET_STATE ResetState = RESET_IDLE;
 int FailReason;
 
+int InvalidSlipMsgReported = 0;
+
 int StartMDNS_State = 0;
 int StartUPNP_State = 0;
 
-static void ESP_ProcessMessage(MESSAGE *msg);
-static void DisposeMessage(MESSAGE *dat);
+static void ESP_ProcessMessage(ESP8266_SLIP_MESSAGE *msg);
+static void DisposeMessage(ESP8266_SLIP_MESSAGE *dat);
 static int ESP_Reset(float PowerOffTime);
 static const char *translateESP_RESP_CODE(int code);
 
@@ -218,7 +327,7 @@ void ESP_RX_FIFO_Processor() {
                         break;
                     case 9:
                         Msg.Detail.ub[3] = rxByte;
-                        if (Msg.DataLength > 1534) {
+                        if (Msg.DataLength > ESP8266_SLIP_MESSAGE_MAX_LEN) {
                             DisposeMessage(&Msg);
                             state = WaitForMsgStart;
                         } else {
@@ -248,10 +357,39 @@ void ESP_RX_FIFO_Processor() {
     }
 }
 
-static void ESP_ProcessMessage(MESSAGE *msg) {
+void LogEspCon(unsigned char *data, int len) {
+
+    union {
+        signed long l;
+        unsigned char ub[4];
+    } temp;
+
+    temp.ub[0] = data[0];
+    temp.ub[1] = data[1];
+    temp.ub[2] = data[2];
+    temp.ub[3] = data[3];
+    //Log("Remote: %ub.%ub.%ub.%ub:%l ", data[12], data[13], data[14], data[15], temp.l);
+    if (debugESP_BaseMessages) Log("%ub.%ub.%ub.%ub:%l\r\n", data[12], data[13], data[14], data[15], temp.l);
+
+    temp.ub[0] = data[4];
+    temp.ub[1] = data[5];
+    temp.ub[2] = data[6];
+    temp.ub[3] = data[7];
+    //Log("Local:  %ub.%ub.%ub.%ub:%i\r\n", data[8], data[9], data[10], data[11], temp.l);
+
+    //    Log("-raw:");
+    //    int x;
+    //    for (x = 0; x < len; x++) {
+    //        Log("%ub ", data[x]);
+    //    }
+    //    Log("\r\n");
+}
+
+static void ESP_ProcessMessage(ESP8266_SLIP_MESSAGE *msg) {
     BYTE msgID = msg->MessageType;
     BYTE ChannelID = msg->TCP_ChannelID;
     int ResponseCode = msg->ResponseCode;
+    int iTemp;
     TCP_CHANNEL *TCP = NULL;
     if (ChannelID < TCP_CHANNEL_COUNT) {
         TCP = &TCP_Channels[ChannelID];
@@ -288,14 +426,20 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
                 TCP->SendStateDetail = ResponseCode;
                 if (ResponseCode == SendOK) {
                     TCP->SendState = TCP_SEND_STATE_Success;
+                } else if (ResponseCode == InProgress_Sending) {
+                    TCP->SendState = TCP_SEND_STATE_Sending;
                 } else {
-                    Log("%b: TCP Send Failed: %s\r\n", ChannelID, translateESP_RESP_CODE(ResponseCode));
+                    iTemp = msg->Detail.ub[1];
+                    iTemp <<= 8;
+                    iTemp += msg->Detail.ub[2];
+                    Log("%b: TCP Send Failed: res=%b msgLen=%i\r\n", ChannelID, msg->Detail.b[0], iTemp);
                     TCP->SendState = TCP_SEND_STATE_Fail;
                 }
             }
             break;
         case ESP_TCP_RECIEVE:
             if (TCP != NULL) {
+                WifiCommunicationsAreAlive = 1;
                 ParseMessage_HTTP(msg);
             }
             break;
@@ -310,6 +454,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             break;
         case ESP_UPNP_RECIEVE:
             uPnP_RecieveMsg(msg);
+            WifiCommunicationsAreAlive = 1;
             break;
         case ESP_MDNS_SEND_RESULT:
             mDNS_Channel.SendStateDetail = ResponseCode;
@@ -322,6 +467,7 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
             break;
         case ESP_MDNS_RECIEVE:
             mDNS_RecieveMsg(msg);
+            WifiCommunicationsAreAlive = 1;
             break;
         case ESP_INIT_RESP:
             if (ResponseCode == Init_OK) {
@@ -332,13 +478,120 @@ static void ESP_ProcessMessage(MESSAGE *msg) {
                 FailReason = ResponseCode;
             }
             break;
+        case ESP_TCP_RECONNECT:
+            if (debugESP_BaseMessages) {
+                if (ResponseCode == 0) {
+                    Log("?: RECONNECT: Arg is NULL: Err=%xb\r\n", msg->Detail.ub[0]);
+                } else if (ResponseCode == 1) {
+                    Log("?: RECONNECT: Channel is NULL: Err=%xb ", msg->Detail.ub[0]);
+                    LogEspCon(msg->Data, msg->DataLength);
+                } else if (ResponseCode == 2) {
+                    Log("%b: RECONNECT: Err=%b State=%b ", ChannelID, msg->Detail.ub[0], msg->Detail.ub[1]);
+                    LogEspCon(msg->Data, msg->DataLength);
+                } else {
+                    Log("?: RECONNECT: Unknown ResponseCode=%i", ResponseCode);
+                }
+            }
+            break;
+        case ESP_TCP_CONNECT:
+            if (debugESP_BaseMessages) {
+                Log("%b: CONNECT: State=%xi ", ChannelID, ResponseCode);
+                LogEspCon(msg->Data, msg->DataLength);
+            }
+            WifiCommunicationsAreAlive = 1;
+            break;
+        case ESP_TCP_CLOSED:
+            if (debugESP_BaseMessages) {
+                Log("%b: CLOSED: State=%xi ", ChannelID, ResponseCode);
+                LogEspCon(msg->Data, msg->DataLength);
+            }
+            break;
+        case ESP_TCP_CONNECTFAIL:
+            if (debugESP_BaseMessages) {
+                Log("?: CONNECTFAIL: ");
+                LogEspCon(msg->Data, msg->DataLength);
+            }
+            break;
+        case ESP_TCP_RECV_ERROR:
+            if (debugESP_BaseMessages) {
+                if (ResponseCode == 0) {
+                    Log("?: RECV_ERROR: Arg is NULL\r\n");
+                    msg->Data[msg->DataLength] = 0;
+                    Log("%s\r\n--END--\r\n", msg->Data);
+                    Log("\r\n");
+                } else if (ResponseCode == 1) {
+                    Log("?: RECV_ERROR: Channel is NULL\r\n");
+                    msg->Data[msg->DataLength] = 0;
+                    Log("%s\r\n--END--\r\n", msg->Data);
+                    Log("\r\n");
+                } else if (ResponseCode == 2) {
+                    Log("%b: RECV_ERROR: LinkEn=FASLE\r\n", ChannelID);
+                    msg->Data[msg->DataLength] = 0;
+                    Log("%s\r\n--END--\r\n", msg->Data);
+                    Log("\r\n");
+                }
+            }
+
+            break;
+        case ESP_TCP_CLOSE_ERROR:
+            if (debugESP_BaseMessages) {
+                if (ResponseCode == 0) {
+                    Log("?: CLOSE_ERROR: Arg is NULL\r\n\r\n");
+                } else if (ResponseCode == 1) {
+                    Log("?: CLOSE_ERROR: Channel is NULL | ");
+                    LogEspCon(msg->Data, msg->DataLength);
+                } else {
+                    Log("?: CLOSE_ERROR: Unknown ResponseCode=%i\r\n", ResponseCode);
+                }
+            }
+
+            break;
+        case ESP_TCP_SENDCOMPLETE_ERROR:
+            if (debugESP_BaseMessages) {
+                if (ResponseCode == 0) {
+                    Log("?: SENDCOMPLETE_ERROR: Arg is NULL\r\n");
+                    Log("\r\n");
+                } else if (ResponseCode == 1) {
+                    Log("?: SENDCOMPLETE_ERROR: Channel is NULL ");
+                    LogEspCon(msg->Data, msg->DataLength);
+                } else if (ResponseCode == 2) {
+                    Log("%b: SENDCOMPLETE_ERROR: LinkEn=FALSE ", ChannelID);
+                    LogEspCon(msg->Data, msg->DataLength);
+                } else if (ResponseCode == 3) {
+                    Log("%b: SENDCOMPLETE_ERROR: isSending=FALSE ", ChannelID);
+                    LogEspCon(msg->Data, msg->DataLength);
+                } else {
+                    Log("?: SENDCOMPLETE_ERROR: Unknown ResponseCode=%i\r\n", ResponseCode);
+                }
+            }
+            break;
+        case ESP_SEND_GEN_MESSAGE:
+            if (ResponseCode == Invalid_SLIP_Packet) {
+                if (debugESP_BaseMessages) Log("?: ESP! invalid SLIP Subtype=%xb\r\n", msg->Detail.ub[0]);
+                InvalidSlipMsgReported = 1;
+            } else if (ResponseCode == InProgress_Sending) {
+                if (TCP != NULL) {
+                    TCP->SendState = TCP_SEND_STATE_Sending;
+                }
+            }
+            break;
+        case 0xEE://boot time progress
+            break;
+        case ESP_WIFI_EVENT:
+            //Log("ESP_WIFI_EVENT\r\n");
+            break;
+        case ESP_BEACON_SENT:
+            //Log("Beacon Sent\r\n");
+            break;
         default:
+            if (debugESP_BaseMessages) Log("?: UNKNOWN MSG: %xb\r\n", msgID);
+            //Log("\r\n");
             break;
     }
     DisposeMessage(msg);
 }
 
-static void DisposeMessage(MESSAGE *dat) {
+static void DisposeMessage(ESP8266_SLIP_MESSAGE *dat) {
     if (dat != NULL) {
 
         dat->TCP_ChannelID = 0;
@@ -357,7 +610,7 @@ static int ESP_Reset(float PowerOffTime) {
     _U1RXIE = 0;
     unsigned char abaudData[2];
     int temp;
-    int tock;
+    int tock = 0;
 
     if (GET_WIFI_POWER) {
         Log("   Power is already ON... so turn it off and wait...\r\n");
@@ -398,14 +651,18 @@ autoBaudOK:
         FIFO_WriteData(txFIFO, 4, ESCAPE_CHAR, START_OF_MESSAGE, MCU_INIT, SOFTAP_MODE);
         circularPrintf(txFIFO, "%s", ESP_Config.SSID);
         FIFO_Write(txFIFO, 0);
-        circularPrintf(txFIFO, "%s", ESP_Config.Password);
+        circularPrintf(txFIFO, "%s", ESP_Config.STA_Password);
         FIFO_Write(txFIFO, 0);
         FIFO_WriteData(txFIFO, 4, ESP_Config.Channel, ESP_Config.EncryptionMode, ESCAPE_CHAR, END_OF_MESSAGE);
     } else {
         FIFO_WriteData(txFIFO, 4, ESCAPE_CHAR, START_OF_MESSAGE, MCU_INIT, STATION_MODE);
         circularPrintf(txFIFO, "%s", ESP_Config.SSID);
         FIFO_Write(txFIFO, 0);
-        circularPrintf(txFIFO, "%s", ESP_Config.Password);
+        circularPrintf(txFIFO, "%s", ESP_Config.STA_Password);
+        FIFO_Write(txFIFO, 0);
+        circularPrintf(txFIFO, "%s", ESP_Config.Name);
+        FIFO_Write(txFIFO, 0);
+        circularPrintf(txFIFO, "%s", ESP_Config.STA_Password);
         FIFO_Write(txFIFO, 0);
         FIFO_WriteData(txFIFO, 2, ESCAPE_CHAR, END_OF_MESSAGE);
     }
@@ -492,8 +749,13 @@ ResetGood:
 
     Log(" OK = %d.%d.%d.%d\r\n    Starting mDNS Server.", IP_Address.b[3], IP_Address.b[2], IP_Address.b[1], IP_Address.b[0]);
     StartMDNS_State = 0;
-    FIFO_WriteData(txFIFO, 5, ESCAPE_CHAR, START_OF_MESSAGE, MCU_START_MDNS, ESCAPE_CHAR, END_OF_MESSAGE);
+    //FIFO_WriteData(txFIFO, 5, ESCAPE_CHAR, START_OF_MESSAGE, MCU_START_MDNS, ESCAPE_CHAR, END_OF_MESSAGE);
+    FIFO_WriteData(txFIFO, 3, ESCAPE_CHAR, START_OF_MESSAGE, MCU_START_MDNS);
+    circularPrintf(txFIFO, "%s", ESP_Config.Name);
+    FIFO_Write(txFIFO, 0);
+    FIFO_WriteData(txFIFO, 2, ESCAPE_CHAR, END_OF_MESSAGE);
     _U1TXIF = 1;
+
     GetTime(tmr);
     timeout = tmr + (SYSTEM_TIMER_FREQ);
     tock = 0;
@@ -572,22 +834,65 @@ int ESP_TCP_StartStream(BYTE ChannelID) {
 }
 
 int ESP_TCP_TriggerWiFi_Send(BYTE ChannelID) {
-    if (ChannelID > 9) return -1;
+    TCP_SEND_STATE state;
+    unsigned long tmr, timeout;
+    GetTime(tmr);
+    timeout = tmr + SYSTEM_TIMER_FREQ * 0.1;
+
+    if (ChannelID > 9) {
+        Log("Bad ChannelID=%xb\r\n", ChannelID);
+        return -1;
+    }
     TCP_CHANNEL * con = &TCP_Channels[ChannelID];
 
     DISABLE_INTERRUPTS;
     if (con->SendState != TCP_SEND_STATE_Idle) {
-        Log("SendState!=Idle\r\n");
         ENABLE_INTERRUPTS;
-
+        Log("SendState!=Idle\r\n");
         return -1;
     }
-    con->SendState = TCP_SEND_STATE_Sending;
+    con->SendState = TCP_SEND_STATE_Submitted;
+    InvalidSlipMsgReported = 0;
     ENABLE_INTERRUPTS;
-
     FIFO_WriteData(txFIFO, 2, ESCAPE_CHAR, END_OF_MESSAGE);
     _U1TXIF = 1;
-    return 1;
+
+    while (1) {
+        DISABLE_INTERRUPTS;
+        tmr = Timer500Hz;
+        state = con->SendState;
+        ENABLE_INTERRUPTS;
+
+        if (InvalidSlipMsgReported) {
+            Log("Invalid SLIP Message Reported!\r\n");
+            con->SendState = TCP_SEND_STATE_Idle;
+            return -1;
+        }
+
+        if (tmr > timeout) {
+            Log("Wait for acceptance Timeout\r\n");
+            con->SendState = TCP_SEND_STATE_Idle;
+            return -1;
+        }
+
+        switch (state) {
+            case TCP_SEND_STATE_Success:
+            case TCP_SEND_STATE_Submitted:
+                DELAY_105uS;
+                continue;
+                break;
+            case TCP_SEND_STATE_Sending:
+                return 1;
+                break;
+            default:
+                Log("Error! Unknown State: %xi\r\n", state);
+                DISABLE_INTERRUPTS;
+                con->SendState = TCP_SEND_STATE_Idle;
+                ENABLE_INTERRUPTS;
+                return -1;
+                break;
+        }
+    }
 }
 
 int ESP_TCP_CancelSend(BYTE ChannelID) {
@@ -627,6 +932,7 @@ int ESP_TCP_Wait_WiFi_SendCompleted(BYTE ChannelID) {
                 return 1;
                 break;
             default:
+                Log("ERROR: Unexpected State=%b\r\n", state);
                 DISABLE_INTERRUPTS;
                 con->SendState = TCP_SEND_STATE_Idle;
                 ENABLE_INTERRUPTS;
@@ -656,6 +962,8 @@ int ESP_mDNS_BeginSend() {
 
     mDNS_Channel.SendState = TCP_SEND_STATE_Sending;
     FIFO_WriteData(txFIFO, 3, ESCAPE_CHAR, START_OF_MESSAGE, MCU_MDNS_ASYNCSEND);
+
+
 
     return (1);
 }

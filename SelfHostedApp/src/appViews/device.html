@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="css" href="./app.css">
+  <link rel="stylesheet" type="css" href="../external.css">  
+</head>
+
+<body>
+  <nav class="navbar navbar-inverse navbar-default">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html"><i class="fa fa-beer icon-white" onclick="updateStatus()"></i></a>
+      </div>
+      <div class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li><a href="status.html">Device Status</a></li>
+          <li><a href="temperatureProfiles.html">Fermentation Profiles</a></li>
+          <li><a href="equipmentProfiles.html">Equipment Profiles</a></li>
+          <li class="active"><a href="device.html">Device</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+
+  <div id="page-wrapper" class="container">
+    <div class="flex-container-col" style="width: 100%">
+
+      <h1>Device page under construction</h1>
+
+    </div>
+  </div>
+
+  <script src="../appJS/deviceAPI.js"></script>
+  <script src="../appJS/promisify.js "></script>
+  <script src="./external.js""></script>   
+
+
+  window.onload = function() { };
+  </script>
+</body>
+
+</html>
