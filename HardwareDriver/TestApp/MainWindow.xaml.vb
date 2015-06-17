@@ -8,7 +8,13 @@ Class MainWindow
     Private coms As IHttpCommsProvider
     Private poll As New Timers.Timer(1000)
     Private pollTick As Integer = 0
+    Private beaconer As BeaconDiscovery
     Private Sub MainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+
+        beaconer = New BeaconDiscovery(11624)
+        AddHandler beaconer.OnDeviceDiscovered, AddressOf OnDeviceDiscovered
+
+
         Dim ssdp As New Discovery.SSDP.Agents.ClientAgent()
         coms = New HttpCommsProviderWebClient
         Dim IPAddress As String = InputBox("Controller IP Address:", "", My.Settings.LastAddress)
@@ -36,6 +42,18 @@ Class MainWindow
                                      'poll.Enabled = True
                                  End Sub
 
+
+
+    End Sub
+
+    Private Sub OnDeviceDiscovered(dev As Concurrent.ConcurrentBag(Of TCON_Device))
+        Dispatcher.Invoke(Sub()
+                              Devices.Items.Clear()
+                              For Each d In dev
+                                  Devices.Items.Add(d)
+                              Next
+
+                          End Sub)
     End Sub
 
     Private Async Sub cmdGetTemp_Click(sender As Object, e As RoutedEventArgs) Handles cmdGetTemp.Click
@@ -114,7 +132,7 @@ Class MainWindow
         If edt.Canceled Then Return
 
         Try
-            Await Controller.UploadEquipmentProfile(name, edt.data)
+            Await Controller.UploadEquipmentProfile(Name, edt.data)
             response.Text = "OK"
         Catch ex As Exception
             response.Text = "Error:" & ex.ToString
@@ -149,28 +167,28 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdRestart_Click(sender As Object, e As RoutedEventArgs) Handles cmdRestart.Click
-        response.Text = "--"
+        response.Text = "Restarting..."
         Try
             Await Controller.Reboot()
-            response.Text = "OK"
+            response.Text = "Restarting...OK"
         Catch ex As Exception
-            response.Text = "Error:" & ex.ToString
+            response.Text = "Restarting...Error:" & ex.ToString
         End Try
     End Sub
 
     Private Async Sub cmdGetStats_Click(sender As Object, e As RoutedEventArgs) Handles cmdGetStats.Click
-        response.Text = "--"
+        response.Text = "Getting Status..."
         Try
             Dim temp = Await Controller.GetStatus()
             response.Text = temp.ToString
         Catch ex As Exception
-            response.Text = "Error:" & ex.ToString
+            response.Text = "Getting Status...Error:" & ex.ToString
         End Try
 
     End Sub
 
     Private Async Sub cmdGetProfileListing_Click(sender As Object, e As RoutedEventArgs) Handles cmdGetProfileListing.Click
-        response.Text = "--"
+        response.Text = "Getting Profile Listing...."
         Try
             Dim eq = Await Controller.GetProfileListing()
             response.Text = ""
@@ -178,13 +196,13 @@ Class MainWindow
                 response.Text += itm & vbCrLf
             Next
         Catch ex As Exception
-            response.Text = "Error:" & ex.ToString
+            response.Text = "Getting Profile Listing....Error:" & ex.ToString
         End Try
 
     End Sub
 
     Private Async Sub cmdUploadProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadProfile.Click
-        response.Text = "--"
+        response.Text = "Uploading profile..."
         Dim l As New List(Of PROFILE_STEP)
         Dim rnd As New Random(Now.Millisecond)
 
@@ -196,9 +214,9 @@ Class MainWindow
 
         Try
             Await Controller.UploadProfile("", tprfl)
-            response.Text = "OK"
+            response.Text = "Uploading profile...OK"
         Catch ex As Exception
-            response.Text = "Error:" & ex.ToString
+            response.Text = "Uploading profile...Error:" & ex.ToString
         End Try
 
 
@@ -206,7 +224,7 @@ Class MainWindow
 
     Private Async Sub cmdDownloadProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdDownloadProfile.Click
         Try
-            response.Text = "--"
+            response.Text = "Downloading Profile..."
             Dim profiles = Await Controller.GetProfileListing()
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
@@ -217,7 +235,7 @@ Class MainWindow
                 Dim profile = Await Controller.DownloadProfile(profileID)
                 response.Text = profile.ToString
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Downloading Profile...Error:" & ex.ToString
             End Try
         Catch ex As Exception
             response.Text = ex.ToString
@@ -227,7 +245,7 @@ Class MainWindow
 
     Private Async Sub cmdExecProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdExecProfile.Click
         Try
-            response.Text = "--"
+            response.Text = "Executing Profile..."
             Dim profiles = Await Controller.GetProfileListing()
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
@@ -236,9 +254,9 @@ Class MainWindow
             prflSelector = Nothing
             Try
                 Await Controller.ExecuteProfile(profileID)
-                response.Text = "OK"
+                response.Text = "Executing Profile...OK"
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Executing Profile...Error:" & ex.ToString
             End Try
         Catch ex As Exception
             response.Text = ex.ToString
@@ -248,12 +266,12 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdTerminateProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdTerminateProfile.Click
-        response.Text = "--"
+        response.Text = "Terminating Profile..."
         Try
             Await Controller.TerminateProfile()
-            response.Text = "OK"
+            response.Text = "Terminating Profile...OK"
         Catch ex As Exception
-            response.Text = "Error:" & ex.ToString
+            response.Text = "Terminating Profile...Error:" & ex.ToString
         End Try
 
 
@@ -261,7 +279,7 @@ Class MainWindow
 
     Private Async Sub cmdGetInstanceListing_Click(sender As Object, e As RoutedEventArgs) Handles cmdGetInstanceListing.Click
         Try
-            response.Text = "--"
+            response.Text = "Getting instance Listing..."
             Dim profiles = Await Controller.GetProfileListing()
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
@@ -276,7 +294,7 @@ Class MainWindow
                     response.Text += itm.ToString & vbCrLf
                 Next
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Getting instance Listing...Error:" & ex.ToString
             End Try
         Catch ex As Exception
             response.Text = ex.ToString
@@ -287,7 +305,7 @@ Class MainWindow
 
     Private Async Sub cmdDownloadInstance_Click(sender As Object, e As RoutedEventArgs) Handles cmdDownloadInstance.Click
         Try
-            response.Text = "--"
+            response.Text = "Downloading Instance Steps..."
             Dim profiles = Await Controller.GetProfileListing()
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
@@ -310,7 +328,7 @@ Class MainWindow
                 Next
 
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Downloading Instance Steps...Error:" & ex.ToString
                 Return
             End Try
         Catch ex As Exception
@@ -321,7 +339,7 @@ Class MainWindow
 
     Private Async Sub cmdDownloadTrend_Click(sender As Object, e As RoutedEventArgs) Handles cmdDownloadTrend.Click
         Try
-            response.Text = "--"
+            response.Text = "Downloading Trend..."
             Dim profiles = Await Controller.GetProfileListing()
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
@@ -347,16 +365,14 @@ Class MainWindow
                 Using sw = New StreamWriter(fod.OpenFile())
                     sw.WriteLine("Idx, Probe0, Probe1, Output, Relay")
                     For Each itm In ret
-                        If itm.Duration > 0 Then
-                            sw.WriteLine(idx & "," & itm.ToString)
-                            idx += itm.Duration
-                        End If
+                        sw.WriteLine(idx & "," & itm.ToString)
+                        idx += 1
                     Next
                 End Using
-                response.Text = "OK"
+                response.Text = "Downloading Trend...OK"
                 Process.Start(fod.FileName)
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Downloading Trend...Error:" & ex.ToString
                 Return
             End Try
         Catch ex As Exception
@@ -368,7 +384,7 @@ Class MainWindow
 
     Private Async Sub cmdDeleteEquipmentProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdDeleteEquipmentProfile.Click
         Try
-            response.Text = "--"
+            response.Text = "Deletng Equipment..."
             Dim EquipmentProfiles = Await Controller.GetEquipmentProfileListing()
             Dim prflSelector = New ProfileSelector(EquipmentProfiles)
             prflSelector.ShowDialog()
@@ -377,9 +393,9 @@ Class MainWindow
             prflSelector = Nothing
             Try
                 Await Controller.DeleteEquipmentProfile(equipmentID)
-                response.Text = "OK"
+                response.Text = "Deletng Equipment...OK"
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Deletng Equipment...Error:" & ex.ToString
             End Try
         Catch ex As Exception
             response.Text = ex.ToString
@@ -389,7 +405,7 @@ Class MainWindow
 
     Private Async Sub cmdDeleteProfile_Click(sender As Object, e As RoutedEventArgs) Handles cmdDeleteProfile.Click
         Try
-            response.Text = "--"
+            response.Text = "Deleting Profile..."
             Dim profiles = Await Controller.GetProfileListing()
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
@@ -398,9 +414,9 @@ Class MainWindow
             prflSelector = Nothing
             Try
                 Await Controller.DeleteProfile(profileID)
-                response.Text = "OK"
+                response.Text = "Deleting Profile...OK"
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Deleting Profile...Error:" & ex.ToString
             End Try
         Catch ex As Exception
             response.Text = ex.ToString
@@ -410,7 +426,7 @@ Class MainWindow
 
     Private Async Sub cmdDeleteTrend_Click(sender As Object, e As RoutedEventArgs) Handles cmdDeleteTrend.Click
         Try
-            response.Text = "--"
+            response.Text = "Deleting Trend..."
             Dim profiles = Await Controller.GetProfileListing()
             Dim prflSelector = New ProfileSelector(profiles)
             prflSelector.ShowDialog()
@@ -425,9 +441,9 @@ Class MainWindow
                 If selector.isCanceled Then Return
 
                 Await Controller.DeleteInstance(profileID, selector.SelectedDate)
-                response.Text = "OK"
+                response.Text = "Deleting Trend...OK"
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Deleting Trend...Error:" & ex.ToString
             End Try
         Catch ex As Exception
             response.Text = ex.ToString
@@ -453,7 +469,7 @@ Class MainWindow
                     response.Text = "Firmware Uploaded OK"
                 End Using
             Catch ex As Exception
-                response.Text = "Error:" & ex.ToString
+                response.Text = "Uploading Firmware...Error:" & ex.ToString
             End Try
 
         Catch ex As Exception
@@ -462,11 +478,11 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdVersion_Click(sender As Object, e As RoutedEventArgs) Handles cmdVersion.Click
-        response.Text = "--"
+        response.Text = "DeviceInfo...."
         Try
             response.Text = Await Controller.GetVersion
         Catch ex As Exception
-            response.Text = "Error:" & ex.ToString
+            response.Text = "DeviceInfo....Error:" & ex.ToString
         End Try
 
 
@@ -528,7 +544,7 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdTruncate_Click(sender As Object, e As RoutedEventArgs) Handles cmdTruncate.Click
-        response.Text = "--"
+        response.Text = "Truncating..."
         Dim l As New List(Of PROFILE_STEP)
         l.Add(New PROFILE_STEP(18.3, 30, 120)) '3 Hours
         l.Add(New PROFILE_STEP(30, 30, 120)) '10 Minutes
@@ -537,22 +553,25 @@ Class MainWindow
 
         Try
             Await Controller.TruncateProfile(l)
-            response.Text = "OK"
+            response.Text = "Truncating...OK"
         Catch ex As Exception
-            response.Text = "Error:" & ex.ToString
+            response.Text = "Truncating...Error:" & ex.ToString
         End Try
 
     End Sub
 
     Private Async Sub cmdUploadBlob_Click(sender As Object, e As RoutedEventArgs) Handles cmdUploadBlob.Click
         Dim dlg = New Forms.FolderBrowserDialog
-        dlg.ShowDialog()
+        dlg.SelectedPath = My.Settings.LastBlob
+        If dlg.ShowDialog() = Forms.DialogResult.Cancel Then Return
+        My.Settings.LastBlob = dlg.SelectedPath
+        My.Settings.Save()
         Dim blob = blobify.BlobThis(dlg.SelectedPath)
         Using fs As New FileStream("C:\blob.dat", FileMode.Create, FileAccess.ReadWrite)
             blob.Position = 0
             blob.CopyTo(fs)
         End Using
-
+        blob.Position = 0
         Await Controller.uploadBlob(blob, Sub(prog As Single)
                                               Dispatcher.Invoke(Sub()
                                                                     response.Text = "Uploading Blob: " & (prog * 100).ToString("0.00") & "% Complete"
@@ -564,7 +583,23 @@ Class MainWindow
     End Sub
 
     Private Async Sub cmdEraseBlob_Click(sender As Object, e As RoutedEventArgs) Handles cmdEraseBlob.Click
+        response.Text = "Erasing Blob..."
         Await Controller.EraseBLOB
+        response.Text = "Erasing Blob...OK"
+    End Sub
+
+    Private Sub Devices_SelectionChanged(sender As Object, e As SelectionChangedEventArgs) Handles Devices.SelectionChanged
+        Dim selDev As TCON_Device = Devices.SelectedItem
+        If IsNothing(selDev) = False Then
+            Console.WriteLine(selDev.IP_Address)
+
+        End If
+    End Sub
+
+    Private Async Sub cmdEraseFirmware_Click(sender As Object, e As RoutedEventArgs) Handles cmdEraseFirmware.Click
+        response.Text = "Erasing Firmware..."
+        Await Controller.EraseFirmware
+        response.Text = "Erasing Firmware...OK"
     End Sub
 End Class
 
@@ -651,7 +686,7 @@ Public Class HttpCommsProviderWebClient
 
                 st.Start()
                 Dim T = request.GetResponseAsync()
-                Dim X = Await Task.WhenAny(T, Task.Delay(5000))
+                Dim X = Await Task.WhenAny(T, Task.Delay(500))
                 If X.Equals(T) = False Then
                     request.Abort()
                     T.Dispose()

@@ -358,12 +358,13 @@ int main(int argc, char** argv) {
 
     int x;
     int sCount = 0;
-    for (x = 0; x < 10; x++) {
+    for (x = 0; x < 1000; x++) {
         if (U2STAbits.OERR) U2STAbits.OERR = 0;
         while (U2STAbits.URXDA) {
             U2STAbits.OERR = 0;
             if (U2RXREG == CMD_ECHO) {
                 sCount++;
+                if (sCount > 1) serialInterface();
             } else {
                 sCount = 0;
             }

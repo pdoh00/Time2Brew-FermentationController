@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="css" href="app.css">
+    <link rel="stylesheet" type="css" href="../external.css">
+</head>
+
+<body>
+    <nav class="navbar navbar-inverse navbar-default">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="../index.html"><i class="fa fa-beer icon-white" onclick="updateStatus()"></i></a>
+            </div>
+            <div class="collapse navbar-collapse">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="status.html">Device Status</a></li>
+                    <li><a href="temperatureProfiles.html">Fermentation Profiles</a></li>
+                    <li><a href="equipmentProfiles.html">Equipment Profiles</a></li>
+                    <li><a href="device.html">Device</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <div id="page-wrapper" class="container">
+
+        <div class="flex-container-col" style="width: 100%">
+
+            <div class="panel panel-default">
+                <div class="panel-heading  text-center">System Time</div>
+                <div class="panel-body  text-center">
+                    <h3 id="systemTime"></h3>
+                </div>
+            </div>
+
+            <ul class="flex-container-row">
+
+                <li class="flex1">
+                    <div class="panel panel-default">
+                        <div class="panel-heading  text-center">Left Probe</div>
+                        <div class="panel-body text-center">
+                            <h3 id="probe0Temp"></h3>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="flex1">
+                    <div class="panel panel-default">
+                        <div class="panel-heading  text-center">Right Probe</div>
+                        <div class="panel-body text-center">
+                            <h3 id="probe1Temp"></h3>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="flex1">
+                    <div class="panel panel-danger">
+                        <div class="panel-heading text-center">Heat Relay</div>
+                        <div class="panel-body text-center">
+                            <h3 id="heatRelayStatus"></h3>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="flex1">
+                    <div class="panel panel-info">
+                        <div class="panel-heading text-center">Cool Relay</div>
+                        <div class="panel-body text-center">
+                            <h3 id="coolRelayStatus"></h3>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+
+            <ul class="flex-container-row">
+                <li class="flex1">
+                    <div class="panel panel-default">
+                        <div class="panel-heading  text-center">Active Profile</div>
+                        <div class="panel-body  text-center">
+                            <h3 id="activeProfileName"></h3>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="flex1">
+                    <div class="panel panel-default">
+                        <div class="panel-heading  text-center">Active Profile Step</div>
+                        <div class="panel-body text-center">
+                            <h3 id="currentStepIndex"></h3>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="flex1">
+                    <div class="panel panel-default">
+                        <div class="panel-heading  text-center">Step Target Temperature</div>
+                        <div class="panel-body text-center">
+                            <h3 id="currentStepTemp"></h3>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="flex1">
+                    <div class="panel panel-default">
+                        <div class="panel-heading  text-center">Step Time Remaining</div>
+                        <div class="panel-body text-center">
+                            <h3 id="currentStepTimeRemaining"></h3>
+                        </div>
+                    </div>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+
+    <script src="../appJS/configureApp.js"></script>
+    <script src="../appJS/utils.js"></script>
+    <script src="../appJS/promisify.js "></script>
+    <script src="../appJS/statusAPI.js"></script>
+    <script src="../externJS/rx.all.min.js"></script>
+    <script src="../externJS/mustache.min.js"></script>
+    <script src="../externJS/jquery.min.js"></script>
+    <script src="../externJS/bootstrap.min.js"></script>	
+    <script src="../externJS/jquery.flot.min.js"></script>
+    <script src="../externJS/jquery.flot.time.min.js"></script>  
+    <script>
+        function updateStatus() {
+            statusAPI.getStatus()
+              .subscribe(function (status) {
+
+                  document.getElementById("systemTime").innerText =
+                    status.systemTime.toLocaleDateString() + ' ' + status.systemTime.toLocaleTimeString();
+
+                  document.getElementById("probe0Temp").innerText =
+                    Math.round(utils.celciusToFahrenheit(status.probe0Temp) * 100) / 100 + ' \xB0F';
+
+                  document.getElementById("probe1Temp").innerText =
+                    Math.round(utils.celciusToFahrenheit(status.probe1Temp) * 100) / 100 + ' \xB0F';
+
+                  document.getElementById("heatRelayStatus").innerText =
+                    status.heatRelayOn ? "On" : "Off";
+
+                  document.getElementById("coolRelayStatus").innerText =
+                    status.coolRelayOn ? "On" : "Off";
+
+                  if (status.systemMode === 2) {
+                      document.getElementById("activeProfileName").innerText =
+                        status.activeProfileName;
+
+                      document.getElementById("currentStepIndex").innerText =
+                        status.currentStepIndex;
+
+                      document.getElementById("currentStepTemp").innerText =
+                        Math.round(utils.celciusToFahrenheit(status.currentStepTemp) * 100) / 100 +
+                        ' \xB0F';
+
+                      document.getElementById("currentStepTimeRemaining").innerText =
+                      utils.formatTime(status.currentStepRemainingSeconds);
+                      // moment({
+                      //   second: status.currentStepRemainingSeconds
+                      // }, 'HH:mm:ss');
+                  } else {
+                      document.getElementById("activeProfileName").innerText = "No active profile";
+                  }
+
+              },
+              function (err) {
+                  alert(err);
+              });
+        };
+
+        window.onload = function () {
+            //update the page every 1000ms
+            Rx.Observable.timer(0, 1000).subscribe(function (x) {
+                updateStatus();
+            });
+        };
+    </script>
+</body>
+
+</html>

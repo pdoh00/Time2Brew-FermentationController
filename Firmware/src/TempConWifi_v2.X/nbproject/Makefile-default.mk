@@ -45,17 +45,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=OneWire.c ESP8266.c rtc.c I2C.c uPnP.c mDNS.c FIFO.c circularPrintF.c Base64.c MD5.c pack.c fletcherChecksum.c GOTHtraps.c geterrorloc.s FlashFS.c PID.c IIR.c RLE_Compressor.c BlobFS.c Http_API.c Settings.c SystemConfiguration.c http_server.c main.c TemperatureControler.c
+SOURCEFILES_QUOTED_IF_SPACED=OneWire.c ESP8266.c rtc.c uPnP.c mDNS.c FIFO.c circularPrintF.c Base64.c MD5.c pack.c fletcherChecksum.c GOTHtraps.c geterrorloc.s FlashFS.c PID.c IIR.c RLE_Compressor.c BlobFS.c Http_API.c Settings.c SystemConfiguration.c http_server.c main.c TemperatureControler.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/OneWire.o ${OBJECTDIR}/ESP8266.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/I2C.o ${OBJECTDIR}/uPnP.o ${OBJECTDIR}/mDNS.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/Base64.o ${OBJECTDIR}/MD5.o ${OBJECTDIR}/pack.o ${OBJECTDIR}/fletcherChecksum.o ${OBJECTDIR}/GOTHtraps.o ${OBJECTDIR}/geterrorloc.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/PID.o ${OBJECTDIR}/IIR.o ${OBJECTDIR}/RLE_Compressor.o ${OBJECTDIR}/BlobFS.o ${OBJECTDIR}/Http_API.o ${OBJECTDIR}/Settings.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/http_server.o ${OBJECTDIR}/main.o ${OBJECTDIR}/TemperatureControler.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/OneWire.o.d ${OBJECTDIR}/ESP8266.o.d ${OBJECTDIR}/rtc.o.d ${OBJECTDIR}/I2C.o.d ${OBJECTDIR}/uPnP.o.d ${OBJECTDIR}/mDNS.o.d ${OBJECTDIR}/FIFO.o.d ${OBJECTDIR}/circularPrintF.o.d ${OBJECTDIR}/Base64.o.d ${OBJECTDIR}/MD5.o.d ${OBJECTDIR}/pack.o.d ${OBJECTDIR}/fletcherChecksum.o.d ${OBJECTDIR}/GOTHtraps.o.d ${OBJECTDIR}/geterrorloc.o.d ${OBJECTDIR}/FlashFS.o.d ${OBJECTDIR}/PID.o.d ${OBJECTDIR}/IIR.o.d ${OBJECTDIR}/RLE_Compressor.o.d ${OBJECTDIR}/BlobFS.o.d ${OBJECTDIR}/Http_API.o.d ${OBJECTDIR}/Settings.o.d ${OBJECTDIR}/SystemConfiguration.o.d ${OBJECTDIR}/http_server.o.d ${OBJECTDIR}/main.o.d ${OBJECTDIR}/TemperatureControler.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/OneWire.o ${OBJECTDIR}/ESP8266.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/uPnP.o ${OBJECTDIR}/mDNS.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/Base64.o ${OBJECTDIR}/MD5.o ${OBJECTDIR}/pack.o ${OBJECTDIR}/fletcherChecksum.o ${OBJECTDIR}/GOTHtraps.o ${OBJECTDIR}/geterrorloc.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/PID.o ${OBJECTDIR}/IIR.o ${OBJECTDIR}/RLE_Compressor.o ${OBJECTDIR}/BlobFS.o ${OBJECTDIR}/Http_API.o ${OBJECTDIR}/Settings.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/http_server.o ${OBJECTDIR}/main.o ${OBJECTDIR}/TemperatureControler.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/OneWire.o.d ${OBJECTDIR}/ESP8266.o.d ${OBJECTDIR}/rtc.o.d ${OBJECTDIR}/uPnP.o.d ${OBJECTDIR}/mDNS.o.d ${OBJECTDIR}/FIFO.o.d ${OBJECTDIR}/circularPrintF.o.d ${OBJECTDIR}/Base64.o.d ${OBJECTDIR}/MD5.o.d ${OBJECTDIR}/pack.o.d ${OBJECTDIR}/fletcherChecksum.o.d ${OBJECTDIR}/GOTHtraps.o.d ${OBJECTDIR}/geterrorloc.o.d ${OBJECTDIR}/FlashFS.o.d ${OBJECTDIR}/PID.o.d ${OBJECTDIR}/IIR.o.d ${OBJECTDIR}/RLE_Compressor.o.d ${OBJECTDIR}/BlobFS.o.d ${OBJECTDIR}/Http_API.o.d ${OBJECTDIR}/Settings.o.d ${OBJECTDIR}/SystemConfiguration.o.d ${OBJECTDIR}/http_server.o.d ${OBJECTDIR}/main.o.d ${OBJECTDIR}/TemperatureControler.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/OneWire.o ${OBJECTDIR}/ESP8266.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/I2C.o ${OBJECTDIR}/uPnP.o ${OBJECTDIR}/mDNS.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/Base64.o ${OBJECTDIR}/MD5.o ${OBJECTDIR}/pack.o ${OBJECTDIR}/fletcherChecksum.o ${OBJECTDIR}/GOTHtraps.o ${OBJECTDIR}/geterrorloc.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/PID.o ${OBJECTDIR}/IIR.o ${OBJECTDIR}/RLE_Compressor.o ${OBJECTDIR}/BlobFS.o ${OBJECTDIR}/Http_API.o ${OBJECTDIR}/Settings.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/http_server.o ${OBJECTDIR}/main.o ${OBJECTDIR}/TemperatureControler.o
+OBJECTFILES=${OBJECTDIR}/OneWire.o ${OBJECTDIR}/ESP8266.o ${OBJECTDIR}/rtc.o ${OBJECTDIR}/uPnP.o ${OBJECTDIR}/mDNS.o ${OBJECTDIR}/FIFO.o ${OBJECTDIR}/circularPrintF.o ${OBJECTDIR}/Base64.o ${OBJECTDIR}/MD5.o ${OBJECTDIR}/pack.o ${OBJECTDIR}/fletcherChecksum.o ${OBJECTDIR}/GOTHtraps.o ${OBJECTDIR}/geterrorloc.o ${OBJECTDIR}/FlashFS.o ${OBJECTDIR}/PID.o ${OBJECTDIR}/IIR.o ${OBJECTDIR}/RLE_Compressor.o ${OBJECTDIR}/BlobFS.o ${OBJECTDIR}/Http_API.o ${OBJECTDIR}/Settings.o ${OBJECTDIR}/SystemConfiguration.o ${OBJECTDIR}/http_server.o ${OBJECTDIR}/main.o ${OBJECTDIR}/TemperatureControler.o
 
 # Source Files
-SOURCEFILES=OneWire.c ESP8266.c rtc.c I2C.c uPnP.c mDNS.c FIFO.c circularPrintF.c Base64.c MD5.c pack.c fletcherChecksum.c GOTHtraps.c geterrorloc.s FlashFS.c PID.c IIR.c RLE_Compressor.c BlobFS.c Http_API.c Settings.c SystemConfiguration.c http_server.c main.c TemperatureControler.c
+SOURCEFILES=OneWire.c ESP8266.c rtc.c uPnP.c mDNS.c FIFO.c circularPrintF.c Base64.c MD5.c pack.c fletcherChecksum.c GOTHtraps.c geterrorloc.s FlashFS.c PID.c IIR.c RLE_Compressor.c BlobFS.c Http_API.c Settings.c SystemConfiguration.c http_server.c main.c TemperatureControler.c
 
 
 CFLAGS=
@@ -128,13 +128,6 @@ ${OBJECTDIR}/rtc.o: rtc.c  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/rtc.o.ok ${OBJECTDIR}/rtc.o.err 
 	@${RM} ${OBJECTDIR}/rtc.o 
 	@${FIXDEPS} "${OBJECTDIR}/rtc.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/rtc.o.d" -o ${OBJECTDIR}/rtc.o rtc.c    
-	
-${OBJECTDIR}/I2C.o: I2C.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/I2C.o.d 
-	@${RM} ${OBJECTDIR}/I2C.o.ok ${OBJECTDIR}/I2C.o.err 
-	@${RM} ${OBJECTDIR}/I2C.o 
-	@${FIXDEPS} "${OBJECTDIR}/I2C.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/I2C.o.d" -o ${OBJECTDIR}/I2C.o I2C.c    
 	
 ${OBJECTDIR}/uPnP.o: uPnP.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
@@ -297,13 +290,6 @@ ${OBJECTDIR}/rtc.o: rtc.c  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/rtc.o.ok ${OBJECTDIR}/rtc.o.err 
 	@${RM} ${OBJECTDIR}/rtc.o 
 	@${FIXDEPS} "${OBJECTDIR}/rtc.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/rtc.o.d" -o ${OBJECTDIR}/rtc.o rtc.c    
-	
-${OBJECTDIR}/I2C.o: I2C.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/I2C.o.d 
-	@${RM} ${OBJECTDIR}/I2C.o.ok ${OBJECTDIR}/I2C.o.err 
-	@${RM} ${OBJECTDIR}/I2C.o 
-	@${FIXDEPS} "${OBJECTDIR}/I2C.o.d" $(SILENT) -rsi ${MP_CC_DIR}../ -c ${MP_CC} $(MP_EXTRA_CC_PRE)  -g -omf=elf -x c -c -mcpu=$(MP_PROCESSOR_OPTION) -Werror -Wall -mlarge-code -mlarge-data -MMD -MF "${OBJECTDIR}/I2C.o.d" -o ${OBJECTDIR}/I2C.o I2C.c    
 	
 ${OBJECTDIR}/uPnP.o: uPnP.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 

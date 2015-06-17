@@ -53,6 +53,9 @@ extern "C" {
 
 #define ESP_SEND_GEN_MESSAGE    0x19
 
+#define ESP_WIFI_EVENT  0x20
+#define ESP_BEACON_SENT 0x21
+
     typedef enum {
         Fail_UnableToGetSoftAP_Config = 1,
         Fail_UnableToSetSoftAP_Config = 2,

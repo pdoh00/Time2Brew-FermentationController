@@ -105,8 +105,6 @@ void __attribute__((interrupt, no_auto_psv)) _MathError(void) {
     }
     while (1);
 
-    while (1);
-
     INTCON1bits.MATHERR = 0; // clear the trap flag
 
     asm("reset"); // reset processor

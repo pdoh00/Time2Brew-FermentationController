@@ -184,11 +184,6 @@ void Setup_Interrupts() {
     _T3IF = 0;
     _T3IE = 1;
 
-    //1Hz Controller Timer
-    _CNIP = 4;
-    _CNIF = 0;
-    _CNIE = 1;
-
     //ADC DMA Interrupts
     _DMA2IP = 6;
     _DMA2IF = 0;

@@ -68,6 +68,8 @@ BYTE __attribute__((aligned)) TRNG_Data[128];
 FIFO_BUFFER TRNG_real = {TRNG_Data, TRNG_Data, TRNG_Data, TRNG_Data + 128};
 FIFO_BUFFER *TRNG_fifo = &TRNG_real;
 
+char debugESP_BaseMessages, debugFlashFS, debugTemperatureController, debugHTTPServer, debugHTTP_API, debugRTC;
+
 void __attribute__((__interrupt__, no_auto_psv)) _U1RXInterrupt(void) {
     BYTE token;
     _U1RXIF = 0;
@@ -121,6 +123,10 @@ void __attribute__((__interrupt__, no_auto_psv)) _U2TXInterrupt(void) {
 void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
     static int HalfSecondTick = 0;
     static int CFG_MODE_COUNT = 0;
+    static unsigned long WDT_TIME = 0;
+    static unsigned long lastTempConRun = 0;
+    static unsigned long lastWifiCommunication = 0;
+    static unsigned long lastMainLoopRun = 0;
 
     _T1IF = 0;
     asm("CLRWDT");
@@ -128,7 +134,43 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
     Timer500Hz++;
     HalfSecondTick++;
     if (HalfSecondTick == 250) {
-        _CNIF = 1; //Tell the Temperature Controller to Run! but on a lower priority thread.
+        if (WDT_Enabled) {
+            WDT_TIME++;
+
+            if (TemperatureControllerIsAlive) {
+                lastTempConRun = WDT_TIME;
+                TemperatureControllerIsAlive = 0;
+            }
+
+            if (WifiCommunicationsAreAlive) {
+                lastWifiCommunication = WDT_TIME;
+                WifiCommunicationsAreAlive = 0;
+            }
+
+            if (MainLoopIsAlive) {
+                lastMainLoopRun = WDT_TIME;
+                MainLoopIsAlive = 0;
+            }
+
+            if ((WDT_TIME - lastTempConRun) > 240) { //2 minute
+                Log("WDT: Temperature Controller Is Not Alive!");
+                Delay(0.1);
+                asm("RESET");
+            }
+
+            if ((WDT_TIME - lastWifiCommunication) > 1200) { //10 minutes
+                Log("WDT: WiFi Comms Are Not Alive!");
+                TriggerWifiReset = 1;
+                lastWifiCommunication = WDT_TIME;
+            }
+
+            if ((WDT_TIME - lastMainLoopRun) > 240) { //2 minutes
+                Log("WDT: Main Loop Is Not Alive!");
+                Delay(0.1);
+                asm("RESET");
+            }
+        }
+
         HalfSecondTick = 1;
     }
 
@@ -142,57 +184,6 @@ void __attribute__((__interrupt__, no_auto_psv)) _T1Interrupt(void) {
             TriggerConfigReset = 1;
         }
         CFG_MODE_COUNT = 0;
-    }
-
-
-}
-
-void __attribute__((__interrupt__, no_auto_psv)) _CNInterrupt(void) {
-    static unsigned long WDT_TIME = 0;
-    static unsigned long lastTempConRun = 0;
-    static unsigned long lastWifiCommunication = 0;
-    static unsigned long lastMainLoopRun = 0;
-
-    _CNIF = 0;
-    TemperatureController_Interrupt();
-
-    if (WDT_Enabled) {
-        WDT_TIME++;
-
-        if (TemperatureControllerIsAlive) {
-            lastTempConRun = WDT_TIME;
-            TemperatureControllerIsAlive = 0;
-        }
-
-        if (WifiCommunicationsAreAlive) {
-            lastWifiCommunication = WDT_TIME;
-            WifiCommunicationsAreAlive = 0;
-        }
-
-        if (MainLoopIsAlive) {
-            lastMainLoopRun = WDT_TIME;
-            MainLoopIsAlive = 0;
-        }
-
-        if ((WDT_TIME - lastTempConRun) > 240) { //2 minute
-            Log("WDT: Temperature Controller Is Not Alive!");
-            Delay(0.1);
-            asm("RESET");
-        }
-
-        if ((WDT_TIME - lastWifiCommunication) > 1200) { //10 minutes
-            Log("WDT: WiFi Comms Are Not Alive!");
-            TriggerWifiReset = 1;
-            lastWifiCommunication = WDT_TIME;
-        }
-
-        if ((WDT_TIME - lastMainLoopRun) > 240) { //2 minutes
-            Log("WDT: Main Loop Is Not Alive!");
-            Delay(0.1);
-            asm("RESET");
-        }
-
-
     }
 
 
@@ -459,6 +450,13 @@ int main(int argc, char** argv) {
     WDT_Enabled = 0;
     INTCON2bits.GIE = 0;
 
+    debugESP_BaseMessages = 1;
+    debugFlashFS = 1;
+    debugTemperatureController = 1;
+    debugHTTPServer = 1;
+    debugHTTP_API = 1;
+    debugRTC = 0;
+
     SetupClock();
     SetupPortPins();
     Setup_UART();
@@ -482,10 +480,6 @@ int main(int argc, char** argv) {
         };
     }
 
-    Log("Testing Blob...\r\n");
-    BLOB_FILE dut;
-    BLOB_openFile(&dut, "nevergonnafindit");
-    
     Log("Starting WDT:...");
     if (RCONbits.WDTO) {
         Log("Last Restart was due to WDT Timeout!...");
@@ -515,7 +509,7 @@ int main(int argc, char** argv) {
         HTTP_ServerLoop();
         mDNS_ProcessLoop();
         uPnP_ProcessLoop();
-        TrendBufferCommitt();
+        TemperatureController_ProcessLoop();
         if (TriggerConfigReset) {
             TriggerConfigReset = 0;
             GlobalStartup(1);

@@ -76,6 +76,18 @@ Partial Friend NotInheritable Class MySettings
             Me("LastAddress") = value
         End Set
     End Property
+    
+    <Global.System.Configuration.UserScopedSettingAttribute(),  _
+     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+     Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+    Public Property LastBlob() As String
+        Get
+            Return CType(Me("LastBlob"),String)
+        End Get
+        Set
+            Me("LastBlob") = value
+        End Set
+    End Property
 End Class
 
 Namespace My

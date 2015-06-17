@@ -28,19 +28,19 @@ int CreateDefaultEquipmentProfile() {
     eq->CoolMinTimeOn = 60;
     eq->HeatMinTimeOff = 60;
     eq->HeatMinTimeOn = 60;
-    eq->Process_Kp = 1;
+    eq->Process_Kp = 0.2;
     eq->Process_Ki = 0;
     eq->Process_Kd = 0;
     eq->RegulationMode = REGULATIONMODE_SimplePID;
-    eq->Target_Kp = 1;
+    eq->Target_Kp = 0.2;
     eq->Target_Ki = 0;
     eq->Target_Kd = 0;
-    eq->TargetOutput_Max = 1000;
+    eq->TargetOutput_Max = 80;
     eq->TargetOutput_Min = 0;
-    eq->heatDifferential = 50; //5C or 9F
-    eq->heatTransition = 50; //5C or 9F
-    eq->coolDifferential = 100; //10C or 18F
-    eq->coolTransition = 100; //10C or 18F
+    eq->heatDifferential = 5; //5C or 9F
+    eq->heatTransition = 5; //5C or 9F
+    eq->coolDifferential = 5; //10C or 18F
+    eq->coolTransition = 5; //10C or 18F
     eq->Target_D_AdaptiveBand = 25.0;
     eq->Target_D_FilterGain = 20.8776099;
     eq->Target_D_FilterCoeff = 0.9042035937;
@@ -70,7 +70,7 @@ static int CreateFactoryDefaultWifiConfig() {
     sprintf(ESP_Config.Name, "TEMPCON");
     sprintf(ESP_Config.UUID, "f14fe247-a3bb-4663-9875-edccbe0b3f35");
     ESP_Config.Mode = SOFTAP_MODE;
-    ESP_Config.Password[0] = 0;
+    ESP_Config.STA_Password[0] = 0;
     sprintf(ESP_Config.SSID, "TEMPCON");
     ESP_Config.Channel = 1;
     ESP_Config.EncryptionMode = AUTH_OPEN;
@@ -108,7 +108,7 @@ int ESP_ConfigLoad(ESP8266_CONFIG *cfg, const char *filename) {
         Log("Name is not OK\r\n");
         return 0;
     }
-    if (strlen(cfg->Password) > 30) {
+    if (strlen(cfg->STA_Password) > 30) {
         Log("Password is not OK\r\n");
         return 0;
     }
@@ -251,6 +251,9 @@ int GlobalStartup(int configMode) {
     Log(" OK\r\n");
 
     sprintf(ESP_Config.UUID, "%s", UUID);
+    sprintf(ESP_Config.SOFTAP_Password, "%s", ConfigPassword);
+
+    if (strlen(ESP_Config.STA_Password) == 0) sprintf(ESP_Config.STA_Password, "%s", ConfigPassword);
 
     Log("Checing HA1...");
     if (strlen(ESP_Config.HA1) != 32) {
@@ -262,13 +265,15 @@ int GlobalStartup(int configMode) {
     if (configMode) {
         Log("CONFIG MODE DETECTED\r\n");
         Global_Config_Mode = 1;
-        sprintf(ESP_Config.Name, "TEMPCONCONFIG");
+        if (strlen(ESP_Config.Name) == 0) {
+            sprintf(ESP_Config.Name, "defaultConfig");
+        }
         ESP_Config.EncryptionMode = AUTH_WPA2_PSK;
         ESP_Config.Mode = SOFTAP_MODE;
-        sprintf(ESP_Config.Password, "%s", ConfigPassword);
-        sprintf(ESP_Config.SSID, "TEMPCONCONFIG");
+        sprintf(ESP_Config.STA_Password, "%s", ESP_Config.SOFTAP_Password);
+        sprintf(ESP_Config.SSID, "CFG_%s", ESP_Config.Name);
         ESP_Config.Channel = 1;
-        Log("***SSID='%s' Password='%s'\r\n", ESP_Config.SSID, ESP_Config.Password);
+        Log("***SSID='%s' Password='%s'\r\n", ESP_Config.SSID, ESP_Config.STA_Password);
     } else {
         Global_Config_Mode = 0;
     }
@@ -280,14 +285,13 @@ int GlobalStartup(int configMode) {
     }
     Log("   WiFI Module Ready. IP Address=%d.%d.%d.%d\r\n", IP_Address.b[3], IP_Address.b[2], IP_Address.b[1], IP_Address.b[0]);
 
-//    Log("Initializing mDNS Service\r\n");
-//    mDNS_Init(ESP_Config.Name, IP_Address.l);
-//    Log("    mDNS Service Online\r\n");
+    Log("Initializing mDNS Service\r\n");
+    mDNS_Init(ESP_Config.Name, IP_Address.l);
+    Log("    mDNS Service Online\r\n");
 
     Log("\r\nInitializing uPnP Service\r\n");
     uPnP_Init(ESP_Config.Name, ESP_Config.UUID, IP_Address.l, 1);
     Log("   uPnP Service Online\r\n");
-
 
     res = ff_OpenByFileName(&defaultEquip, "equip.0", 0);
     if (res == FR_NOT_FOUND) {

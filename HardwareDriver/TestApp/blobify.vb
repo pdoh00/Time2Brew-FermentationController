@@ -6,11 +6,12 @@ Public Class blobify
         Dim CheckSum As UInt16
         Dim ret As New MemoryStream
         For Each File In Directory.GetFiles(srcFolder, "*.*", SearchOption.AllDirectories)
-            Console.WriteLine(File)
+
             Dim Blob = blobifyThisFile(File, CheckSum)
 
             'Write the file name
             Dim blobName = Text.ASCIIEncoding.ASCII.GetBytes(File.Replace(srcFolder, "").Replace("\", "/"))
+            Console.WriteLine(File.Replace(srcFolder, "").Replace("\", "/"))
             For x = 0 To 255
                 blobNameBytes(x) = 0
             Next
@@ -27,6 +28,8 @@ Public Class blobify
             Blob.Position = 0
             Blob.CopyTo(ret)
         Next
+
+
         Return ret
     End Function
 
@@ -72,13 +75,13 @@ Public Class blobify
 
         AddString(ret, String.Format(
                   "HTTP/1.1 200 OK" & vbCrLf & _
-                  "Connection: Keep-Alive" & vbCrLf & _
-                  "Cache-Control: 600" & vbCrLf & _
-                  "ETag: ""{0}""" & vbCrLf & _
+                  "Connection: close" & vbCrLf & _
+                  "Cache-Control: 86400" & vbCrLf & _
+                  "ETag: ""X{0}""" & vbCrLf & _
                   "Content-Type: {1}" & vbCrLf & _
                   "Content-Encoding: gzip" & vbCrLf & _
                   "Content-Length: {2}" & vbCrLf & _
-                  vbCrLf, Hex(checksum), contentType, data.Length.ToString))
+                  vbCrLf, Hex(CheckSum).PadLeft(4, "0"c), contentType, data.Length.ToString))
         ret.Write(data, 0, data.Length)
         Return ret
     End Function

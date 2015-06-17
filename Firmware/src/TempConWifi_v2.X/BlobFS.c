@@ -5,13 +5,27 @@
 #include "ESP8266.h"
 #include "SystemConfiguration.h"
 
+void ToLower(char *src) {
+    char token;
+    while (*src) {
+        token = *src;
+        if (token >= 'A' && token <= 'Z') {
+            token -= 'A';
+            token += 'a';
+        }
+        *(src++) = token;
+    }
+}
+
 int BLOB_openFile(BLOB_FILE *file, const char *filename) {
+    ToLower((char *) filename);
     //Log("BLOB: OpenFile '%s'\r\n", filename);
     BLOB_FILE entry;
     unsigned long offset = BLOB_START_ADDRESS;
     while (1) {
         //Log("  Offset=%l ", offset);
         diskRead(offset, sizeof (BLOB_FILE), (BYTE *) & entry);
+        ToLower(entry.filename);
         if ((BYTE) entry.filename[0] == 0xFF) {
             //Log(" 0xFF found... End of Blob\r\n");
             return FR_NOT_FOUND;

@@ -19,6 +19,8 @@ int RLE_CreateNew(RLE_State *state, const char *filename, ff_File *fileHandle, v
     state->nvSRAM_AddressOffset = nvram_address;
 
     nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+    nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+    state->RLE=RunLength;
 
     ff_Delete(filename);
     res = ff_OpenByFileName(state->file, filename, 1);
@@ -39,7 +41,7 @@ int RLE_Open(RLE_State *state, const char *filename, ff_File *fileHandle, void *
     state->file = fileHandle;
     state->nvSRAM_AddressOffset = nvram_address;
 
-    BYTE RunLength;
+    BYTE RunLength, RunLengthA;
 
     res = ff_OpenByFileName(state->file, filename, 0);
     if (res != FR_OK) return RLE_CreateNew(state, filename, fileHandle, SampleBuffer, sizeofSamples, nvram_address);
@@ -53,14 +55,19 @@ int RLE_Open(RLE_State *state, const char *filename, ff_File *fileHandle, void *
             ff_Seek(state->file, state->file->Position - 1); //Back up so the file is at the right place to write the sample count...
             //Restore the nvRAM RunLength
             nvsRAM_Read(&RunLength, state->nvSRAM_AddressOffset, 1);
-            state->SampleCount += RunLength;
-            Log("  Restored Runlength=%b SampleCount=%l\r\n", RunLength, state->SampleCount);
-
-            //And complete the record...by writing a valid RunLength
-            //ff_Append(state->file, &RunLength, 1, &bw);
-
+            nvsRAM_Read(&RunLengthA, state->nvSRAM_AddressOffset + 1, 1);
+            if (RunLength != RunLengthA) {
+                Log("Invalid nvSRAM Run Length!\r\n");
+                RunLength = 0;
+                nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+                nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+                state->RLE=RunLength;
+            } else {
+                state->SampleCount += RunLength;
+                Log("  Restored Runlength=%b SampleCount=%l\r\n", RunLength, state->SampleCount);
+            }
             //Clear the LastSampleData to zero indicating this is a GAP FILLER
-            memset(zeroBuffer, 0, state->sizeofSample);
+            memset(zeroBuffer, 0x00, state->sizeofSample);
 
             //Now we can add zero samples until the file is back to the sample count required (to fill the gap)
             while (state->SampleCount < NextSampleIdx) {
@@ -68,12 +75,6 @@ int RLE_Open(RLE_State *state, const char *filename, ff_File *fileHandle, void *
                 if (res != FR_OK) return res;
             }
             return FR_OK;
-
-            //And write the packet sample start to disk...
-            //ff_Append(state->file, state->lastSample, state->sizeofSample, &bw);
-            //RunLength = 1; //Reset the Run Length back to 1
-            //nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
-
         } else {
             state->SampleCount += RunLength;
             state->packetCount++;
@@ -93,7 +94,10 @@ int RLE_close(RLE_State *state) {
     ff_Append(state->file, &RunLength, 1, &bw);
     state->file->Length = state->file->Position;
     ff_UpdateLength(state->file);
-
+    RunLength = 0;
+    nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+    nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+    state->RLE=RunLength;
     return FR_OK;
 }
 
@@ -112,6 +116,8 @@ int RLE_Flush(RLE_State *state) {
     //Reset the run-length
     RunLength = 0;
     nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+    nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+    state->RLE=RunLength;
 
     //Now write the start of the next packet...
     ff_Append(state->file, state->lastSample, state->sizeofSample, &bw);
@@ -132,6 +138,8 @@ int RLE_addSample(RLE_State *state, void *Sample) {
         memcpy(state->lastSample, Sample, state->sizeofSample);
         RunLength = 1;
         nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+        nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+        state->RLE=RunLength;
         state->SampleCount++;
         return FR_OK;
     }
@@ -140,24 +148,27 @@ int RLE_addSample(RLE_State *state, void *Sample) {
     //Is this sample the same as the last sample?
     if (state->lastSample == Sample || memcmp(state->lastSample, Sample, state->sizeofSample) == 0) {
         //This is the same so increase the RunLength
-        RunLength++;
-        nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+        if (RunLength >= 0xFE) {
+            unsigned long filePosition = (state->packetCount * (state->sizeofSample + 1)) + state->sizeofSample;
+            if (state->file->Position != filePosition) {
+                ff_Seek(state->file, filePosition);
+            }
+            ff_Append(state->file, &RunLength, 1, &bw);
+            state->packetCount++; //Increment the Packet
 
-        if (RunLength != 0xFF) return FR_OK;
-
-        //Run length is too long so...flush it to disk and then add the sample.
-        RunLength--;
-        unsigned long filePosition = (state->packetCount * (state->sizeofSample + 1)) + state->sizeofSample;
-        if (state->file->Position != filePosition) {
-            ff_Seek(state->file, filePosition);
+            //Add the start of the next packet...
+            ff_Append(state->file, Sample, state->sizeofSample, &bw);
+            RunLength = 1;
+            nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+            nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+            state->RLE=RunLength;
+            return FR_OK;
+        } else {
+            RunLength++;
+            nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+            nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+            state->RLE=RunLength;
         }
-        ff_Append(state->file, &RunLength, 1, &bw);
-        state->packetCount++; //Increment the Packet
-
-        //Add the start of the next packet...
-        ff_Append(state->file, Sample, state->sizeofSample, &bw);
-        RunLength = 1;
-        nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
     } else {
         //The sample has changed so flush this record and start the next...
 
@@ -174,10 +185,13 @@ int RLE_addSample(RLE_State *state, void *Sample) {
         memcpy(state->lastSample, Sample, state->sizeofSample);
         RunLength = 1; //Reset the Run Length back to 1
         nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset, 1);
+        nvsRAM_Write(&RunLength, state->nvSRAM_AddressOffset + 1, 1);
+        state->RLE=RunLength;
     }
     return FR_OK;
 }
 
+//
 //void RLE_Test() {
 //    int res, x, bw;
 //    ff_File backingFile;

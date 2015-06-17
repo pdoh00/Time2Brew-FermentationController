@@ -33,53 +33,61 @@ void PID_Initialize(PID_CTX *ctx, float ITerm) {
 }
 
 void PID_Compute(PID_CTX *ctx) {
-    float porportional;
     /*Compute all the working error variables*/
     ctx->error = ctx->Setpoint - ctx->Input;
-    porportional = ctx->error * ctx->kp;
+    ctx->PTerm = ctx->error * ctx->kp;
 
-    if (porportional > ctx->outMax) {
-        porportional = ctx->outMax;
+    if (ctx->PTerm > ctx->outMax) {
+        ctx->PTerm = ctx->outMax;
         ctx->ITerm = 0;
         ctx->DTerm = 0;
-    } else if (porportional < ctx->outMin) {
-        porportional = ctx->outMin;
+    } else if (ctx->PTerm < ctx->outMin) {
+        ctx->PTerm = ctx->outMin;
         ctx->ITerm = 0;
         ctx->DTerm = 0;
     } else {
-        ctx->ITerm += (ctx->ki * ctx->error);
-        if (ctx->ITerm > ctx->outMax) ctx->ITerm = ctx->outMax;
-        else if (ctx->ITerm < ctx->outMin) ctx->ITerm = ctx->outMin;
-
-        //Calculate the Derivative Input value by getting the slope of the trend data from one minute ago
-        //to now.
-
-        float thisError = IIR_FilterF(&(ctx->D_Filter), (float) ctx->error);
-
-        float dInput = (ctx->lastError - thisError);
-        ctx->lastError = thisError;
-
-        ctx->DTerm = ctx->kd*dInput;
-        if (ctx->DTerm > ctx->outMax) ctx->DTerm = ctx->outMax;
-        else if (ctx->DTerm < ctx->outMin) ctx->DTerm = ctx->outMin;
-
-        float absError;
-        if (ctx->error > 0.0) absError = ctx->error;
-        else absError = -(ctx->error);
-
-        if (absError > (ctx->D_AdaptiveBand * 2)) { //more than 5C away? Derivative braking is zero
-            ctx->DTerm = 0.0;
-        } else if (absError > ctx->D_AdaptiveBand) { //Feather in derivative braking from 5C to 2.5C away
-            absError -= ctx->D_AdaptiveBand;
-            absError = (ctx->D_AdaptiveBand - absError) / ctx->D_AdaptiveBand;
-            ctx->DTerm *= absError;
-        } else { //Closer than 2.5C means apply full derivative braking
-            //do nothing
+        if (ctx->ki != 0) {
+            ctx->ITerm += (ctx->ki * ctx->error);
+            if (ctx->ITerm > ctx->outMax) ctx->ITerm = ctx->outMax;
+            else if (ctx->ITerm < ctx->outMin) ctx->ITerm = ctx->outMin;
+        } else {
+            ctx->ITerm = 0;
         }
+
+        if (ctx->kd != 0) {
+            //Calculate the Derivative Input value by getting the slope of the trend data from one minute ago
+            //to now.
+
+            float thisError = IIR_FilterF(&(ctx->D_Filter), (float) ctx->error);
+
+            float dInput = (ctx->lastError - thisError);
+            ctx->lastError = thisError;
+
+            ctx->DTerm = ctx->kd*dInput;
+            if (ctx->DTerm > ctx->outMax) ctx->DTerm = ctx->outMax;
+            else if (ctx->DTerm < ctx->outMin) ctx->DTerm = ctx->outMin;
+
+            float absError;
+            if (ctx->error > 0.0) absError = ctx->error;
+            else absError = -(ctx->error);
+
+            if (absError > (ctx->D_AdaptiveBand * 2)) { //more than 5C away? Derivative braking is zero
+                ctx->DTerm = 0.0;
+            } else if (absError > ctx->D_AdaptiveBand) { //Feather in derivative braking from 5C to 2.5C away
+                absError -= ctx->D_AdaptiveBand;
+                absError = (ctx->D_AdaptiveBand - absError) / ctx->D_AdaptiveBand;
+                ctx->DTerm *= absError;
+            } else { //Closer than 2.5C means apply full derivative braking
+                //do nothing
+            }
+        } else {
+            ctx->DTerm = 0;
+        }
+
     }
 
     /*Compute PID Output*/
-    ctx->Output = porportional + (ctx->ITerm) + ctx->DTerm;
+    ctx->Output = ctx->PTerm + ctx->ITerm + ctx->DTerm;
     if (ctx->Output > ctx->outMax) ctx->Output = ctx->outMax;
     else if (ctx->Output < ctx->outMin) ctx->Output = ctx->outMin;
 }

@@ -15,7 +15,115 @@
 #include "FlashFS.h"
 #include "fletcherChecksum.h"
 
-char msg[512];
+//char msg[512];
+
+void uploadRawDiskData(HTTP_REQUEST *req, const char *urlParameter, unsigned long baseAddress, unsigned long maxLength) {
+    char temp[32];
+    unsigned long offset;
+    char *b64_Content;
+    int ContentLength;
+    int b64_ContentLength;
+    unsigned int chkSum;
+    BYTE ContentData[512];
+    char msg[512];
+
+    if (url_queryParse2(urlParameter, "offset", temp, 12)) {
+        if (sscanf(temp, "%lu", &offset) != 1) {
+            sprintf(msg, "Error Offset was invalid: offset=\"%s\"", temp);
+            Send500_InternalServerError(req, msg);
+            return;
+        }
+    } else {
+        Send500_InternalServerError(req, "parameter 'offset' is required");
+        return;
+    }
+
+    if (url_queryParse2(urlParameter, "chksum", temp, 6)) {
+        if (sscanf(temp, "%u", &chkSum) != 1) {
+            sprintf(msg, "Error chksum could not parse: chksum=\"%s\"", temp);
+            Send500_InternalServerError(req, msg);
+            return;
+        }
+    } else {
+        Send500_InternalServerError(req, "Query Parameter 'chksum' was not provided.");
+        return;
+    }
+
+    if (url_queryParse(urlParameter, "content", &b64_Content, &b64_ContentLength) == 0) {
+        Send500_InternalServerError(req, "Parameter 'content' is required");
+        return;
+    }
+
+    if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
+    ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
+    if (ContentLength < 0) {
+        Send500_InternalServerError(req, "Unable to decode base64 Content...");
+        return;
+    }
+
+    unsigned int calcChkSum = fletcher16(ContentData, ContentLength);
+    if (calcChkSum != chkSum) {
+        sprintf(msg, "Checksums Do NOT match: Actual=%u Expected=%u", calcChkSum, chkSum);
+        Send500_InternalServerError(req, msg);
+        return;
+    }
+
+    if ((offset + ContentLength) > maxLength) {
+        Send500_InternalServerError(req, "Total Length exceeds allowable size...");
+        return;
+    }
+
+    baseAddress += offset;
+    diskWrite(baseAddress, ContentLength, ContentData);
+
+    diskRead(baseAddress, ContentLength, ContentData);   
+    Log("   uploadRawDiskData: Offset=%ul OK\r\n", offset);
+    Send200_OK_Data(req, ContentData, ContentLength);
+}
+
+void deleteRawDiskData(HTTP_REQUEST *req, const char *urlParameter, unsigned long baseAddress, unsigned long maxLength) {
+    char temp[32];
+    unsigned long offset;
+    unsigned long currAddress;
+    char msg[256];
+
+    if (url_queryParse2(urlParameter, "offset", temp, 12)) {
+        if (sscanf(temp, "%lu", &offset) != 1) {
+            sprintf(msg, "Error Offset was invalid: offset=\"%s\"", temp);
+            Send500_InternalServerError(req, msg);
+            return;
+        }
+
+        if ((offset & 4095) != 0) {
+            sprintf(msg, "Error Offset was invalid (must lie on 4K sector boundary...offset=\"%s\"", temp);
+            Send500_InternalServerError(req, msg);
+            return;
+        }
+        currAddress = baseAddress;
+        currAddress += offset;
+        Log("Erasing Sector: %xl...\r\n", currAddress);
+        diskEraseSector(currAddress);
+        Send200_OK_Simple(req);
+        return;
+    } else {
+        if (url_queryParse2(urlParameter, "wipe", temp, 12) == 0) {
+            Send500_InternalServerError(req, "Error when no offset is provided the 'wipe' parameter is mandatory");
+            return;
+        }
+
+        if (strcmp("confirm", temp) == 0) {
+            Send200_OK_Simple(req);
+            Log("Erasing FULL Area...");
+            for (currAddress = baseAddress; currAddress < (baseAddress + maxLength); currAddress += 4096) {
+                diskEraseSector(currAddress);
+            }
+            Log("OK\r\n");
+        } else {
+            Send500_InternalServerError(req, "The 'wipe' parameter value must be == 'confirm'");
+            return;
+        }
+    }
+}
 
 void BuildProfileInstanceListing(const char *ProfileID) {
     ff_File DirInfo, CacheFile;
@@ -23,6 +131,7 @@ void BuildProfileInstanceListing(const char *ProfileID) {
     int res;
     char Filter[128];
     char Filename[128];
+    char msg[256];
     sprintf(Filename, "prflinstlisting.%s", ProfileID);
     sprintf(Filter, "inst.%s.", ProfileID);
     int FilterLength = strlen(Filter);
@@ -49,8 +158,9 @@ void BuildProfileListing() {
     ff_File DirInfo, CacheFile, thisProfile;
     int bWritten;
     int res;
+    char msg[256];
 
-    Log("BuildProfileListing\r\n");
+    if (debugHTTP_API) Log("BuildProfileListing\r\n");
 
     res = ff_Delete("ProfileListing.txt");
     res = ff_OpenDirectoryListing(&DirInfo);
@@ -60,7 +170,7 @@ void BuildProfileListing() {
         res = ff_GetNextEntryFromDirectory(&DirInfo, filename);
         if (res != FR_OK) {
             ff_UpdateLength(&CacheFile);
-            Log("Done\r\n");
+            if (debugHTTP_API) Log("Done\r\n");
             return;
         }
         if (memcmp("prfl.", filename, 5) == 0) {
@@ -70,7 +180,7 @@ void BuildProfileListing() {
             if (res != FR_OK) continue;
             sprintf(msg, "%s,%s\r\n", filename + 5, ProfileName);
             ff_Append(&CacheFile, (BYTE *) msg, strlen(msg), &bWritten);
-            Log("   %s", msg);
+            if (debugHTTP_API) Log("   %s", msg);
         }
     }
 }
@@ -80,6 +190,7 @@ void BuildEquipmentProfileListing() {
     char equipName[64];
     int bWritten;
     int res;
+    char msg[256];
 
     res = ff_Delete("EquipmentProfileListing.txt");
     res = ff_OpenDirectoryListing(&DirInfo);
@@ -96,7 +207,7 @@ void BuildEquipmentProfileListing() {
             ff_Read(&equipProfile, (BYTE*) equipName, 64, &bWritten);
             sprintf(msg, "%s, %s\r\n", msg + 6, equipName);
             ff_Append(&CacheFile, (BYTE *) msg, strlen(msg), &bWritten);
-            Log("  %s", msg);
+            if (debugHTTP_API) Log("  %s", msg);
         }
     }
 }
@@ -104,28 +215,37 @@ void BuildEquipmentProfileListing() {
 void GET_echo(HTTP_REQUEST *req, const char *urlParameter) {
     char *echoMessage;
     int echoMessageLength;
+    char msg[128];
+
     url_queryParse(urlParameter, "echo", &echoMessage, &echoMessageLength);
     sprintf(msg, "GET: You Said:%.*s", echoMessageLength, echoMessage);
+    if (debugHTTP_API) Log("GET_echo: %s\r\n", msg);
     Send200_OK_SmallMsg(req, msg);
 }
 
 void PUT_echo(HTTP_REQUEST *req, const char *urlParameter) {
+    char msg[128];
     char *echoMessage = (char *) req->Content;
     int echoMessageLength = req->ContentLength;
     url_queryParse(urlParameter, "echo", &echoMessage, &echoMessageLength);
     sprintf(msg, "PUT: You Said:%.*s", echoMessageLength, echoMessage);
+    if (debugHTTP_API) Log("PUT_echo: %s\r\n", msg);
     Send200_OK_SmallMsg(req, msg);
 }
 
 void GET_profile(HTTP_REQUEST *req, const char *urlParameter) {
     char strProfileID[7];
 
+    if (debugHTTP_API) Log("GET_profile: ");
+
     if (url_queryParse2(urlParameter, "id", strProfileID, 7)) {
+        if (debugHTTP_API) Log("/prfl.%s\r\n", strProfileID);
         sprintf(req->Resource, "/prfl.%s", strProfileID);
         req->ETag = NULL;
         req->ContentLength = 0;
         Process_GET_File(req, 0);
     } else {
+        if (debugHTTP_API) Log("No 'id' provided...Sending ProfileListing.txt\r\n");
         if (ff_exists("ProfileListing.txt") == 0) {
             BuildProfileListing();
         }
@@ -150,7 +270,9 @@ void PUT_profile(HTTP_REQUEST *req, const char *urlParameter) {
     int ContentLength;
     int b64_ContentLength;
     unsigned int chkSum;
+    char msg[256];
 
+    if (debugHTTP_API) Log("PUT_profile:\r\n");
 
     if (url_queryParse2(urlParameter, "isfinal", strProfileID, 2)) {
         if (strProfileID[0] == 'n') IsFinal = 0;
@@ -186,15 +308,13 @@ void PUT_profile(HTTP_REQUEST *req, const char *urlParameter) {
     }
     if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
 
-    sprintf(msg, "Base64Content Length=%d Value='%.*s'\r\n", b64_ContentLength, b64_ContentLength, b64_Content);
-    Log("%s", msg);
     ContentData = (BYTE *) b64_Content;
     ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
     if (ContentLength < 0) {
         Send500_InternalServerError(req, "Unable to decode base64 Content...");
         return;
     }
-    Log("Decoded Length=%i\r\n", ContentLength);
+    if (debugHTTP_API) Log("Decoded Length=%i\r\n", ContentLength);
 
     unsigned int calcChkSum = fletcher16(ContentData, ContentLength);
     if (calcChkSum != chkSum) {
@@ -242,7 +362,7 @@ void PUT_profile(HTTP_REQUEST *req, const char *urlParameter) {
     }
 
     if (IsFinal) {
-        Log("Finalizing Upload...\r\n");
+        if (debugHTTP_API) Log("Finalizing Upload...\r\n");
         res = ff_UpdateLength(&handle);
         if (res != FR_OK) {
             sprintf(msg, "Error Updating Profile File Length: res=%d", res);
@@ -265,7 +385,9 @@ void PUT_profile(HTTP_REQUEST *req, const char *urlParameter) {
 }
 
 void PUT_executeProfile(HTTP_REQUEST *req, const char *urlParameter) {
+    char msg[256];
     if (globalstate.SystemMode != SYSTEMMODE_IDLE) {
+        if (debugHTTP_API) Log("PUT_execureProfile: Controller is not IDLE\r\n");
         sprintf(msg, "Controller is not IDLE");
         Send500_InternalServerError(req, msg);
         return;
@@ -298,6 +420,7 @@ void PUT_truncateProfile(HTTP_REQUEST *req, const char *urlParameter) {
     int ContentLength;
     int b64_ContentLength;
     unsigned int chkSum;
+    char msg[256];
 
     char temp[16];
 
@@ -392,13 +515,15 @@ void GET_instanceTrend(HTTP_REQUEST *req, const char *urlParameter) {
 
             if ((globalstate.SystemMode == SYSTEMMODE_Profile) &&
                     (globalstate.ProfileID == profileID)) {
-                RLE_Flush(&globalstate.trend_RLE_State);
-                sendLength = globalstate.trend_RLE_State.sizeofSample + 1;
-                sendLength *= globalstate.trend_RLE_State.packetCount;
+                //RLE_Flush(&globalstate.trend_RLE_State);
+                //sendLength = globalstate.trend_RLE_State.sizeofSample + 1;
+                //sendLength *= globalstate.trend_RLE_State.packetCount;
+                sendLength = globalstate.SystemTime - globalstate.ProfileStartTime;
+                sendLength /= 60;
+                sendLength *= TREND_RECORD_SIZE;
             } else {
                 sendLength = 0; //Tell Process_GET_File_ex to send the file Length as it is recorded on disk...
             }
-
             sprintf(req->Resource, "/trnd.%s.%s", strProfileID, strInstance);
             req->ETag = NULL;
             req->ContentLength = 0;
@@ -429,22 +554,26 @@ void GET_instanceTrend(HTTP_REQUEST *req, const char *urlParameter) {
 
 void GET_temperature(HTTP_REQUEST *req, const char *urlParameter) {
     Log("%d: GET_temperature urlParameter=%s\r\n", req->TCP_ChannelID, urlParameter);
-    char ProbeID[3];
-    if (url_queryParse2(urlParameter, "probe", ProbeID, 2)) {
-        if (ProbeID[0] == '0') {
-            sprintf(msg, "%d\r\n", (int) (globalstate.ProcessTemperature * 100));
+    char ProbeID[10];
+
+    char msg[128];
+    if (url_queryParse2(urlParameter, "probe", ProbeID, 9)) {
+        if (strcmp(ProbeID, "target") == 0) {
+            sprintf(msg, "%f\r\n", (double) globalstate.ProcessTemperature);
             Send200_OK_SmallMsg(req, msg);
-        } else if (ProbeID[0] == '1') {
-            sprintf(msg, "%d\r\n", (int) (globalstate.TargetTemperature * 100));
+            return;
+        } else if (strcmp(ProbeID, "target") == 0) {
+            sprintf(msg, "%f\r\n", (double) globalstate.TargetTemperature);
             Send200_OK_SmallMsg(req, msg);
+            return;
         } else {
-            sprintf(msg, "%d\r\n%d\r\n", (int) (globalstate.ProcessTemperature * 100), (int) (globalstate.TargetTemperature * 100));
-            Send200_OK_SmallMsg(req, msg);
+            Send500_InternalServerError(req, "Error: Invalid Probe ID Must be 'target'|'process'");
+            return;
         }
     } else {
-
-        sprintf(msg, "%d\r\n%d\r\n", (int) (globalstate.ProcessTemperature * 100), (int) (globalstate.TargetTemperature * 100));
+        sprintf(msg, "%f\r\n%f\r\n", (double) globalstate.ProcessTemperature, (double) globalstate.TargetTemperature);
         Send200_OK_SmallMsg(req, msg);
+        return;
     }
 }
 
@@ -457,7 +586,7 @@ void GET_status(HTTP_REQUEST *req, const char *urlParameter) {
     unsigned int len = 64;
 
     unsigned char *packedData = req->rawbuffer;
-    unsigned char *cursour = Pack(packedData, "lbbbfbfbbaiIlIlallllBffffll", temp.SystemTime, temp.SystemMode,
+    unsigned char *cursour = Pack(packedData, "lbbbfbfbbaiflflallllfffffll", temp.SystemTime, temp.SystemMode,
             temp.equipmentConfig.RegulationMode, temp.equipmentConfig.Probe0Assignment, temp.TargetTemperature,
             temp.equipmentConfig.Probe1Assignment, temp.ProcessTemperature, temp.HeatRelay,
             temp.CoolRelay, temp.ActiveProfileName, len, temp.StepIdx,
@@ -473,6 +602,7 @@ void GET_status(HTTP_REQUEST *req, const char *urlParameter) {
 }
 
 void PUT_temperature(HTTP_REQUEST *req, const char *urlParameter) {
+    char msg[256];
     if (globalstate.SystemMode == SYSTEMMODE_Profile) {
         sprintf(msg, "Controller is running a profile...");
         Send500_InternalServerError(req, msg);
@@ -480,14 +610,14 @@ void PUT_temperature(HTTP_REQUEST *req, const char *urlParameter) {
     }
 
     char strSetpoint[4];
-    int Setpoint;
+    float Setpoint;
 
     if (url_queryParse2(urlParameter, "setpoint", strSetpoint, 4)) {
-        if (sscanf(strSetpoint, "%d", &Setpoint) != 1) {
+        if (sscanf(strSetpoint, "%f", &Setpoint) != 1) {
             Send500_InternalServerError(req, "Error: 'setpoint' is invalid");
             return;
         }
-        if (Setpoint<-250 || Setpoint > 1250) {
+        if (Setpoint<-25.0 || Setpoint > 125.0) {
             Send500_InternalServerError(req, "Error: 'setpoint' is outside of bounds");
             return;
         }
@@ -498,7 +628,6 @@ void PUT_temperature(HTTP_REQUEST *req, const char *urlParameter) {
 
     if (SetManualMode(Setpoint, msg) != 1) {
         Send500_InternalServerError(req, msg);
-
         return;
     }
 
@@ -509,6 +638,7 @@ void PUT_temperature(HTTP_REQUEST *req, const char *urlParameter) {
 void PUT_UpdateCredentials(HTTP_REQUEST *req, const char *urlParameter) {
     char username[64];
     char password[64];
+    char msg[256];
 
     if (!url_queryParse2(urlParameter, "username", username, 63)) {
         Send500_InternalServerError(req, "username is not provided or is outside of bounds...");
@@ -547,6 +677,7 @@ int UpdateCredentials(const char*username, const char *password) {
 }
 
 void GET_PUT_Time(HTTP_REQUEST *req, const char *urlParameter) {
+    char msg[128];
     Log("PUT_Time urlParameter=%s\r\n", urlParameter);
     char strTime[16];
     unsigned long tm;
@@ -629,7 +760,7 @@ void PUT_WifiConfig(HTTP_REQUEST *req, const char *urlParameter) {
     }
 
     if (url_queryParse2(urlParameter, "password", token, 31)) {
-        sprintf(ESP_Config.Password, "%s", token);
+        sprintf(ESP_Config.STA_Password, "%s", token);
     }
 
     if (url_queryParse2(urlParameter, "ssid", token, 31)) {
@@ -690,6 +821,7 @@ void PUT_EquipmentProfile(HTTP_REQUEST *req, const char *urlParameter) {
     char temp[128];
     char strEquipID[65];
     unsigned int EquipID;
+    char msg[256];
 
     char filename[120];
     int bWritten, res;
@@ -750,9 +882,7 @@ void PUT_EquipmentProfile(HTTP_REQUEST *req, const char *urlParameter) {
         return;
     }
     if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
-
-    sprintf(msg, "Base64Content Length=%d Value='%.*s'\r\n", b64_ContentLength, b64_ContentLength, b64_Content);
-    Log("%s", msg);
+   
     ContentData = (BYTE *) b64_Content;
     ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
     if (ContentLength < 0) {
@@ -844,6 +974,7 @@ void GET_EquipmentProfile(HTTP_REQUEST *req, const char *urlParameter) {
 
 void PUT_SetEquipment(HTTP_REQUEST *req, const char *urlParameter) {
     char strEquipID[7];
+    char msg[256];
     unsigned int equipmentID;
     int ret;
     if (url_queryParse2(urlParameter, "id", strEquipID, 7)) {
@@ -865,6 +996,7 @@ void PUT_SetEquipment(HTTP_REQUEST *req, const char *urlParameter) {
 
 void PUT_trimFileSystem(HTTP_REQUEST *req, const char *urlParameter) {
     int res;
+    char msg[256];
     res = ff_RepairFS();
     if (res != FR_OK) {
 
@@ -897,7 +1029,7 @@ void GET_rawSector(HTTP_REQUEST *req, const char *urlParameter) {
 
     circularPrintf(txFIFO,
             "HTTP/1.1 200 OK\r\n"
-            "Connection: Keep-Alive\r\n"
+            "Connection: close\r\n"
             "Content-Type:  application/octet-stream\r\n"
             "Content-Length: 4096\r\n"
             "\r\n");
@@ -931,6 +1063,7 @@ void GET_rawSector(HTTP_REQUEST *req, const char *urlParameter) {
 void PUT_deleteProfileInstance(HTTP_REQUEST *req, const char *urlParameter) {
     char strProfileID[7];
     char strInstance[14];
+    char msg[256];
     int res;
 
     if (url_queryParse2(urlParameter, "id", strProfileID, 7)) {
@@ -941,24 +1074,11 @@ void PUT_deleteProfileInstance(HTTP_REQUEST *req, const char *urlParameter) {
                 Send500_InternalServerError(req, "Error: Unable to delete the currently running instance");
                 return;
             }
-
             sprintf(msg, "trnd.%s.%s", strProfileID, strInstance);
             res = ff_Delete(msg);
-            if (res != FR_OK) {
-                sprintf(msg, "Error: Unable to delete Trend Record: res='%s'", Translate_DRESULT(res));
-                Send500_InternalServerError(req, msg);
-                return;
-            }
             sprintf(msg, "inst.%s.%s", strProfileID, strInstance);
             res = ff_Delete(msg);
-            if (res != FR_OK) {
-                sprintf(msg, "Error: Unable to delete Instance Record: res='%s'", Translate_DRESULT(res));
-                Send500_InternalServerError(req, msg);
-                return;
-            }
-
             BuildProfileInstanceListing(strProfileID);
-
             Send200_OK_Simple(req);
             return;
         } else {
@@ -975,6 +1095,7 @@ void PUT_deleteProfileInstance(HTTP_REQUEST *req, const char *urlParameter) {
 void PUT_deleteProfile(HTTP_REQUEST *req, const char *urlParameter) {
     char strProfileID[7];
     int res;
+    char msg[256];
     if (url_queryParse2(urlParameter, "id", strProfileID, 7) == 0) {
         sprintf(msg, "Error: 'id' is requried");
         Send500_InternalServerError(req, msg);
@@ -1015,12 +1136,6 @@ void PUT_deleteProfile(HTTP_REQUEST *req, const char *urlParameter) {
     //Delete the profile itself.
     sprintf(msg, "prfl.%s", strProfileID);
     res = ff_Delete(msg);
-    if (res != FR_OK) {
-        sprintf(msg, "Error Deleting Profile res='%s'", Translate_DRESULT(res));
-        Send500_InternalServerError(req, msg);
-        return;
-    }
-
     BuildProfileListing(); //rebuild the profile listing
     Send200_OK_Simple(req);
 
@@ -1031,6 +1146,7 @@ void PUT_deleteEquipmentProfile(HTTP_REQUEST *req, const char *urlParameter) {
     char strEquipID[7];
     unsigned int equipID;
     int res;
+    char msg[256];
 
     if (url_queryParse2(urlParameter, "id", strEquipID, 7) == 0) {
         sprintf(msg, "Error: 'ID' is requried");
@@ -1060,304 +1176,159 @@ void PUT_deleteEquipmentProfile(HTTP_REQUEST *req, const char *urlParameter) {
 }
 
 void PUT_uploadfirmware(HTTP_REQUEST *req, const char *urlParameter) {
-    char temp[32];
-    unsigned long offset;
-    char *b64_Content;
-    BYTE *ContentData;
-    int ContentLength;
-    int b64_ContentLength;
-    unsigned int chkSum;
-
-    if (url_queryParse2(urlParameter, "offset", temp, 12)) {
-        if (sscanf(temp, "%lu", &offset) != 1) {
-            sprintf(msg, "Error Offset was invalid: offset=\"%s\"", temp);
-            Send500_InternalServerError(req, msg);
-            return;
-        }
-    } else {
-        Send500_InternalServerError(req, "parameter 'offset' is required");
-        return;
-    }
-
-    if (url_queryParse2(urlParameter, "chksum", temp, 6)) {
-        if (sscanf(temp, "%u", &chkSum) != 1) {
-            sprintf(msg, "Error chksum could not parse: chksum=\"%s\"", temp);
-            Send500_InternalServerError(req, msg);
-            return;
-        }
-    } else {
-        Send500_InternalServerError(req, "Query Parameter 'chksum' was not provided.");
-        return;
-    }
-
-    if (url_queryParse(urlParameter, "content", &b64_Content, &b64_ContentLength) == 0) {
-        Send500_InternalServerError(req, "Parameter 'content' is required");
-        return;
-    }
-
-    if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
-
-    ContentData = (BYTE *) b64_Content;
-    ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
-    if (ContentLength < 0) {
-        Send500_InternalServerError(req, "Unable to decode base64 Content...");
-        return;
-    }
-
-    unsigned int calcChkSum = fletcher16(ContentData, ContentLength);
-    if (calcChkSum != chkSum) {
-        sprintf(msg, "Checksums Do NOT match: Actual=%u Expected=%u", calcChkSum, chkSum);
-        Send500_InternalServerError(req, msg);
-        return;
-    }
-
-
-    unsigned long limit = FIRMWARE_RESERVED_SIZE;
-
-    if (offset + ContentLength > limit) {
-        Send500_InternalServerError(req, "Firmware Length exceeds allowable size...");
-        return;
-    }
-
-    unsigned long baseAddress;
-    if (offset == 0) {
-        for (baseAddress = FIRMWARE_PRIMARY_ADDRESS; baseAddress < (FIRMWARE_PRIMARY_ADDRESS + limit); baseAddress += 4096) {
-
-            diskEraseSector(baseAddress);
-        }
-    }
-
-    baseAddress = FIRMWARE_PRIMARY_ADDRESS;
-    baseAddress += offset;
-    diskWrite(baseAddress, ContentLength, ContentData);
-
-    Log("UploadFirmware: Offset=%ul OK\r\n", offset);
-    Send200_OK_Simple(req);
+    uploadRawDiskData(req, urlParameter, FIRMWARE_PRIMARY_ADDRESS, FIRMWARE_RESERVED_SIZE);
 }
 
-void PUT_uploadFile(HTTP_REQUEST *req, const char *urlParameter) {
-    char temp[32];
-    char fname[64];
-    unsigned long offset;
-    char *b64_Content;
-    BYTE *ContentData;
-    int ContentLength;
-    int b64_ContentLength;
-    unsigned int chkSum;
-    ff_File handle;
-    int ret;
-
-    if (url_queryParse2(urlParameter, "fname", fname, 63) == 0) {
-        Send500_InternalServerError(req, "parameter 'fname' is required");
-        return;
-    }
-
-    if (url_queryParse2(urlParameter, "offset", temp, 12)) {
-        if (sscanf(temp, "%lu", &offset) != 1) {
-            sprintf(msg, "Error Offset was invalid: offset=\"%s\"", temp);
-            Send500_InternalServerError(req, msg);
-            return;
-        }
-        if (offset == 0) {
-            ff_Delete(fname);
-            ret = ff_OpenByFileName(&handle, fname, 1);
-            if (ret != FR_OK) {
-                sprintf(msg, "Error: Unable to open/create file: res='%s'", Translate_DRESULT(ret));
-                Send500_InternalServerError(req, msg);
-                return;
-            }
-        }
-    } else {
-        Send500_InternalServerError(req, "parameter 'offset' is required");
-        return;
-    }
-
-    if (url_queryParse2(urlParameter, "chksum", temp, 6)) {
-        if (sscanf(temp, "%u", &chkSum) != 1) {
-            sprintf(msg, "Error chksum could not parse: chksum=\"%s\"", temp);
-            Send500_InternalServerError(req, msg);
-            return;
-        }
-    } else {
-        Send500_InternalServerError(req, "Query Parameter 'chksum' was not provided.");
-        return;
-    }
-
-    if (url_queryParse(urlParameter, "content", &b64_Content, &b64_ContentLength) == 0) {
-        Send500_InternalServerError(req, "Parameter 'content' is required");
-        return;
-    }
-
-    if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
-
-    ContentData = (BYTE *) b64_Content;
-    ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
-    if (ContentLength < 0) {
-        Send500_InternalServerError(req, "Unable to decode base64 Content...");
-        return;
-    }
-
-    unsigned int calcChkSum = fletcher16(ContentData, ContentLength);
-    if (calcChkSum != chkSum) {
-        sprintf(msg, "Checksums Do NOT match: Actual=%u Expected=%u", calcChkSum, chkSum);
-        Send500_InternalServerError(req, msg);
-        return;
-    }
-
-    ret = ff_Seek(&handle, offset);
-    if (ret != FR_OK) {
-        sprintf(msg, "Error: Unable to seek file: res='%s'", Translate_DRESULT(ret));
-        Send500_InternalServerError(req, msg);
-        return;
-    }
-
-    int bWritten;
-    ret = ff_Append(&handle, ContentData, ContentLength, &bWritten);
-    if (ret != FR_OK) {
-        sprintf(msg, "Error: Unable to append file: res='%s'", Translate_DRESULT(ret));
-        Send500_InternalServerError(req, msg);
-        return;
-    }
-
-    if (url_queryParse2(urlParameter, "finalize", temp, 2)) {
-        if (temp[0] == 'y') {
-            ret = ff_UpdateLength(&handle);
-            if (ret != FR_OK) {
-                sprintf(msg, "Error: Unable to finalize file: res='%s'", Translate_DRESULT(ret));
-                Send500_InternalServerError(req, msg);
-
-                return;
-            }
-        }
-    }
-
-    Log("UploadFile: '%s' Offset=%ul finalize='%s'...OK\r\n", fname, offset, temp);
-    Send200_OK_Simple(req);
+void PUT_erasefirmware(HTTP_REQUEST *req, const char *urlParameter) {
+    deleteRawDiskData(req, urlParameter, FIRMWARE_PRIMARY_ADDRESS, FIRMWARE_RESERVED_SIZE);
 }
 
-void PUT_deleteFile(HTTP_REQUEST *req, const char *urlParameter) {
-    char fname[64];
-
-    if (url_queryParse2(urlParameter, "fname", fname, 63) == 0) {
-        Send500_InternalServerError(req, "parameter 'fname' is required");
-
-        return;
-    }
-
-    ff_Delete(fname);
-    Log("DeleteFile: '%s' OK\r\n", fname);
-    Send200_OK_Simple(req);
+void PUT_UploadBlob(HTTP_REQUEST *req, const char *urlParameter) {
+    uploadRawDiskData(req, urlParameter, BLOB_START_ADDRESS, BLOB_LENGTH);
 }
 
-void GET_version(HTTP_REQUEST *req, const char *urlParameter) {
-    Send200_OK_SmallMsg(req, Version);
-
-    return;
+void PUT_EraseBlob(HTTP_REQUEST *req, const char *urlParameter) {
+    deleteRawDiskData(req, urlParameter, BLOB_START_ADDRESS, BLOB_LENGTH);
 }
+
+//void PUT_uploadFile(HTTP_REQUEST *req, const char *urlParameter) {
+//    char temp[32];
+//    char fname[64];
+//    unsigned long offset;
+//    char *b64_Content;
+//    BYTE *ContentData;
+//    int ContentLength;
+//    int b64_ContentLength;
+//    unsigned int chkSum;
+//    ff_File handle;
+//    int ret;
+//
+//    if (url_queryParse2(urlParameter, "fname", fname, 63) == 0) {
+//        Send500_InternalServerError(req, "parameter 'fname' is required");
+//        return;
+//    }
+//
+//    if (url_queryParse2(urlParameter, "offset", temp, 12)) {
+//        if (sscanf(temp, "%lu", &offset) != 1) {
+//            sprintf(msg, "Error Offset was invalid: offset=\"%s\"", temp);
+//            Send500_InternalServerError(req, msg);
+//            return;
+//        }
+//        if (offset == 0) {
+//            ff_Delete(fname);
+//            ret = ff_OpenByFileName(&handle, fname, 1);
+//            if (ret != FR_OK) {
+//                sprintf(msg, "Error: Unable to open/create file: res='%s'", Translate_DRESULT(ret));
+//                Send500_InternalServerError(req, msg);
+//                return;
+//            }
+//        }
+//    } else {
+//        Send500_InternalServerError(req, "parameter 'offset' is required");
+//        return;
+//    }
+//
+//    if (url_queryParse2(urlParameter, "chksum", temp, 6)) {
+//        if (sscanf(temp, "%u", &chkSum) != 1) {
+//            sprintf(msg, "Error chksum could not parse: chksum=\"%s\"", temp);
+//            Send500_InternalServerError(req, msg);
+//            return;
+//        }
+//    } else {
+//        Send500_InternalServerError(req, "Query Parameter 'chksum' was not provided.");
+//        return;
+//    }
+//
+//    if (url_queryParse(urlParameter, "content", &b64_Content, &b64_ContentLength) == 0) {
+//        Send500_InternalServerError(req, "Parameter 'content' is required");
+//        return;
+//    }
+//
+//    if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
+//
+//    ContentData = (BYTE *) b64_Content;
+//    ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
+//    if (ContentLength < 0) {
+//        Send500_InternalServerError(req, "Unable to decode base64 Content...");
+//        return;
+//    }
+//
+//    unsigned int calcChkSum = fletcher16(ContentData, ContentLength);
+//    if (calcChkSum != chkSum) {
+//        sprintf(msg, "Checksums Do NOT match: Actual=%u Expected=%u", calcChkSum, chkSum);
+//        Send500_InternalServerError(req, msg);
+//        return;
+//    }
+//
+//    ret = ff_Seek(&handle, offset);
+//    if (ret != FR_OK) {
+//        sprintf(msg, "Error: Unable to seek file: res='%s'", Translate_DRESULT(ret));
+//        Send500_InternalServerError(req, msg);
+//        return;
+//    }
+//
+//    int bWritten;
+//    ret = ff_Append(&handle, ContentData, ContentLength, &bWritten);
+//    if (ret != FR_OK) {
+//        sprintf(msg, "Error: Unable to append file: res='%s'", Translate_DRESULT(ret));
+//        Send500_InternalServerError(req, msg);
+//        return;
+//    }
+//
+//    if (url_queryParse2(urlParameter, "finalize", temp, 2)) {
+//        if (temp[0] == 'y') {
+//            ret = ff_UpdateLength(&handle);
+//            if (ret != FR_OK) {
+//                sprintf(msg, "Error: Unable to finalize file: res='%s'", Translate_DRESULT(ret));
+//                Send500_InternalServerError(req, msg);
+//
+//                return;
+//            }
+//        }
+//    }
+//
+//    Log("UploadFile: '%s' Offset=%ul finalize='%s'...OK\r\n", fname, offset, temp);
+//    Send200_OK_Simple(req);
+//}
+//
+//void PUT_deleteFile(HTTP_REQUEST *req, const char *urlParameter) {
+//    char fname[64];
+//
+//    if (url_queryParse2(urlParameter, "fname", fname, 63) == 0) {
+//        Send500_InternalServerError(req, "parameter 'fname' is required");
+//
+//        return;
+//    }
+//
+//    ff_Delete(fname);
+//    Log("DeleteFile: '%s' OK\r\n", fname);
+//    Send200_OK_Simple(req);
+//}
 
 void GET_FlashStats(HTTP_REQUEST *req, const char *urlParameter) {
-
+    char msg[256];
     unsigned long FreeSpace, UsedSpace, TrimSpace;
     ff_GetUtilization(&FreeSpace, &TrimSpace, &UsedSpace);
     sprintf(msg, "%lu\r\n%lu\r\n%lu\r\n", FreeSpace, UsedSpace, TrimSpace);
     Send200_OK_SmallMsg(req, msg);
 }
 
-void GET_SecurityTest(HTTP_REQUEST *req, const char *urlParameter) {
-
-    Send200_OK_SmallMsg(req, "Secure!!!");
+void GET_DeviceInfo(HTTP_REQUEST *req, const char *urlParameter) {
+    char msg[256];
+    sprintf(msg, "%s\r\n%s\r\n%s\r\n", ESP_Config.Name, ESP_Config.UUID, Version);
+    Send200_OK_SmallMsg(req, msg);
 }
 
-void GET_EraseBlob(HTTP_REQUEST *req, const char *urlParameter) {
-
-    Send200_OK_Simple(req);
-    unsigned long baseAddress;
-    Log("Erasing Blob...");
-    for (baseAddress = BLOB_START_ADDRESS; baseAddress < (BLOB_START_ADDRESS + BLOB_LENGTH); baseAddress += 4096) {
-        diskEraseSector(baseAddress);
-    }
-    Log("OK\r\n");
-}
-
-void GET_UploadBlob(HTTP_REQUEST *req, const char *urlParameter) {
-    char temp[32];
-    unsigned long offset;
-    char *b64_Content;
-    BYTE *ContentData;
-    int ContentLength;
-    int b64_ContentLength;
-    unsigned int chkSum;
-
-    if (url_queryParse2(urlParameter, "offset", temp, 12)) {
-        if (sscanf(temp, "%lu", &offset) != 1) {
-            sprintf(msg, "Error Offset was invalid: offset=\"%s\"", temp);
-            Send500_InternalServerError(req, msg);
-            return;
-        }
-    } else {
-        Send500_InternalServerError(req, "parameter 'offset' is required");
-        return;
-    }
-
-    if (url_queryParse2(urlParameter, "chksum", temp, 6)) {
-        if (sscanf(temp, "%u", &chkSum) != 1) {
-            sprintf(msg, "Error chksum could not parse: chksum=\"%s\"", temp);
-            Send500_InternalServerError(req, msg);
-            return;
-        }
-    } else {
-        Send500_InternalServerError(req, "Query Parameter 'chksum' was not provided.");
-        return;
-    }
-
-    if (url_queryParse(urlParameter, "content", &b64_Content, &b64_ContentLength) == 0) {
-        Send500_InternalServerError(req, "Parameter 'content' is required");
-        return;
-    }
-
-    if (b64_ContentLength == 0) b64_ContentLength = strlen(b64_Content);
-
-    ContentData = (BYTE *) b64_Content;
-    ContentLength = decode_Base64(b64_Content, b64_ContentLength, ContentData);
-    if (ContentLength < 0) {
-        Send500_InternalServerError(req, "Unable to decode base64 Content...");
-        return;
-    }
-
-    unsigned int calcChkSum = fletcher16(ContentData, ContentLength);
-    if (calcChkSum != chkSum) {
-        sprintf(msg, "Checksums Do NOT match: Actual=%u Expected=%u", calcChkSum, chkSum);
-        Send500_InternalServerError(req, msg);
-        return;
-    }
-
-    unsigned long limit = BLOB_LENGTH;
-
-    if (offset + ContentLength > limit) {
-        Send500_InternalServerError(req, "Blob Length exceeds allowable size...");
-        return;
-    }
-
-    unsigned long baseAddress;
-    baseAddress = BLOB_START_ADDRESS;
-    baseAddress += offset;
-    diskWrite(baseAddress, ContentLength, ContentData);
-
-    Send200_OK_Simple(req);
-
-    Log("UploadBLOB: Offset=%ul Length=%i OK\r\n", offset, ContentLength);
-}
-
-#define API_INTERFACE_COUNT    30
+#define API_INTERFACE_COUNT    28
 
 API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/echo", &GET_echo, 0, &PUT_echo, 0, 0},
     {"/api/executeprofile", NULL, 0, &PUT_executeProfile, 0, 0},
     {"/api/terminateprofile", NULL, 0, &PUT_terminateProfile, 0, 0},
     {"/api/truncateprofile", NULL, 0, &PUT_truncateProfile, 0, 0},
-    {"/api/runhistory", &GET_instanceSteps, 0, NULL, 0, 0},
+    {"/api/instancesteps", &GET_instanceSteps, 0, NULL, 0, 0},
     {"/api/profile", &GET_profile, 0, &PUT_profile, 0, 0},
-    {"/api/temperaturetrend", &GET_instanceTrend, 0, NULL, 0, 0},
+    {"/api/instancetrend", &GET_instanceTrend, 0, NULL, 0, 0},
     {"/api/temperature", &GET_temperature, 0, &PUT_temperature, 0, 0},
     {"/api/status", &GET_status, 0, NULL, 0, 0},
     {"/api/time", &GET_PUT_Time, 0, &GET_PUT_Time, 0, 0},
@@ -1373,14 +1344,15 @@ API_INTERFACE api_interfaces[API_INTERFACE_COUNT] = {
     {"/api/deleteprofile", NULL, 0, &PUT_deleteProfile, 0, 0},
     {"/api/deleteinstance", NULL, 0, &PUT_deleteProfileInstance, 0, 0},
     {"/api/uploadfirmware", NULL, 0, &PUT_uploadfirmware, 0, 0},
-    {"/api/version", &GET_version, 0, NULL, 0, 0},
+    {"/api/erasefirmware", NULL, 0, &PUT_erasefirmware, 0, 0},
     {"/api/flashstats", &GET_FlashStats, 0, NULL, 0, 0},
-    {"/api/uploadfile", NULL, 0, &PUT_uploadFile, 0, 0},
-    {"/api/deletefile", NULL, 0, &PUT_deleteFile, 0, 0},
-    {"/api/rawsector", &GET_rawSector, 0, &GET_rawSector, 0, 0},
-    {"/api/sectest", &GET_SecurityTest, 1, &GET_SecurityTest, 1, 0},
-    {"/api/eraseblob", &GET_EraseBlob, 1, &GET_EraseBlob, 0, 0},
-    {"/api/uploadblob", &GET_UploadBlob, 1, &GET_UploadBlob, 0, 0}
+    //{"/api/uploadfile", NULL, 0, &PUT_uploadFile, 0, 0},
+    //{"/api/deletefile", NULL, 0, &PUT_deleteFile, 0, 0},
+    {"/api/rawsector", &GET_rawSector, 0, NULL, 0, 0},
+    //{"/api/sectest", &GET_SecurityTest, 1, &GET_SecurityTest, 1, 0},
+    {"/api/eraseblob", NULL, 0, &PUT_EraseBlob, 0, 0},
+    {"/api/uploadblob", NULL, 0, &PUT_UploadBlob, 0, 0},
+    {"/api/deviceinfo", &GET_DeviceInfo, 0, NULL, 0, 0}
 };
 
 API_INTERFACE * GetAPI(HTTP_REQUEST * req) {
@@ -1441,6 +1413,7 @@ void ProcessAPI(HTTP_REQUEST *req, API_INTERFACE * API) {
                 Send501_NotImplemented(req);
             }
             break;
+        case HTTP_METHOD_POST:
         case HTTP_METHOD_PUT:
             if (API->OnPut != NULL) {
                 API->OnPut(req, urlParameter);

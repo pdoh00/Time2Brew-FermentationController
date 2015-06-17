@@ -15,7 +15,7 @@ Public Structure TEMPERATURE_PROFILE
         Using ms As New MemoryStream()
             ms.Write(bb, 0, 64)
             For Each stp In Steps
-                ms.Write(stp.Serialize, 0, 8)
+                ms.Write(stp.Serialize, 0, 12)
             Next
             Return ms.ToArray()
         End Using
@@ -28,10 +28,10 @@ Public Structure TEMPERATURE_PROFILE
         ProfileName = GetString(sourceData, 0, 64)
         offset = 64
 
-        While (sourceData.Length - offset >= 8)
+        While (sourceData.Length - offset >= 12)
             Dim stp = New PROFILE_STEP(sourceData, offset)
             Steps.Add(stp)
-            offset += 8
+            offset += 12
         End While
     End Sub
 

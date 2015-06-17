@@ -41,7 +41,6 @@
         <itemPath>OneWire.c</itemPath>
         <itemPath>ESP8266.c</itemPath>
         <itemPath>rtc.c</itemPath>
-        <itemPath>I2C.c</itemPath>
       </logicalFolder>
       <logicalFolder name="f2" displayName="networking" projectFiles="true">
         <itemPath>uPnP.c</itemPath>
@@ -217,6 +216,7 @@
         <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
         <property key="UART 1" value="true"/>
         <property key="UART 2" value="true"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>

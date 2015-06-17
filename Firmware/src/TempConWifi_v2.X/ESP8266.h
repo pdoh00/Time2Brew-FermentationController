@@ -82,8 +82,9 @@ extern "C" {
         AUTH_MODE EncryptionMode;
         int Channel;
         char SSID[32];
-        char Password[32];
+        char STA_Password[32];
         char HA1[34];
+        char SOFTAP_Password[32];
     } ESP8266_CONFIG;
 
     extern ESP8266_CONFIG ESP_Config;

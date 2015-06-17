@@ -56,12 +56,12 @@
         offset += 64
         StepIdx = BitConverter.ToUInt16(sourceData, offset)
         offset += 2
-        StepTemperature_C = CDbl(BitConverter.ToInt16(sourceData, offset)) * 0.1
-        offset += 2
+        StepTemperature_C = CDbl(BitConverter.ToSingle(sourceData, offset))
+        offset += 4
         StepTimeRemaining_seconds = BitConverter.ToUInt32(sourceData, offset)
         offset += 4
-        ManualSetPoint_C = CDbl(BitConverter.ToInt16(sourceData, offset)) * 0.1
-        offset += 2
+        ManualSetPoint_C = CDbl(BitConverter.ToSingle(sourceData, offset))
+        offset += 4
         ProfileStartTime_seconds = BitConverter.ToUInt32(sourceData, offset)
         offset += 4
 

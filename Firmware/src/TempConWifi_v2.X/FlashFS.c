@@ -16,12 +16,15 @@
 #define FLASH_SPI_RX(x) {FLASH_SPI_PORT=0xFF;while(!FLASH_SPI_RXFULL);(x)=FLASH_SPI_PORT;}
 #define ESCAPE_CHAR 0xAA
 
+void FileEntryTable_Seek(unsigned long position);
+void FileEntryTable_Expand();
 
-BYTE buff[256];
+//BYTE buff[256];
 uint32_t CAT_Address = 0;
 ff_File FET;
 
 int LoggingOn = 0;
+char OperationInProgress = 0;
 
 static BYTE xchg_spi(BYTE dat) {
     FLASH_SPI_PORT = dat;
@@ -30,24 +33,42 @@ static BYTE xchg_spi(BYTE dat) {
 }
 
 BYTE diskReadStatus1() {
+    if (OperationInProgress) {
+        Log("\r\ndiskReadStatus1 OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
+
     BYTE ret;
     FLASH_ASSERT_CS;
     xchg_spi(0x05); //Secure Register Read
     ret = xchg_spi(0xFF);
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     return ret;
 }
 
 BYTE diskReadStatus2() {
+    if (OperationInProgress) {
+        Log("\r\ndiskReadStatus2 OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
     BYTE ret;
     FLASH_ASSERT_CS;
     xchg_spi(0x35); //Secure Register Read
     ret = xchg_spi(0xFF);
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     return ret;
 }
 
 void diskReadMFID(unsigned char *mfId, unsigned char *devId) {
+    if (OperationInProgress) {
+        Log("\r\ndiskReadMFID OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
     FLASH_ASSERT_CS;
     xchg_spi(0x90);
     xchg_spi(0x0);
@@ -56,9 +77,15 @@ void diskReadMFID(unsigned char *mfId, unsigned char *devId) {
     *mfId = xchg_spi(0xFF);
     *devId = xchg_spi(0xFF);
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
 }
 
 int diskReadUniqueID(unsigned char *out) {
+    if (OperationInProgress) {
+        Log("\r\n diskReadUniqueID OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
     FLASH_ASSERT_CS;
     xchg_spi(0x4B);
     xchg_spi(0x0);
@@ -74,19 +101,32 @@ int diskReadUniqueID(unsigned char *out) {
     out[6] = xchg_spi(0xFF);
     out[7] = xchg_spi(0xFF);
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     return FR_OK;
 }
 
 BYTE diskReadStatus3() {
+    if (OperationInProgress) {
+        Log("\r\n diskReadStatus3 OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
     BYTE ret;
     FLASH_ASSERT_CS;
     xchg_spi(0x15); //Secure Register Read
     ret = xchg_spi(0xFF);
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     return ret;
 }
 
 int diskReadSecure(char sector, unsigned char *out) {
+    if (OperationInProgress) {
+        Log("\r\n diskReadSecure OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
+
     //if (LoggingOn) Log("       diskReadSecure: Address=%b bCount=%i\r\n", sector);
     FLASH_ASSERT_CS;
     xchg_spi(0x48); //Secure Register Read
@@ -100,10 +140,16 @@ int diskReadSecure(char sector, unsigned char *out) {
         *(out++) = xchg_spi(0xFF);
     }
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     return 1;
 }
 
 int diskWriteSecure(char sector, unsigned char *data) {
+    if (OperationInProgress) {
+        Log("\r\n diskWriteSecure OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
     //if (LoggingOn) Log("         diskWriteSecure: sector=%b\r\n", sector);
 
     BYTE status;
@@ -135,10 +181,16 @@ int diskWriteSecure(char sector, unsigned char *data) {
     }
     FLASH_RELEASE_CS;
     //Log("OK\r\n");
+    OperationInProgress = 0;
     return 1;
 }
 
 int diskEraseSecure(char sector) {
+    if (OperationInProgress) {
+        Log("\r\n diskEraseSecure OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
     //Log("      diskEraseSecure: sector=%b...", sector);
     BYTE status;
 
@@ -162,11 +214,17 @@ int diskEraseSecure(char sector) {
     }
     FLASH_RELEASE_CS;
     Log("Done\r\n");
+    OperationInProgress = 0;
     return 1;
 }
 
 int diskRead(uint32_t address, int bCount, BYTE * out) {
     //Log("       diskRead: Address=%xl bCount=%i\r\n", address, bCount);
+    if (OperationInProgress) {
+        Log("\r\n diskRead OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
     FLASH_ASSERT_CS;
     xchg_spi(0x03);
     xchg_spi((address & 0xFF0000) >> 16);
@@ -177,12 +235,19 @@ int diskRead(uint32_t address, int bCount, BYTE * out) {
         *(out++) = xchg_spi(0xFF);
     }
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     return 1;
 }
 
 int diskWritePage(uint32_t address, int bCount, BYTE *data) {
     //Log("         diskWritePage: Address=%xl Count=%i...\r\n", address, bCount);
     BYTE status;
+
+    if (OperationInProgress) {
+        Log("\r\n diskWritePage OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
 
     FLASH_ASSERT_CS;
     xchg_spi(0x06);
@@ -207,6 +272,7 @@ int diskWritePage(uint32_t address, int bCount, BYTE *data) {
         if (status == 0) break;
     }
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     return 1;
 }
 
@@ -226,7 +292,7 @@ int diskWrite(uint32_t address, int bCount, BYTE * in) {
 }
 
 int diskEraseSector(uint32_t address) {
-
+    BYTE buff[256];
     BYTE status;
     char isEmpty = 1;
     unsigned int x, y;
@@ -244,6 +310,12 @@ int diskEraseSector(uint32_t address) {
 
 exitPoint:
     if (isEmpty) return 1;
+
+    if (OperationInProgress) {
+        Log("\r\n diskEraseSector OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
 
     FLASH_ASSERT_CS;
     xchg_spi(0x06);
@@ -264,6 +336,7 @@ exitPoint:
         if (status == 0) break;
     }
     FLASH_RELEASE_CS;
+    OperationInProgress = 0;
     //Log("diskEraseSector: Address=%xl\r\n", address);
     //Log("Done\r\n");
     return 1;
@@ -271,6 +344,12 @@ exitPoint:
 
 int diskEraseChip() {
     BYTE status;
+
+    if (OperationInProgress) {
+        Log("\r\n diskEraseChip OperationAlreadyInprogress...Halted\r\n");
+        while (1) asm("CLRWDT");
+    }
+    OperationInProgress = 1;
 
     FLASH_ASSERT_CS;
     xchg_spi(0x06);
@@ -281,7 +360,7 @@ int diskEraseChip() {
     FLASH_RELEASE_CS;
 
     Log("      Chip Erase in progres...");
-    unsigned int x;
+    unsigned int x = 0;
     FLASH_ASSERT_CS;
     xchg_spi(0x05); //Read Status Register 1
     while (1) {
@@ -296,6 +375,7 @@ int diskEraseChip() {
     }
     FLASH_RELEASE_CS;
     Log("OK\r\n");
+    OperationInProgress = 0;
     return 1;
 }
 
@@ -392,12 +472,13 @@ int GetNextSector(uint32_t sector, uint32_t *nextSector) {
 }
 
 int FindFileEntryAddress(const char *filename, uint32_t *FileTablePosition) {
+    BYTE buff[256];
     if (LoggingOn) Log("   *********\r\nFindFileEntryAddress filename='%s'\r\n", filename);
 
     BYTE fnameLength = strlen(filename);
     int bRead;
 
-    ff_Seek(&FET, 0);
+    FileEntryTable_Seek(0);
 
     while (1) {
         //Read the first byte to see if this is a valid entry
@@ -424,12 +505,11 @@ int FindFileEntryAddress(const char *filename, uint32_t *FileTablePosition) {
                 return FR_OK;
             } else {
                 if (LoggingOn) Log("        Exact Entry Does NOT Match.\r\n");
-                ff_Seek(&FET, FET.Position + 255 - fnameLength);
+                FileEntryTable_Seek(FET.Position + 255 - fnameLength);
             }
         } else {
-
             if (LoggingOn) Log("   %xl: Filename Length Does Not Match\r\n", *FileTablePosition);
-            ff_Seek(&FET, FET.Position + 255);
+            FileEntryTable_Seek(FET.Position + 255);
         }
     }
 }
@@ -460,7 +540,7 @@ int CreateFile(const char *filename, ff_File *file) {
         int i[2];
         unsigned char ub[4];
     } temp;
-
+    BYTE buff[256];
     //Clear the File Record
     memset(buff, 0, 128);
     memset(buff + 128, 0xFF, 128);
@@ -514,13 +594,14 @@ int EraseSectorChain(uint32_t OriginSector) {
     uint32_t nextSector, currentSector;
     currentSector = OriginSector;
     while (1) {
+        Log("%xi->", (unsigned int) currentSector);
+        ret = diskEraseSector(currentSector << 12);
+        if (ret != FR_OK) return ret;
+        diskWrite(CAT_Address + (currentSector * 2), 2, (BYTE*) & val);
+
         ret = GetNextSector(currentSector, &nextSector);
         if (ret == FR_EOF) return FR_OK;
         if (ret != FR_OK) return ret;
-        ret = diskEraseSector(currentSector << 12);
-        Log("%xi->", (unsigned int) currentSector);
-        if (ret != FR_OK) return ret;
-        diskWrite(CAT_Address + (currentSector * 2), 2, (BYTE*) & val);
         if (nextSector == 0x7FFF) return FR_OK;
         currentSector = nextSector;
     }
@@ -565,8 +646,21 @@ void SetSPIBaudRate(long targetBaud) {
     Log("SPI Speed Set - Unable to find speed setting...");
 }
 
-void ff_SPI_initialize() {
+void FileEntryTable_Expand() {
+    Log("FileEntryTable_Expand: Original Length=%ul : New Length=", FET.Length);
+    ff_Seek(&FET, FET.Length + 256);
+    Log("%ul\r\n", FET.Length);
+}
 
+void FileEntryTable_Seek(unsigned long position) {
+    if (position > FET.Length) {
+        Log("Error: Attempt to seek FET beyond the end!\r\n");
+        while (1) asm("CLRWDT");
+    }
+    ff_Seek(&FET, position);
+}
+
+void ff_SPI_initialize() {
     SPI1STATbits.SPIEN = 0;
     SPI1CON1bits.DISSCK = 0; //Internal Serial Clock Enabled
     SPI1CON1bits.DISSDO = 0; //SDO is controlled by the moudle
@@ -589,6 +683,7 @@ void ff_SPI_initialize() {
 }
 
 int ff_Initialize() {
+    BYTE buff[256];
     CAT_Address = 0;
     diskRead(CAT_Address, 1, buff);
     if (buff[0] != 0xAA) { //0xF0 = Active Table 0x00 = Tombstoned, 0xFF = EMPTY
@@ -657,7 +752,7 @@ int ff_Format() {
 
     int bw;
     unsigned long FET_END;
-
+    BYTE buff[256];
     while (1) {
         ff_Read(&FET, buff, 256, &bw);
         if (buff[0] == 0xFF) {
@@ -682,10 +777,10 @@ int ff_OpenByEntryAddress(ff_File *file, unsigned long FileTablePosition) {
         int i[2];
         unsigned char ub[4];
     } tempLength;
-
+    BYTE buff[256];
     unsigned char *cursor = buff;
     file->FileEntryAddress = FileTablePosition;
-    ff_Seek(&FET, FileTablePosition);
+    FileEntryTable_Seek(FileTablePosition);
     ff_Read(&FET, buff, 256, &tempLength.i[0]);
 
     if (*cursor > 123 || *cursor == 0x00) {
@@ -768,8 +863,9 @@ int ff_DeleteByHandle(ff_File *file) {
     if (LoggingOn) Log("ff_DeleteByHandle: Filename='%s'\r\n", file->FileName);
 
     //First Clobber the File Entry
-    res = ff_Seek(&FET, file->FileEntryAddress);
-    if (res != FR_OK) return res;
+    FileEntryTable_Seek(file->FileEntryAddress);
+    //    res = ff_Seek(&FET, file->FileEntryAddress);
+    //    if (res != FR_OK) return res;
 
     res = ff_Append(&FET, (BYTE *) & val, 2, &itemp);
     if (res != FR_OK) return res;
@@ -877,6 +973,7 @@ int ff_Read(ff_File *file, BYTE *out, int bCount, int *bytesRead) {
             //Log("Sector Change: SectorOffset=%xl\r\n", file->SectorOffset);
             //Okay get the next sector we should be writing to...
             res = GetNextSector(file->CurrentSector, &nextSector);
+            if (res == FR_EOF) return res;
             if (res != FR_OK && res != FR_EOF) return res;
             //Is this the last sector that's been allocated?
             if (nextSector == 0x7FFF) {
@@ -945,6 +1042,7 @@ int ff_Append(ff_File *file, BYTE *dataToWrite, int bCount, int *bytesWritten) {
 
 int ff_UpdateLength(ff_File *file) {
     Log("\r\nUpdate Length: '%s'\r\n", file->FileName);
+    BYTE buff[256];
     int res, idx, bRead;
     unsigned int zero = 0;
 
@@ -954,8 +1052,10 @@ int ff_UpdateLength(ff_File *file) {
     } temp;
     temp.ul = 0;
 
-    res = ff_Seek(&FET, file->FileEntryAddress);
-    if (res != FR_OK) return res;
+    Log("Seeking FET To File->FileEntryAddress: %xl\r\n", file->FileEntryAddress);
+    FileEntryTable_Seek(file->FileEntryAddress);
+    //    res = ff_Seek(&FET, file->FileEntryAddress);
+    //    if (res != FR_OK) return res;
 
     res = ff_Read(&FET, buff, 256, &bRead);
     if (res != FR_OK) return res;
@@ -970,8 +1070,10 @@ int ff_UpdateLength(ff_File *file) {
                 *(cursor++) = temp.ub[2];
                 Log("   Free Slot Found At Index=%i\r\n", idx);
 
-                res = ff_Seek(&FET, file->FileEntryAddress);
-                if (res != FR_OK) return res;
+                Log("Seeking FET To File->FileEntryAddress: %xl\r\n", file->FileEntryAddress);
+                FileEntryTable_Seek(file->FileEntryAddress);
+                //res = ff_Seek(&FET, file->FileEntryAddress);
+                //if (res != FR_OK) return res;
 
                 res = ff_Append(&FET, buff, 256, &bRead);
                 if (res != FR_OK) return res;
@@ -988,11 +1090,11 @@ int ff_UpdateLength(ff_File *file) {
     Log("   No Free Slots in File Record... Creating new...\r\n");
 
     //Clobber the existing file entry...
-    res = ff_Seek(&FET, file->FileEntryAddress);
-    if (res != FR_OK) return res;
+    FileEntryTable_Seek(file->FileEntryAddress);
+    //    res = ff_Seek(&FET, file->FileEntryAddress);
+    //    if (res != FR_OK) return res;
     res = ff_Append(&FET, (BYTE *) & zero, 2, &bRead);
     if (res != FR_OK) return res;
-
 
     //Clear the file lengths from the old entry
     cursor = &buff[128];
@@ -1008,6 +1110,7 @@ int ff_UpdateLength(ff_File *file) {
     //Ask the system to get the entry...since we clobbered it we'll get a not found response
     //But the address returned will be located at the tail of the file entry table...
     Log("   Find the end of the File Entry Table...\r\n");
+    FileEntryTable_Expand();
     SeekToEndOfFET(&FET);
     file->FileEntryAddress = FET.Position;
     buff[0] = strlen(file->FileName);
@@ -1065,6 +1168,7 @@ int ff_OpenDirectoryListing(ff_File * DirectoryIfo) {
 }
 
 int ff_GetNextEntryFromDirectory(ff_File *DirectoryIfo, char *fname) {
+    BYTE buff[256];
     int bytesRead, res;
     while (1) {
         //Read the first byte to see if this is a valid entry
@@ -1089,7 +1193,7 @@ int ff_GetNextEntryFromDirectory(ff_File *DirectoryIfo, char *fname) {
 int ff_Trim() {
     uint16_t Entry, iTemp;
     int res;
-
+    BYTE buff[256];
     //Get the New SAT Table Setup
     uint32_t oldSAT, newSAT;
     oldSAT = CAT_Address;
@@ -1206,6 +1310,7 @@ int ff_Trim() {
 
 int ff_RepairFS() {
     BYTE LinkMap[512];
+    BYTE buff[256];
     int res;
     ff_File dir;
     uint32_t curSector, nxtSector;
@@ -1277,7 +1382,8 @@ int ff_RepairFS() {
                 curSector = nxtSector;
             }
         } else {
-            ff_Seek(&FET, fileEntryAddress);
+            FileEntryTable_Seek(fileEntryAddress);
+            //ff_Seek(&FET, fileEntryAddress);
             ff_Append(&FET, (BYTE *) & val, 2, &itemp);
         }
     }
@@ -1364,6 +1470,7 @@ int ff_GetUtilization(unsigned long *freeSpace, unsigned long *TrimSpace, unsign
 }
 
 int ff_CheckFS() {
+    BYTE buff[256];
     ff_File dir;
     ff_File *DirectoryIfo = &dir;
     uint32_t originSector, nextSector, curSector;
@@ -1432,6 +1539,7 @@ int ff_CheckFS() {
 }
 
 int ff_copy(const char *source, unsigned long sourceOffset, const char *dest, unsigned long destOffset, unsigned long bCount, int overwrite) {
+    Log("ff_Copy: source='%s':%ul dest='%s':%ul bCount=%ul Overwrite=%i\r\n", source, sourceOffset, dest, destOffset, bCount, overwrite);
     BYTE copyBuff[256];
     unsigned long bytesToRead;
     int res, bw;
@@ -1470,7 +1578,7 @@ int ff_copy(const char *source, unsigned long sourceOffset, const char *dest, un
     for (x = 0; x < a; x++) {\
         if (fftest_buffer[x] != x % 255) {\
             Log("Failure to Verify CORRECT at offset:%i Actual=%xb, Expected=%xb\r\n", x,fftest_buffer[x],x % 255);\
-            while (1);\
+            while (1) asm("CLRWDT");\
         }\
     }\
 }
@@ -1482,7 +1590,7 @@ int ff_copy(const char *source, unsigned long sourceOffset, const char *dest, un
     for (x = 0; x < a; x++) {\
         if (fftest_buffer[x] != 0) {\
             Log("Failure to Verify ZERO at address:%xl Size:%i\r\n", (z) + x,a);\
-            while (1);\
+            while (1) asm("CLRWDT");\
         }\
     }\
 }
@@ -1492,7 +1600,7 @@ int ff_copy(const char *source, unsigned long sourceOffset, const char *dest, un
     for (x = 0; x < a; x++) {\
         if (fftest_buffer[x] != 0xFF) {\
             Log("Failure to Verify EMPTY at address:%xl Size:%i\r\n", (z) + x,a);\
-            while (1);\
+            while (1) asm("CLRWDT");\
         }\
     }\
 }
@@ -1570,7 +1678,7 @@ void fftest_Allocation() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("Check Allocate Sector...");
@@ -1580,7 +1688,7 @@ void fftest_Allocation() {
         Log("OK\r\n");
     } else {
         Log("Error: Sector Entry=%xi Expected=0x7FFF", checkSector);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("GetNextSector...");
@@ -1590,7 +1698,7 @@ void fftest_Allocation() {
         Log("OK - NextSector=%xl\r\n", nextSector);
     } else {
         Log("Error Res=%i nextSector=%xl", ret, nextSector);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
 }
@@ -1613,7 +1721,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     fftest_Allocation();
@@ -1624,7 +1732,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(CREATE) Append 4K of Data...");
@@ -1634,7 +1742,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(CREATE) Update Length...");
@@ -1643,7 +1751,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(CREATE) Re-Open...");
@@ -1652,7 +1760,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(CREATE) Check length...");
@@ -1660,7 +1768,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error: Length=%xl Expected=0x1000", test.Length);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(CREATE) Read 4K of Data...");
@@ -1669,14 +1777,14 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(CREATE) Verify Data...");
     for (x = 0; x < 0x1000; x++) {
         if (fftest_buffer[x] != x % 255) {
             Log("Error @ %i: Expected=%xb Actual=%xb", x, x % 255, fftest_buffer[x]);
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("OK\r\n");
@@ -1691,12 +1799,12 @@ void fftest_HighLevel() {
         ret = ff_Append(&test, fftest_buffer + (x * 40), 40, &bWritten);
         if (ret != FR_OK) {
             Log("Append Error On Cycle %i: Res=%i", x, ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         ret = ff_UpdateLength(&test);
         if (ret != FR_OK) {
             Log("UpdateLength Error On Cycle %i: Res=%i", x, ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         expectedLength += 40;
     }
@@ -1708,7 +1816,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(APPEND) Check length after updates...");
@@ -1716,7 +1824,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error: Length=%xl Expected=%xl", test.Length, expectedLength);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(APPEND) Test Seek to offset=0x1000...");
@@ -1725,7 +1833,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(APPEND) Read 4000 Bytes of Data...");
@@ -1734,14 +1842,14 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(APPEND) Verify Data...");
     for (x = 0; x < 4000; x++) {
         if (fftest_buffer[x] != x % 64) {
             Log("Error @ %i: Expected=%xb Actual=%xb", x, x % 255, fftest_buffer[x]);
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("OK\r\n");
@@ -1753,7 +1861,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Attempt to Open the Deleted File...");
@@ -1762,7 +1870,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Re-Create The Deleted File...");
@@ -1771,7 +1879,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Write 4K of Data to File...");
@@ -1781,7 +1889,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Update Length...");
@@ -1790,7 +1898,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Re-Open...");
@@ -1799,7 +1907,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Check length...");
@@ -1807,7 +1915,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error: Length=%xl Expected=0x1000", test.Length);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Read 4K of Data...");
@@ -1816,14 +1924,14 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(DELETE) Verify Data...");
     for (x = 0; x < 0x1000; x++) {
         if (fftest_buffer[x] != x % 47) {
             Log("Error @ %i: Expected=%xb Actual=%xb", x, x % 255, fftest_buffer[x]);
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("OK\r\n");
@@ -1835,7 +1943,7 @@ void fftest_HighLevel() {
     ret = ff_CheckFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     LoggingOn = 0;
@@ -1845,14 +1953,14 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("Checking File System:...");
     ret = ff_CheckFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     ff_GetUtilization(&fs, &ts, &us);
@@ -1865,7 +1973,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(TRIM) Check length...");
@@ -1873,7 +1981,7 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error: Length=%xl Expected=0x1000", test.Length);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(TRIM) Read 4K of Data...");
@@ -1882,14 +1990,14 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("(TRIM) Verify Data...");
     for (x = 0; x < 0x1000; x++) {
         if (fftest_buffer[x] != x % 47) {
             Log("Error @ %i: Expected=%xb Actual=%xb", x, x % 255, fftest_buffer[x]);
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("OK\r\n");
@@ -1909,7 +2017,7 @@ void fftest_HighLevel() {
         ret = ff_OpenByFileName(&test, fname, 1);
         if (ret != FR_OK) {
             Log("ff_OpenByFileName Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         FIFO_Read(TRNG_fifo, flen);
         flen = 1 + (flen % 8);
@@ -1918,18 +2026,18 @@ void fftest_HighLevel() {
         ret = ff_Append(&test, buff, 1, &bWritten);
         if (ret != FR_OK) {
             Log("Write Length ff_Append Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         for (q = 0; q < flen; q++) {
             ret = ff_Append(&test, fftest_buffer, 999, &bWritten);
             if (ret != FR_OK) {
                 Log("ff_Append Error Res=%i", ret);
-                while (1);
+                while (1) asm("CLRWDT");
             }
             ret = ff_UpdateLength(&test);
             if (ret != FR_OK) {
                 Log("ff_UpdateLength Error Res=%i", ret);
-                while (1);
+                while (1) asm("CLRWDT");
             }
         }
     }
@@ -1949,12 +2057,12 @@ void fftest_HighLevel() {
         ret = ff_OpenByFileName(&test, fname, 1);
         if (ret != FR_OK) {
             Log("ff_OpenByFileName Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         ret = ff_Read(&test, &flen, 1, &bWritten);
         if (ret != FR_OK) {
             Log("Read Length ff_Read Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         Log("Length=%ubkb...", flen);
         lenCheck = flen;
@@ -1963,20 +2071,20 @@ void fftest_HighLevel() {
 
         if (test.Length != lenCheck) {
             Log("File Length does not match expected: Length=%xl Expected=%xl", test.Length, lenCheck);
-            while (1);
+            while (1) asm("CLRWDT");
         }
 
         for (q = 0; q < flen; q++) {
             ret = ff_Read(&test, fftest_buffer, 999, &bWritten);
             if (ret != FR_OK) {
                 Log("ff_Read Error Res=%i", ret);
-                while (1);
+                while (1) asm("CLRWDT");
             }
 
             for (z = 0; z < 999; z++) {
                 if (fftest_buffer[z] != x) {
                     Log("File Content Corrupted @ %xi|%xi Read=%xb Expected=%xb", q, z, fftest_buffer[z], (BYTE) x);
-                    while (1);
+                    while (1) asm("CLRWDT");
                 }
             }
         }
@@ -1988,21 +2096,21 @@ void fftest_HighLevel() {
     ret = ff_CheckFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("Repair File System:...");
     ret = ff_RepairFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("Re-Checking File System After Repair:...");
     ret = ff_CheckFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("Delete every 2nd file...");
@@ -2011,7 +2119,7 @@ void fftest_HighLevel() {
         ret = ff_Delete(fname);
         if (ret != FR_OK) {
             Log("ff_Delete Error: '%s' Res=%i '%s'", fname, ret, Translate_DRESULT(ret));
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("OK\r\n");
@@ -2022,7 +2130,7 @@ void fftest_HighLevel() {
         ret = ff_OpenByFileName(&test, fname, 0);
         if (ret != FR_NOT_FOUND) {
             Log("Error: File Exists! '%s' Res=%i", fname, ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("OK\r\n");
@@ -2038,12 +2146,12 @@ void fftest_HighLevel() {
         ret = ff_OpenByFileName(&test, fname, 1);
         if (ret != FR_OK) {
             Log("ff_OpenByFileName Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         ret = ff_Read(&test, &flen, 1, &bWritten);
         if (ret != FR_OK) {
             Log("Read Length ff_Read Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         Log("Length=%ubkb...", flen);
         lenCheck = flen;
@@ -2052,20 +2160,20 @@ void fftest_HighLevel() {
 
         if (test.Length != lenCheck) {
             Log("File Length does not match expected: Length=%xl Expected=%xl", test.Length, lenCheck);
-            while (1);
+            while (1) asm("CLRWDT");
         }
 
         for (q = 0; q < flen; q++) {
             ret = ff_Read(&test, fftest_buffer, 999, &bWritten);
             if (ret != FR_OK) {
                 Log("ff_Read Error Res=%i", ret);
-                while (1);
+                while (1) asm("CLRWDT");
             }
 
             for (z = 0; z < 999; z++) {
                 if (fftest_buffer[z] != x) {
                     Log("File Content Corrupted @ %xi|%xi Read=%xb Expected=%xb", q, z, fftest_buffer[z], (BYTE) x);
-                    while (1);
+                    while (1) asm("CLRWDT");
                 }
             }
         }
@@ -2082,14 +2190,14 @@ void fftest_HighLevel() {
         Log("OK\r\n");
     } else {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("Checking File System:...");
     ret = ff_CheckFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("Re-Verify Files after trim...");
@@ -2100,12 +2208,12 @@ void fftest_HighLevel() {
         ret = ff_OpenByFileName(&test, fname, 1);
         if (ret != FR_OK) {
             Log("ff_OpenByFileName Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         ret = ff_Read(&test, &flen, 1, &bWritten);
         if (ret != FR_OK) {
             Log("Read Length ff_Read Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         Log("Length=%ubkb...", flen);
         lenCheck = flen;
@@ -2114,20 +2222,20 @@ void fftest_HighLevel() {
 
         if (test.Length != lenCheck) {
             Log("File Length does not match expected: Length=%xl Expected=%xl", test.Length, lenCheck);
-            while (1);
+            while (1) asm("CLRWDT");
         }
 
         for (q = 0; q < flen; q++) {
             ret = ff_Read(&test, fftest_buffer, 999, &bWritten);
             if (ret != FR_OK) {
                 Log("ff_Read Error Res=%i", ret);
-                while (1);
+                while (1) asm("CLRWDT");
             }
 
             for (z = 0; z < 999; z++) {
                 if (fftest_buffer[z] != x) {
                     Log("File Content Corrupted @ %xi|%xi Read=%xb Expected=%xb", q, z, fftest_buffer[z], (BYTE) x);
-                    while (1);
+                    while (1) asm("CLRWDT");
                 }
             }
         }
@@ -2145,7 +2253,7 @@ void fftest_HighLevel() {
     ret = ff_OpenByFileName(&pig, "103.test", 0);
     if (ret != FR_OK) {
         Log("ff_OpenByFileName Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     badData = 0;
@@ -2155,7 +2263,7 @@ void fftest_HighLevel() {
     ret = ff_CheckFS();
     if (ret != FR_CORRUPTED) {
         Log("Error FS is NOT Corrupted!!! Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
     Log("OK (IT is corrupted!)\r\n");
 
@@ -2163,7 +2271,7 @@ void fftest_HighLevel() {
     ret = ff_RepairFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
     Log("OK\r\n");
 
@@ -2172,7 +2280,7 @@ void fftest_HighLevel() {
     ret = ff_CheckFS();
     if (ret != FR_OK) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
     Log("OK (IT is NOT corrupted!)\r\n");
 
@@ -2180,7 +2288,7 @@ void fftest_HighLevel() {
     ret = ff_OpenByFileName(&pig, "103.test", 0);
     if (ret != FR_NOT_FOUND) {
         Log("Error Res=%i", ret);
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("OK The files are gone\r\n");
@@ -2196,12 +2304,12 @@ void fftest_HighLevel() {
         ret = ff_OpenByFileName(&test, fname, 1);
         if (ret != FR_OK) {
             Log("ff_OpenByFileName Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         ret = ff_Read(&test, &flen, 1, &bWritten);
         if (ret != FR_OK) {
             Log("Read Length ff_Read Error Res=%i", ret);
-            while (1);
+            while (1) asm("CLRWDT");
         }
         Log("Length=%ubkb...", flen);
         lenCheck = flen;
@@ -2210,20 +2318,20 @@ void fftest_HighLevel() {
 
         if (test.Length != lenCheck) {
             Log("File Length does not match expected: Length=%xl Expected=%xl", test.Length, lenCheck);
-            while (1);
+            while (1) asm("CLRWDT");
         }
 
         for (q = 0; q < flen; q++) {
             ret = ff_Read(&test, fftest_buffer, 999, &bWritten);
             if (ret != FR_OK) {
                 Log("ff_Read Error Res=%i", ret);
-                while (1);
+                while (1) asm("CLRWDT");
             }
 
             for (z = 0; z < 999; z++) {
                 if (fftest_buffer[z] != x) {
                     Log("File Content Corrupted @ %xi|%xi Read=%xb Expected=%xb", q, z, fftest_buffer[z], (BYTE) x);
-                    while (1);
+                    while (1) asm("CLRWDT");
                 }
             }
         }
@@ -2256,7 +2364,7 @@ void fftest_HighLevel() {
             if ((seekPos & 0b1111) == 0) Log(".");
         } else {
             Log("Error: Expected=%xl Actual1=%xl Actual2=%xl", seekPos, seekCheck, seekCheck2);
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("Done\r\n");
@@ -2268,7 +2376,7 @@ void fftest_HighLevel() {
     ret = ff_OpenByFileName(&seekHandle, "seekTest.dat", 0);
     if (ret != FR_OK) {
         Log("ff_OpenByFileName Error Res=%i", Translate_DRESULT(ret));
-        while (1);
+        while (1) asm("CLRWDT");
     }
 
     Log("8 Byte Checking Seek File:\r\n");
@@ -2280,7 +2388,7 @@ void fftest_HighLevel() {
             if ((seekPos & 0b1111) == 0) Log(".");
         } else {
             Log("Error: Expected=%xl Actual=%xl", seekPos, seekCheck);
-            while (1);
+            while (1) asm("CLRWDT");
         }
     }
     Log("Done\r\n");

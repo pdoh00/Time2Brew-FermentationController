@@ -11,11 +11,30 @@
 
 void ICACHE_FLASH_ATTR slipTCP_Server_OnIncommingConnection(void *arg) {
     if (arg == NULL) return;
-
     struct espconn *con = (struct espconn *) arg;
 
     uint8_t x;
     type_IP_Channel *chan;
+//    char ConnectionsInPlace = 0;
+//
+//    for (x = 0; x < ChannelCount; x++) {
+//        chan = &TCP_Channels[x];
+//        if (chan->linkEn) {
+//
+//            if (chan->pCon->proto.tcp->remote_ip[0] == con->proto.tcp->remote_ip[0] &&
+//                    chan->pCon->proto.tcp->remote_ip[1] == con->proto.tcp->remote_ip[1] &&
+//                    chan->pCon->proto.tcp->remote_ip[2] == con->proto.tcp->remote_ip[2] &&
+//                    chan->pCon->proto.tcp->remote_ip[3] == con->proto.tcp->remote_ip[3]) {
+//                ConnectionsInPlace++;
+//            }
+//        }
+//    }
+//
+//    if (ConnectionsInPlace > 1) {
+//        SendMessage(ESP_TCP_CONNECTFAIL, 0, 0, 0, 0, 0, 0, (unsigned char *) con->proto.tcp, sizeof (esp_tcp));
+//        return;
+//    }
+
     for (x = 0; x < ChannelCount; x++) {
         chan = &TCP_Channels[x];
         if (chan->pCon == NULL && chan->linkEn == false) {

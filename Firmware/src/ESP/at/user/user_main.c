@@ -2,11 +2,14 @@
 #include "driver/uart.h"
 #include "../../sdk/include/osapi.h"
 #include "../../sdk/include/mem.h"
-#include "../../sdk/include/user_interface.h"
 #include "../../sdk/include/os_type.h"
-#include "../../sdk/include/espconn.h"
+#include "lwip/netif.h"
+#include "netif/etharp.h"
 #include "ProtocolDefs.h"
 #include "user_main.h"
+//#include "../../sdk/include/user_interface.h"
+#include "../../sdk/include/espconn.h"
+#include "lwip/app/espconn.h"
 
 #define PushByte(x) ({*(txWriteCursor++) = x;if (txWriteCursor > txBufferEND) txWriteCursor = txBuffer;})
 //#define PushByte(x) ({uart_tx_one_char(UART0, x);})
@@ -26,6 +29,7 @@ os_timer_t tmr_WifiConnectCompletedCheck;
 os_timer_t tmr_WifiHasIPCheck;
 os_timer_t tmr_SyncSend;
 os_timer_t tmr_mDNS_Advertise;
+os_timer_t tmr_BeaconSend;
 
 os_event_t rxTaskQueue[rxTaskQueueLen];
 os_event_t txTaskQueue[txTaskQueueLen];
@@ -43,11 +47,19 @@ uint8_t txBuffer[4096];
 uint8_t *txWriteCursor = txBuffer;
 uint8_t *txReadCursor = txBuffer;
 uint8_t *txBufferEND = txBuffer + 4096;
+void SendARP(void);
 
 char mDNS_HOSTNAME[64];
 
+LOCAL struct espconn connBeacon;
+
+void user_rf_pre_init(void) {
+    system_phy_set_rfoption(1);
+    system_phy_set_max_tpw(82);
+}
+
 void user_init(void) {
-    wifi_station_set_auto_connect(0);
+    wifi_station_set_auto_connect(1);
     uint8_t x;
     uart_init(BIT_RATE_921600, BIT_RATE_921600);
     current_wifiMode = wifi_get_opmode();
@@ -59,9 +71,17 @@ void user_init(void) {
     }
     wifi_station_disconnect();
 
+    wifi_set_broadcast_if(3); //Broadcast on ALL interfaces
+    wifi_set_event_handler_cb(wifi_handle_event_cb);
+    system_init_done_cb(onSystemInitDone);
+
     os_timer_disarm(&tmr_SyncSend);
     os_timer_setfn(&tmr_SyncSend, (os_timer_func_t *) SyncSend_OnTimer, NULL);
     os_timer_arm(&tmr_SyncSend, 10, 0);
+}
+
+void onSystemInitDone(void) {
+
 }
 
 /*This task is called when the uart rx interrupt handler posts a message to the task.
@@ -221,7 +241,7 @@ void ICACHE_FLASH_ATTR ProcessMessage(uint8_t *buffer, uint16_t len) {
 void ICACHE_FLASH_ATTR cmd_MCU_INIT(uint8_t *buffer, uint16_t len) {
     uint8_t *cursor = buffer;
     char *dstCursor;
-    bool bres;
+    bool bres, bres2;
     if (isInitialized == true) {
         SendMessage(ESP_INIT_RESP, 0, Fail_AlreadyInitialized, 0, 0, 0, 0, NULL, 0);
         return;
@@ -231,16 +251,28 @@ void ICACHE_FLASH_ATTR cmd_MCU_INIT(uint8_t *buffer, uint16_t len) {
 
     if (mode != wifi_get_opmode()) {
         ETS_UART_INTR_DISABLE();
-        bres = wifi_set_opmode(mode);
+        bres = wifi_set_opmode_current(mode);
         ETS_UART_INTR_ENABLE();
         if (bres == false) {
-            SendMessage(ESP_INIT_RESP, 0, Fail_UnableToSetWifiOpMode, 0, 0, 0, 0, NULL, 0);
+            SendMessage(ESP_INIT_RESP, 0, Fail_UnableToSetWifiOpMode, bres, bres, bres, bres, NULL, 0);
             return;
         }
     }
 
-
     if (mode == STATION_MODE) {
+        if (mode != STATION_MODE) {
+            ETS_UART_INTR_DISABLE();
+            bres = wifi_set_opmode_current(STATION_MODE);
+            ETS_UART_INTR_ENABLE();
+            if (bres == false) {
+                SendMessage(ESP_INIT_RESP, 0, Fail_UnableToSetWifiOpMode, bres, bres, bres, bres, NULL, 0);
+                return;
+            }
+        }
+
+        wifi_station_dhcpc_start();
+        wifi_station_set_reconnect_policy(true);
+
         current_wifiMode = STATION_MODE;
 
         os_bzero(&stationConf, sizeof (struct station_config));
@@ -261,8 +293,45 @@ void ICACHE_FLASH_ATTR cmd_MCU_INIT(uint8_t *buffer, uint16_t len) {
 
         wifi_station_disconnect();
 
+        ////////////////////////////
+        //Now the SoftAP
+        ////////////////////////////
+        os_bzero(&apConfig, sizeof (struct softap_config));
+        bres = wifi_softap_get_config(&apConfig);
+        if (bres == false) {
+            SendMessage(ESP_INIT_RESP, 0, Fail_UnableToGetSoftAP_Config, 0, 0, 0, 0, NULL, 0);
+            return;
+        }
+
+        //os_sprintf(apConfig.ssid, "HWTEST");
+
+        dstCursor = apConfig.ssid;
+        while (*cursor) {
+            *(dstCursor++) = *(cursor++);
+        }
+        *(dstCursor++) = *(cursor++);
+
+        //os_sprintf(apConfig.ssid, "password");
+        dstCursor = apConfig.password;
+        while (*cursor) {
+            *(dstCursor++) = *(cursor++);
+        }
+        *(dstCursor++) = *(cursor++);
+
+        apConfig.ssid_len = strlen(apConfig.ssid);
+        //apConfig.channel = *(cursor++);
+        apConfig.channel = 1;
+        //apConfig.authmode = *(cursor++);
+        apConfig.authmode = AUTH_WPA2_PSK;
+        apConfig.ssid_hidden = 0;
+        apConfig.max_connection = 4;
+        apConfig.beacon_interval = 100;
+
+        //////////////////////////////
+
         ETS_UART_INTR_DISABLE();
-        bres = wifi_station_set_config(&stationConf);
+        bres = wifi_station_set_config_current(&stationConf);
+        //bres2 = wifi_softap_set_config_current(&apConfig);
         ETS_UART_INTR_ENABLE();
         if (bres == false) {
             SendMessage(ESP_INIT_RESP, 0, Fail_UnableToSetWifiConfig, 0, 0, 0, 0, NULL, 0);
@@ -364,6 +433,7 @@ void ICACHE_FLASH_ATTR WifiConnectCompletedCheck_OnTimer(void *timer_arg) {
     retryCount++;
     uint8_t status = wifi_station_get_connect_status();
     if (status == STATION_GOT_IP) {
+        wifi_station_set_reconnect_policy(true);
         retryCount = 0;
         SendMessage(0xEE, 6, 6, retryCount, 0, 0, 0, NULL, 0);
         os_timer_disarm(&tmr_WifiHasIPCheck);
@@ -379,8 +449,6 @@ void ICACHE_FLASH_ATTR WifiConnectCompletedCheck_OnTimer(void *timer_arg) {
         os_timer_arm(&tmr_WifiConnectCompletedCheck, 1000, 0);
     }
 }
-
-struct mdns_info *this_mdns_info;
 
 void ICACHE_FLASH_ATTR cmd_MCU_INIT_afterWifiHasIP() {
     sint8 res;
@@ -415,12 +483,19 @@ void ICACHE_FLASH_ATTR cmd_MCU_INIT_afterWifiHasIP() {
         SendMessage(ESP_INIT_RESP, 0, Fail_UnableToStartTCPListener, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;
     }
-    res = espconn_regist_time(TCP_Server.pCon, 15, 0);
+    res = espconn_regist_time(TCP_Server.pCon, 5, 0);
     if (res != ESPCONN_OK) {
         SendMessage(ESP_INIT_RESP, 0, Fail_UnableToSetTCPTimeout, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;
     }
 
+    if (current_wifiMode == SOFTAP_MODE) {
+        wifi_set_broadcast_if(2); //Broadcast on softAp Interface
+    } else {
+        wifi_set_broadcast_if(1); //Broadcast on Station Interface
+    }
+
+    Beacon_Init();
     isInitialized = true;
     SendMessage(ESP_INIT_RESP, 0, Init_OK, 0, 0, 0, 0, NULL, 0);
 }
@@ -429,22 +504,24 @@ void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS(uint8_t *buffer, uint16_t len) {
     sint8 res;
     struct ip_info mDNS_MulticastIP;
 
-    struct mdns_info *info = (struct mdns_info *) os_zalloc(sizeof (struct mdns_info));
-    char *cursor = (char *) buffer;
-    char *out = mDNS_HOSTNAME;
-    while (*cursor) {
-        *(out++) = *(cursor++);
-    }
-    *(out++) = 0;
+    struct ip_info ipconfig;
 
-    info->host_name = mDNS_HOSTNAME;
-    info->ipAddr = LocalIP.ip.addr; //ESP8266 station IP
-    info->server_name = "http";
-    info->server_port = 80;
-    info->txt_data = "version = now";
-    espconn_mdns_init(info);
-    espconn_mdns_server_register();
-    espconn_mdns_enable();
+    if (wifi_get_opmode() == SOFTAP_MODE) {
+        wifi_get_ip_info(SOFTAP_IF, &ipconfig);
+    } else {
+        wifi_get_ip_info(STATION_IF, &ipconfig);
+    }
+
+    //    struct mdns_info *info = (struct mdns_info *) os_zalloc(sizeof (struct mdns_info));
+    //    os_sprintf(mDNS_HOSTNAME, "%s", buffer);
+    //    info->host_name = mDNS_HOSTNAME;
+    //    info->ipAddr = LocalIP.ip.addr; //ESP8266 station IP
+    //    info->server_name = "http";
+    //    info->server_port = 80;
+    //    info->txt_data[0] = "version = now";
+    //    info->txt_data[1] = "path = /index.html";
+    //    espconn_mdns_init(info);
+
 
     /*-----------------------------------------
      * Start mDNS Connection
@@ -481,15 +558,31 @@ void ICACHE_FLASH_ATTR cmd_MCU_Start_mDNS(uint8_t *buffer, uint16_t len) {
         return;
     }
     IP4_ADDR(&mDNS_MulticastIP.ip, 224, 0, 0, 251);
-    res = espconn_igmp_join(&LocalIP.ip, &mDNS_MulticastIP.ip);
+    res = espconn_igmp_join(&ipconfig.ip, &mDNS_MulticastIP.ip);
+    res = espconn_igmp_leave(&ipconfig.ip, &mDNS_MulticastIP.ip);
+    res = espconn_igmp_join(&ipconfig.ip, &mDNS_MulticastIP.ip);
     if (res != ESPCONN_OK) {
         SendMessage(ESP_START_MDNS_RESP, 0, Fail_UnableJoin_mDNS_IGMP, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;
+    }
+
+    if (current_wifiMode == SOFTAP_MODE) {
+        wifi_set_broadcast_if(2); //Broadcast on softAp Interface
+    } else {
+        wifi_set_broadcast_if(1); //Broadcast on Station Interface
     }
     SendMessage(ESP_START_MDNS_RESP, 0, Init_OK, 0, 0, 0, 0, NULL, 0);
 }
 
 void ICACHE_FLASH_ATTR cmd_MCU_Start_uPnP() {
+    struct ip_info ipconfig;
+
+    if (wifi_get_opmode() == SOFTAP_MODE) {
+        wifi_get_ip_info(SOFTAP_IF, &ipconfig);
+    } else {
+        wifi_get_ip_info(STATION_IF, &ipconfig);
+    }
+
     sint8 res;
     struct ip_info uPnP_MulticastIP;
     /*-----------------------------------------
@@ -528,7 +621,9 @@ void ICACHE_FLASH_ATTR cmd_MCU_Start_uPnP() {
     }
 
     IP4_ADDR(&uPnP_MulticastIP.ip, 239, 255, 255, 250);
-    res = espconn_igmp_join(&LocalIP.ip, &uPnP_MulticastIP.ip);
+    res = espconn_igmp_join(&ipconfig.ip, &uPnP_MulticastIP.ip);
+    res = espconn_igmp_leave(&ipconfig.ip, &uPnP_MulticastIP.ip);
+    res = espconn_igmp_join(&ipconfig.ip, &uPnP_MulticastIP.ip);
     if (res != ESPCONN_OK) {
         SendMessage(ESP_START_UPNP_RESP, 0, Fail_UnableJoin_uPnP_IGMP, 0, 0, 0, 0, (uint8_t *) & res, 1);
         return;
@@ -595,26 +690,52 @@ void ICACHE_FLASH_ATTR cmd_MCU_TCP_CLOSE_CONNECTION(uint8_t *buffer, uint16_t le
 }
 
 void ICACHE_FLASH_ATTR cmd_MCU_mDNS_ASYNCSEND(uint8 *buffer, uint16 len) {
-        if (mDNS_Con.isSending == true) {
-            SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_SendInProgress, 0, 0, 0, 0, NULL, 0);
-            return;
-        }
-        mDNS_Con.isSending = true;
     
-        sint8_t res = espconn_sent(mDNS_Con.pCon, buffer, len);
-        if (res != ESPCONN_OK) {
-            mDNS_Con.isSending = false;
-            SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_EspError, res, (len >> 8), (len & 0xFF), res, NULL, 0);
-            return;
-        }
+    if (mDNS_Con.isSending == true) {
+        SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_SendInProgress, 0, 0, 0, 0, NULL, 0);
+        return;
+    }
+    mDNS_Con.isSending = true;
+
+    
+    mDNS_Con.pCon->proto.udp->local_port = 5353;
+    mDNS_Con.pCon->proto.udp->remote_port = 5353;
+    mDNS_Con.pCon->proto.udp->remote_ip[0] = 224;
+    mDNS_Con.pCon->proto.udp->remote_ip[1] = 0;
+    mDNS_Con.pCon->proto.udp->remote_ip[2] = 0;
+    mDNS_Con.pCon->proto.udp->remote_ip[3] = 251;
+    if (current_wifiMode == SOFTAP_MODE) {
+        wifi_set_broadcast_if(2); //Broadcast on softAp Interface
+    } else {
+        wifi_set_broadcast_if(1); //Broadcast on Station Interface
+    }
+    sint8_t res = espconn_sent(mDNS_Con.pCon, buffer, len);
+    if (res != ESPCONN_OK) {
+        mDNS_Con.isSending = false;
+        SendMessage(ESP_MDNS_SEND_RESULT, 0, Fail_EspError, res, (len >> 8), (len & 0xFF), res, NULL, 0);
+        return;
+    }
 }
 
 void ICACHE_FLASH_ATTR cmd_MCU_uPnP_ASYNCSEND(uint8_t *buffer, uint16_t len) {
+
     if (uPnP_Con.isSending == true) {
         SendMessage(ESP_UPNP_SEND_RESULT, 0, Fail_SendInProgress, 0, 0, 0, 0, NULL, 0);
         return;
     }
+
     uPnP_Con.isSending = true;
+    uPnP_Con.pCon->proto.udp->local_port = 1900;
+    uPnP_Con.pCon->proto.udp->remote_port = 1900;
+    uPnP_Con.pCon->proto.udp->remote_ip[0] = 239;
+    uPnP_Con.pCon->proto.udp->remote_ip[1] = 255;
+    uPnP_Con.pCon->proto.udp->remote_ip[2] = 255;
+    uPnP_Con.pCon->proto.udp->remote_ip[3] = 250;
+    if (current_wifiMode == SOFTAP_MODE) {
+        wifi_set_broadcast_if(2); //Broadcast on softAp Interface
+    } else {
+        wifi_set_broadcast_if(1); //Broadcast on Station Interface
+    }
     sint8_t res = espconn_sent(uPnP_Con.pCon, buffer, len);
     if (res != ESPCONN_OK) {
         uPnP_Con.isSending = false;
@@ -660,8 +781,141 @@ void ICACHE_FLASH_ATTR SyncSend_OnTimer(void *timer_arg) {
     os_timer_arm(&tmr_SyncSend, 10, 0);
 }
 
-void ICACHE_FLASH_ATTR mDNS_Advertise_OnTimer(void *timer_arg) {
-    os_timer_disarm(&tmr_mDNS_Advertise);
-    espconn_mdns_server_register();
-    os_timer_arm(&tmr_mDNS_Advertise, 1000, 0);
+void wifi_handle_event_cb(System_Event_t *evt) {
+
+
+    SendMessage(ESP_WIFI_EVENT, 0, 0, 0, 0, 0, 0, (uint8_t *) & evt, sizeof (System_Event_t));
+    switch (evt->event) {
+        case EVENT_STAMODE_CONNECTED:
+            //            apConfig.channel = evt->event_info.connected.channel;
+            //            wifi_softap_set_config_current(&apConfig);
+            //            uint8 dhcpstatus = 0;
+            //            dhcpstatus = wifi_softap_dhcps_stop();
+            //            struct dhcps_lease dhcp_lease;
+            //            IP4_ADDR(&dhcp_lease.start_ip, 192, 168, 5, 2);
+            //            IP4_ADDR(&dhcp_lease.end_ip, 192, 168, 5, 100);
+            //            wifi_softap_set_dhcps_lease(&dhcp_lease);
+            //            os_printf("DHCP Set Lease: %d\n", dhcpstatus);
+            //            struct ip_info info;
+            //            IP4_ADDR(&info.ip, 192, 168, 5, 1);
+            //            IP4_ADDR(&info.gw, 192, 168, 5, 1);
+            //            IP4_ADDR(&info.netmask, 255, 255, 255, 0);
+            //            dhcpstatus = wifi_set_ip_info(SOFTAP_IF, &info);
+            //            dhcpstatus = wifi_softap_dhcps_start();
+            break;
+    }
+}
+
+void ICACHE_FLASH_ATTR BeaconSendNow(int isBcast) {
+    char DeviceBuffer[40] = {0};
+    char hwaddr[6];
+    unsigned short length;
+    struct ip_info ipconfig;
+
+    if (wifi_get_opmode() == SOFTAP_MODE) {
+        wifi_get_ip_info(SOFTAP_IF, &ipconfig);
+        wifi_get_macaddr(SOFTAP_IF, hwaddr);
+    } else {
+        wifi_get_ip_info(STATION_IF, &ipconfig);
+        wifi_get_macaddr(STATION_IF, hwaddr);
+    }
+
+    if (current_wifiMode == SOFTAP_MODE) {
+        wifi_set_broadcast_if(2); //Broadcast on softAp Interface
+    } else {
+        wifi_set_broadcast_if(1); //Broadcast on Station Interface
+    }
+
+    os_sprintf(DeviceBuffer, "TCON," MACSTR "," IPSTR "\r\n", MAC2STR(hwaddr), IP2STR(&ipconfig.ip));
+    length = os_strlen(DeviceBuffer);
+
+    if (isBcast) {
+        connBeacon.proto.udp->local_port = 11624;
+        connBeacon.proto.udp->remote_port = 11624;
+        connBeacon.proto.udp->remote_ip[0] = 255;
+        connBeacon.proto.udp->remote_ip[1] = 255;
+        connBeacon.proto.udp->remote_ip[2] = 255;
+        connBeacon.proto.udp->remote_ip[3] = 255;
+    }
+    espconn_sent(&connBeacon, DeviceBuffer, length);
+    SendARP();
+
+    
+    struct ip_info mDNS_MulticastIP;
+    IP4_ADDR(&mDNS_MulticastIP.ip, 224, 0, 0, 251);
+    espconn_igmp_leave(&ipconfig.ip, &mDNS_MulticastIP.ip);
+    espconn_igmp_join(&ipconfig.ip, &mDNS_MulticastIP.ip);
+
+    IP4_ADDR(&mDNS_MulticastIP.ip, 239, 255, 255, 250);
+    espconn_igmp_leave(&ipconfig.ip, &mDNS_MulticastIP.ip);
+    espconn_igmp_join(&ipconfig.ip, &mDNS_MulticastIP.ip);
+
+    SendMessage(ESP_BEACON_SENT, 1, 1, 1, 1, 1, 1, DeviceBuffer, length);
+}
+
+void ICACHE_FLASH_ATTR OnBeaconRecieve(void *arg, char *pusrdata, unsigned short length) {
+    if (pusrdata == NULL) return;
+    if (length == 5 && os_strncmp(pusrdata, "TCON?", 5) == 0) {
+        BeaconSendNow(0);
+    }
+}
+
+void ICACHE_FLASH_ATTR BeaconSend_OnTimer(void *timer_arg) {
+    os_timer_disarm(&tmr_BeaconSend);
+    BeaconSendNow(1);
+    os_timer_arm(&tmr_BeaconSend, 5000, 0);
+}
+
+void ICACHE_FLASH_ATTR Beacon_Init(void) {
+    connBeacon.type = ESPCONN_UDP;
+    connBeacon.proto.udp = (esp_udp *) os_zalloc(sizeof (esp_udp));
+    connBeacon.proto.udp->local_port = 11624;
+    connBeacon.proto.udp->remote_port = 11624;
+    connBeacon.proto.udp->remote_ip[0] = 255;
+    connBeacon.proto.udp->remote_ip[1] = 255;
+    connBeacon.proto.udp->remote_ip[2] = 255;
+    connBeacon.proto.udp->remote_ip[3] = 255;
+
+    espconn_regist_recvcb(&connBeacon, OnBeaconRecieve);
+    espconn_create(&connBeacon);
+    os_timer_disarm(&tmr_BeaconSend);
+    os_timer_setfn(&tmr_BeaconSend, (os_timer_func_t *) BeaconSend_OnTimer, NULL);
+    os_timer_arm(&tmr_BeaconSend, 100, 0);
+}
+
+void SendARP(void) {
+
+    //extern struct netif *netif_list;
+
+    struct netif *netif = netif_list;
+    while (netif) {
+        etharp_gratuitous(netif);
+        //        struct pbuf *q = pbuf_alloc(PBUF_RAW, 60, PBUF_RAM);
+        //        if (q != NULL) {
+        //            struct eth_hdr *ethhdr = (struct eth_hdr *) q->payload;
+        //            struct etharp_hdr *hdr = (struct etharp_hdr *) ((u8_t*) ethhdr + SIZEOF_ETH_HDR);
+        //
+        //            os_memcpy(&ethhdr->src, netif->hwaddr, 6);
+        //            os_memset(&ethhdr->dest, 0xff, 6); //broadcast
+        //
+        //            os_memcpy(&hdr->shwaddr, netif->hwaddr, 6);
+        //            os_memset(&hdr->dhwaddr, 0, 6);
+        //
+        //            IPADDR2_COPY(&hdr->sipaddr, &netif->ip_addr);
+        //            IPADDR2_COPY(&hdr->dipaddr, &netif->ip_addr);
+        //            hdr->hwtype = PP_HTONS(1); //HWTYPE_ETHERNET
+        //            hdr->proto = PP_HTONS(ETHTYPE_IP);
+        //            /* set hwlen and protolen */
+        //            hdr->hwlen = ETHARP_HWADDR_LEN;
+        //            hdr->protolen = sizeof (ip_addr_t);
+        //            hdr->opcode = htons(1);
+        //            ethhdr->type = PP_HTONS(ETHTYPE_ARP);
+        //        } else {
+        //            LWIP_ASSERT("q != NULL", q != NULL);
+        //        }
+        //
+        //        netif->linkoutput(netif, q);
+        //        pbuf_free(q);
+        netif = netif->next;
+    }
 }

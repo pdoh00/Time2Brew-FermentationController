@@ -16,6 +16,8 @@
 extern "C" {
 #endif
 
+#define TREND_RECORD_SIZE 4
+
     typedef enum {
         SYSTEMMODE_IDLE = 0,
         SYSTEMMODE_Manual = 1,
@@ -38,14 +40,14 @@ extern "C" {
 
     typedef struct {
         unsigned long time;
-        int ProcessTemperature;
-        int TargetTemperature;
-        char Output;
+        float ProcessTemperature;
+        float TargetTemperature;
+        float Output;
         unsigned char Relay;
     } TREND_RECORD;
 
     typedef struct {
-        int StartTemperature, EndTemperature;
+        float StartTemperature, EndTemperature;
         unsigned long Duration;
     } PROFILE_STEP;
 
@@ -72,10 +74,10 @@ extern "C" {
         float Target_D_FilterGain;
         float Target_D_FilterCoeff;
         float Target_D_AdaptiveBand;
-        int coolDifferential;
-        int heatDifferential;
-        int coolTransition;
-        int heatTransition;
+        float coolDifferential;
+        float heatDifferential;
+        float coolTransition;
+        float heatTransition;
         unsigned int CheckSum;
     } EQUIPMENT_PROFILE;
 
@@ -86,13 +88,13 @@ extern "C" {
         unsigned long CoolWhenCanTurnOn;
         unsigned long HeatWhenCanTurnOff;
         unsigned long HeatWhenCanTurnOn;
-        int ManualSetPoint;
+        float ManualSetPoint;
         float ProcessPID_Integral;
         unsigned long ProfileStartTime;
-        unsigned char SystemMode;
         float TargetPID_Integral;
         unsigned int BootMode;
         unsigned int chkSum;
+        unsigned char SystemMode;
     } RECOVERY_RECORD;
 
     typedef struct {
@@ -101,7 +103,7 @@ extern "C" {
         char ActiveProfileName[64];
         unsigned char HeatRelay;
         unsigned char CoolRelay;
-        signed char Output;
+        float Output;
         PID_CTX TargetPID;
         PID_CTX ProcessPID;
         unsigned long TimeTurnedOn;
@@ -114,7 +116,7 @@ extern "C" {
         unsigned int ProfileID;
         unsigned int StepIdx;
         unsigned char StepCount;
-        int StepTemperature;
+        float StepTemperature;
         unsigned long ProfileStartTime;
         unsigned long StepTimeRemaining;
         unsigned long totalElapsedProfileTime;
@@ -123,13 +125,15 @@ extern "C" {
         float ProcessTemperature;
         float TargetTemperature;
 
-        int ManualSetPoint;
+        float ManualSetPoint;
 
         unsigned int equipmentProfileID;
         EQUIPMENT_PROFILE equipmentConfig;
 
-        RLE_State trend_RLE_State;
-        ff_File trend_RLE_FileHandle;
+        //RLE_State trend_RLE_State;
+        //ff_File trend_RLE_FileHandle;
+
+        ff_File trendFile;
 
     } MACHINE_STATE;
 
@@ -142,9 +146,8 @@ extern "C" {
     int TerminateProfile();
     int TruncateProfile(unsigned char *NewProfileData, int len, char *msg);
     unsigned long SecondsFromEpoch(int y, int m, int d, int hour, int minute, int second);
-    int SetManualMode(int Setpoint, char *msg);
-    void TemperatureController_Interrupt();
-    void TrendBufferCommitt();
+    int SetManualMode(float Setpoint, char *msg);
+    void TemperatureController_ProcessLoop();    
     int TemperatureController_Initialize();
     float rawReadTemp(int ProbeIDX);
     void InitializeRecoveryRecord();

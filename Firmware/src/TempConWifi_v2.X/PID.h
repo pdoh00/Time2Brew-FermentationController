@@ -16,6 +16,7 @@ extern "C" {
 
     typedef struct {
         float lastError;
+        float PTerm;
         float ITerm;
         float Output;
         float kp, ki, kd;

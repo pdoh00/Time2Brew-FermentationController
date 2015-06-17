@@ -1,28 +1,26 @@
 ﻿Public Structure TREND_RECORD
-    Public Duration As Integer
     Public Probe0_Temperature_C As Single
     Public Probe1_Temperature_C As Single
     Public Output_percent As Single
     Public RelayState As Byte
 
     Public Sub New(sourceData As Byte(), sourceOffset As Integer)
-        Dim offset As Integer = sourceOffset
-        Probe0_Temperature_C = CSng(BitConverter.ToInt16(sourceData, offset)) * 0.25
-        offset += 2
-        Probe1_Temperature_C = CSng(BitConverter.ToInt16(sourceData, offset)) * 0.25
-        offset += 2
-        Output_percent = CSng(sourceData(offset))
-        If Output_percent >= 0 AndAlso Output_percent <= 100 Then
-            Output_percent *= 0.01
-        Else
-            Output_percent = Output_percent - 256
-            Output_percent *= 0.01
-        End If
-        offset += 1
-        RelayState = sourceData(offset)
-        offset += 1
-        Duration = sourceData(offset)
-        offset += 1
+        Dim sample As UInt32 = BitConverter.ToUInt32(sourceData, sourceOffset)
+        RelayState = sample And 3
+        sample >>= 2
+        Output_percent = sample And 1023
+        sample >>= 10
+        Probe1_Temperature_C = sample And 1023
+        sample >>= 10
+        Probe0_Temperature_C = sample And 1023
+
+        Probe0_Temperature_C *= 0.146628
+        Probe1_Temperature_C *= 0.146628
+
+        Probe0_Temperature_C -= 25
+        Probe1_Temperature_C -= 25
+        Output_percent -= 100
+      
     End Sub
 
     Public Overrides Function ToString() As String

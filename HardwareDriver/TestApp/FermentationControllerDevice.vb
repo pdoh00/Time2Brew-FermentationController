@@ -12,6 +12,9 @@ Public Class FermentationControllerDevice
         Me.COM = COM
     End Sub
 
+    Public Sub ChangeRootAddress(newRoot As String)
+        Me.RootAddress = newRoot
+    End Sub
 
     ''' <summary>
     ''' Returns the STATUS of the controller.  Can be called any time. Does not require authentication.
@@ -198,12 +201,12 @@ Public Class FermentationControllerDevice
     ''' For a list of profiles see the GetProfileListing command.
     ''' Can be called anytime. Does not require authentication.
     ''' </summary>
-    ''' <param name="profileName"></param>
+    ''' <param name="profileID"></param>
     ''' <returns></returns>
     ''' <remarks></remarks>
     Public Async Function GetInstanceListing(profileID As String) As Task(Of List(Of DateTime))
         Dim ret As New List(Of DateTime)
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/runhistory?id=" & profileID)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/instancesteps?id=" & profileID)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Using ms As New MemoryStream(Result.Body)
             Using rdr As New StreamReader(ms, Text.UTF8Encoding.UTF8)
@@ -231,13 +234,13 @@ Public Class FermentationControllerDevice
     ''' <remarks></remarks>
     Public Async Function DownloadInstance(profileID As String, Instance As DateTime) As Task(Of List(Of PROFILE_STEP))
         Dim timeOffset = (Instance.ToUniversalTime - EPOCH).TotalSeconds
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/runhistory?id=" & profileID & "&instance=" & timeOffset)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/instancesteps?id=" & profileID & "&instance=" & timeOffset)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Dim ret As New List(Of PROFILE_STEP)
         Dim offset As Integer = 0
-        While (Result.Body.Length - offset >= 8)
+        While (Result.Body.Length - offset >= 12)
             ret.Add(New PROFILE_STEP(Result.Body, offset))
-            offset += 8
+            offset += 12
         End While
         Return ret
     End Function
@@ -260,16 +263,16 @@ Public Class FermentationControllerDevice
     ''' <remarks></remarks>
     Public Async Function DownloadTrendData(profileID As String, Instance As DateTime) As Task(Of List(Of TREND_RECORD))
         Dim timeOffset = (Instance.ToUniversalTime - EPOCH).TotalSeconds
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/temperaturetrend?id=" & profileID & "&instance=" & timeOffset)
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/instancetrend?id=" & profileID & "&instance=" & timeOffset)
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Using fs As New FileStream("C:\rawProfile.dat", FileMode.Create, FileAccess.Write)
             fs.Write(Result.Body, 0, Result.Body.Length)
         End Using
         Dim ret As New List(Of TREND_RECORD)
         Dim offset As Integer = 0
-        While (Result.Body.Length - offset >= 7)
+        While (Result.Body.Length - offset >= 4)
             ret.Add(New TREND_RECORD(Result.Body, offset))
-            offset += 7
+            offset += 4
         End While
         Return ret
     End Function
@@ -441,7 +444,7 @@ Public Class FermentationControllerDevice
 
     Public Async Function EraseBLOB() As Task
         Try
-            Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/eraseblob")
+            Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/eraseblob?wipe=confirm")
             If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Catch ex As Exception
 
@@ -449,59 +452,55 @@ Public Class FermentationControllerDevice
     End Function
 
 
+    Public Async Function EraseFirmware() As Task
+        Try
+            Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(RootAddress & "/api/erasefirmware?wipe=confirm")
+            If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
+        Catch ex As Exception
 
-    Public Async Function uploadfirmware(firmwareFile As Stream, prog As Action(Of Single)) As Task
+        End Try
+    End Function
+
+    Public Async Function uploadfirmware(blobFile As Stream, prog As Action(Of Single)) As Task
         Dim first As Boolean = True
         Dim buffer(512) As Byte
-        While firmwareFile.Position < firmwareFile.Length - 1
-            prog(firmwareFile.Position / firmwareFile.Length)
-            Dim offset = firmwareFile.Position
-            Dim bytesToSend = Math.Min(firmwareFile.Length - firmwareFile.Position, 512)
+        blobFile.Position = 0
+        While blobFile.Position < blobFile.Length - 1
+            prog(blobFile.Position / blobFile.Length)
+            Dim offset = blobFile.Position
+            Dim bytesToSend = Math.Min(blobFile.Length - blobFile.Position, 512)
             ReDim buffer(bytesToSend - 1)
-            firmwareFile.Read(buffer, 0, bytesToSend)
-            Dim chksum As UInt16 = FletcherChecksum.Fletcher16(buffer, 0, bytesToSend)
-            Dim url As String = RootAddress & "/api/uploadfirmware?offset=" & offset
-            url += "&chksum=" & chksum
-            url += "&content=" & ToURL_Safe_base64String(buffer, 0, bytesToSend)
-            If first Then
-                url += "&overwrite=y"
-                first = False
-                While (1)
-                    Try
-                        Console.Write("Push...")
-                        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
-                        If Result.StatusCode <> 200 Then
-                            Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
-                            Continue While
-                        Else
-                            Console.WriteLine("OK")
-                        End If
-                        Exit While
-                    Catch ex As Exception
-                        Console.WriteLine(ex.ToString)
-                    End Try
-                End While
-            Else
-                url += "&overwrite=n"
-                While (1)
-                    Try
-                        Console.Write("Push...")
-                        Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
-                        If Result.StatusCode <> 200 Then
-                            Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
-                            Continue While
-                        Else
-                            Console.WriteLine("OK")
-                        End If
-                        Exit While
-                    Catch ex As Exception
-                        Console.WriteLine(ex.ToString)
-                    End Try
-                End While
-            End If
+            blobFile.Read(buffer, 0, bytesToSend)
+            While (1)
+                Dim res = Await SendFirmwareChunk(buffer, offset, bytesToSend)
+                If res = 1 Then Exit While
+            End While
         End While
         Debug.Print("DONE")
     End Function
+
+    Private Async Function SendFirmwareChunk(Buffer As Byte(), offset As Integer, bCount As Integer) As Task(Of Integer)
+        Try
+            Dim chksum As UInt16 = FletcherChecksum.Fletcher16(Buffer, 0, bCount)
+            Dim url As String = RootAddress & "/api/uploadfirmware?offset=" & offset
+            url += "&chksum=" & chksum
+            url += "&content=" & ToURL_Safe_base64String(Buffer, 0, bCount)
+            Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
+            If Result.StatusCode <> 200 Then Return 0
+            If Result.Body.Length < bCount Then Return 0
+            For idx = 0 To bCount - 1
+                If Buffer(idx) <> Result.Body(idx) Then
+                    Console.WriteLine("Mismatch @ " & idx)
+                    Return -1
+                End If
+            Next
+
+            Return 1
+        Catch ex As Exception
+            Return 0
+        End Try
+    End Function
+
 
     Public Async Function uploadFile(inputFile As Stream, fname As String) As Task
         Dim first As Boolean = True
@@ -559,31 +558,38 @@ Public Class FermentationControllerDevice
             Dim bytesToSend = Math.Min(blobFile.Length - blobFile.Position, 512)
             ReDim buffer(bytesToSend - 1)
             blobFile.Read(buffer, 0, bytesToSend)
-            Dim chksum As UInt16 = FletcherChecksum.Fletcher16(buffer, 0, bytesToSend)
-            Dim url As String = RootAddress & "/api/uploadblob?offset=" & offset
-            url += "&chksum=" & chksum
-            url += "&content=" & ToURL_Safe_base64String(buffer, 0, bytesToSend)
             While (1)
-                Try
-                    Console.Write("Push...")
-                    Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
-                    If Result.StatusCode <> 200 Then
-                        Console.WriteLine(Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
-                        Continue While
-                    Else
-                        Console.WriteLine("OK")
-                    End If
-                    Exit While
-                Catch ex As Exception
-                    Console.WriteLine(ex.ToString)
-                End Try
+                Dim res = Await SendBlobChunk(buffer, offset, bytesToSend)
+                If res = 1 Then Exit While
             End While
         End While
         Debug.Print("DONE")
     End Function
 
+    Private Async Function SendBlobChunk(Buffer As Byte(), offset As Integer, bCount As Integer) As Task(Of Integer)
+        Try
+            Dim chksum As UInt16 = FletcherChecksum.Fletcher16(Buffer, 0, bCount)
+            Dim url As String = RootAddress & "/api/uploadblob?offset=" & offset
+            url += "&chksum=" & chksum
+            url += "&content=" & ToURL_Safe_base64String(Buffer, 0, bCount)
+            Dim Result As HTTP_Comms_Result = Await COM.Comms_PUT(url)
+            If Result.StatusCode <> 200 Then Return 0
+            If Result.Body.Length < bCount Then Return 0
+            For idx = 0 To bCount - 1
+                If Buffer(idx) <> Result.Body(idx) Then
+                    Console.WriteLine("Mismatch @ " & idx)
+                    Return -1
+                End If
+            Next
+
+            Return 1
+        Catch ex As Exception
+            Return 0
+        End Try
+    End Function
+
     Public Async Function GetVersion() As Task(Of String)
-        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/version")
+        Dim Result As HTTP_Comms_Result = Await COM.Comms_GET(RootAddress & "/api/deviceinfo")
         If Result.StatusCode <> 200 Then Throw New FermCtrlCommsException(Result.StatusCode, Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count))
         Return Text.UTF8Encoding.UTF8.GetString(Result.Body, 0, Result.Body.Count)
     End Function

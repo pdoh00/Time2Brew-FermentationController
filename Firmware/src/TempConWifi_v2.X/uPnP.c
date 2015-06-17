@@ -37,7 +37,7 @@ const char *XML_TEMPLATE = "<?xml version=\"1.0\"?>"
         "<url>/favicon.ico</url>"
         "</icon> "
         "</iconList>"
-        "<presentationURL>/index.htm</presentationURL>"
+        "<presentationURL>/index.html</presentationURL>"
         "</device></root>";
 
 char uPnP_str_IPAddress[17];

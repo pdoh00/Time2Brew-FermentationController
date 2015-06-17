@@ -22,6 +22,7 @@ extern "C" {
         unsigned long SampleCount;
         int nvSRAM_AddressOffset;
         size_t sizeofSample;
+        BYTE RLE;
     } RLE_State;
 
     int RLE_CreateNew(RLE_State *state, const char *filename, ff_File *fileHandle, void *SampleBuffer, size_t sizeofSamples, int nvram_address);

@@ -28,12 +28,12 @@ typedef struct {
 
 DIGEST_CTX Digest_CTXs[DIGEST_CONNECTIONS_MAX];
 
-char FileETag[32];
-BYTE fileBuffer[1536];
+//char FileETag[32];
+//BYTE fileBuffer[1536];
 
 HTTP_REQUEST HTTP_Channels[HTTP_CHANNEL_COUNT];
 
-const char *defaultResource = "/index.htm";
+const char *defaultResource = "/index.html";
 
 int HexToDec(char a) {
     if (a >= '0' && a <= '9') {
@@ -432,8 +432,9 @@ InvalidRequest:
 void Send404_NotFound(HTTP_REQUEST * req) {
     Log("   %d: Send404_NotFound...", req->TCP_ChannelID);
     const char *HTTP_404 = "HTTP/1.1 404 Not Found\r\n"
-            "Connection: Keep-Alive\r\n"
+            "Connection: close\r\n"
             "Content-Length: 0\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
             "\r\n";
 
     int retry = 3;
@@ -462,9 +463,10 @@ void Send405_MethodNotAllowed(HTTP_REQUEST * req, const char *AllowedMethods) {
     while (retry--) {
         ESP_TCP_StartStream(req->TCP_ChannelID);
         circularPrintf(txFIFO, "HTTP/1.1 405 Method Not Allowed\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
                 "Content-Length: 0\r\n"
                 "Allow: %s\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "\r\n", AllowedMethods);
         if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) == 1) {
             if (ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
@@ -490,8 +492,9 @@ void Send500_InternalServerError(HTTP_REQUEST * req, const char *Msg) {
     while (retry--) {
         ESP_TCP_StartStream(req->TCP_ChannelID);
         circularPrintf(txFIFO, "HTTP/1.1 500 Internal Server Error\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
                 "Content-Length: %d\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "\r\n"
                 "%s", strlen(Msg), Msg);
         if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) == 1) {
@@ -515,8 +518,9 @@ void Send501_NotImplemented(HTTP_REQUEST * req) {
     while (retry--) {
         ESP_TCP_StartStream(req->TCP_ChannelID);
         circularPrintf(txFIFO, "HTTP/1.1 501 Not Implemented\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
                 "Content-Length: 0\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "\r\n");
         if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) == 1) {
             if (ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
@@ -539,8 +543,9 @@ void Send200_OK_Simple(HTTP_REQUEST * req) {
     while (retry--) {
         ESP_TCP_StartStream(req->TCP_ChannelID);
         circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
                 "Content-Length: 0\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "\r\n");
         if (ESP_TCP_TriggerWiFi_Send(channelID) == 1) {
             if (ESP_TCP_Wait_WiFi_SendCompleted(channelID)) {
@@ -562,8 +567,9 @@ void Send200_OK_Data(HTTP_REQUEST * req, unsigned char *msg, int length) {
     while (retry--) {
         ESP_TCP_StartStream(req->TCP_ChannelID);
         circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
                 "Content-Type: application/octet-stream\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "Content-Length: %i\r\n"
                 "\r\n", length);
         ESP_StreamArray(msg, length);
@@ -587,7 +593,8 @@ void Send200_OK_SmallMsg(HTTP_REQUEST * req, const char *msg) {
     while (retry--) {
         ESP_TCP_StartStream(req->TCP_ChannelID);
         circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "Content-Length: %i\r\n"
                 "\r\n"
                 "%s", strlen(msg), msg);
@@ -613,7 +620,8 @@ void Send304_NotModified(HTTP_REQUEST * req) {
         circularPrintf(txFIFO, "HTTP/1.1 304 Not Modified\r\n"
                 "Cache-Control: max-age=600\r\n"
                 "ETag: \"%s\"\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "\r\n", req->ETag);
         if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) == 1) {
             if (ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
@@ -638,7 +646,8 @@ void Send401_Unathorized(HTTP_REQUEST * req, const char *nonce, const char *Stal
                 "WWW-Authenticate: Digest realm=\"%s\", qop=\"auth\", nonce=\"%s\", stale=%s\r\n"
                 "Content-Type: text/html\r\n"
                 "Content-Length: 100\r\n"
-                "Connection: Keep-Alive\r\n"
+                "Connection: close\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
                 "\r\n"
                 "<!DOCTYPE html><html><head><title>Error</title></head><body><h1>401 Unauthorized.</h1></body></html>",
                 ESP_Config.Name, nonce, Stale);
@@ -746,7 +755,7 @@ int AuthorizeConnection(HTTP_REQUEST *req) {
     }
 
     MD5_CTX md5_ctx;
-    char *txtResponse = (char *) fileBuffer;
+    char txtResponse[512];
     char calc_response[34];
     char HA2[34];
     sprintf(txtResponse, "%s:%s", HTTP_METHOD_TO_STRING(req->Method), req->Resource);
@@ -823,6 +832,7 @@ void Process_GET_File(HTTP_REQUEST * req, int AllowCache) {
 void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long length, int AllowCache) {
     ff_File Handle;
     ff_File *handle = &Handle;
+    char FileETag[32];
     int retry;
 
     if (req->Resource == NULL) {
@@ -889,12 +899,13 @@ void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long 
 
     ESP_TCP_StartStream(req->TCP_ChannelID);
     circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
-            "Connection: Keep-Alive\r\n"
+            "Connection: close\r\n"
             "Cache-Control: %s\r\n"
             "ETag: \"%s\"\r\n"
             "Content-Type: %s\r\n"
             "Content-Encoding: %s\r\n"
             "Content-Length: %ul\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
             "\r\n", cachePolicy, FileETag, GetContentType(resource), ContentEncoding, length);
 
     _U1TXIF = 1;
@@ -913,7 +924,7 @@ void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long 
             ff_Seek(handle, handle->Position - bytesToRead);
             ESP_TCP_StartStream(req->TCP_ChannelID);
             circularPrintf(txFIFO, "HTTP/1.1 200 OK\r\n"
-                    "Connection: Keep-Alive\r\n"
+                    "Connection: close\r\n"
                     "Cache-Control: %s\r\n"
                     "ETag: \"%s\"\r\n"
                     "Content-Type: %s\r\n"
@@ -983,7 +994,8 @@ void Process_GET_File_ex(HTTP_REQUEST * req, unsigned long start, unsigned long 
 }
 
 void Process_GET_File_blob(HTTP_REQUEST * req) {
-    Log("%d: GET File Resource=\"%s\"...", req->TCP_ChannelID, req->Resource);
+    char FileETag[32];
+    Log("%d: GET File Resource=\"%s\"\r\n", req->TCP_ChannelID, req->Resource);
 
     BLOB_FILE handleBacking;
     BLOB_FILE *handle = &handleBacking;
@@ -1000,6 +1012,7 @@ void Process_GET_File_blob(HTTP_REQUEST * req) {
 
     res = BLOB_openFile(handle, req->Resource);
     if (res != FR_OK) {
+        Log("   File Not Found\r\n");
         Send404_NotFound(req);
         return;
     }
@@ -1014,7 +1027,7 @@ void Process_GET_File_blob(HTTP_REQUEST * req) {
     if (req->ETag == NULL) {
         Log("   Request Has No ETAG\r\n");
     } else {
-        sprintf(FileETag, "%04X", handle->checksum);
+        sprintf(FileETag, "X%04X", handle->checksum);
         Log("   File E-Tag=%s Request E-Tag=%s\r\n", FileETag, req->ETag);
         if (memcmp(FileETag, req->ETag, 4) == 0) {
             Send304_NotModified(req);
@@ -1028,6 +1041,7 @@ void Process_GET_File_blob(HTTP_REQUEST * req) {
     //Log("  First Packet: Buffering %xl bytes\r\n", bytesLastRead);
     ESP_TCP_StartStream(req->TCP_ChannelID);
     BLOB_readStreamToWifi(handle, fileOffset, bytesLastRead);
+    Log("   Buffered: Offset=%ul Length=%ul\r\n", fileOffset, bytesLastRead);
     _U1TXIF = 1;
     retry = 3;
 
@@ -1035,52 +1049,60 @@ void Process_GET_File_blob(HTTP_REQUEST * req) {
         //Send the buffered packet
         while (1) {
             if (ESP_TCP_TriggerWiFi_Send(req->TCP_ChannelID) >= 0) break;
-            Log("Trigger Send Failed..Retry\r\n");
+            Log("   Trigger Send Failed..Retry\r\n");
             //The buffered packet failed...so retry to send it again.
             if ((retry--) == 0) goto FailErr;
             ESP_TCP_StartStream(req->TCP_ChannelID);
             BLOB_readStreamToWifi(handle, fileOffset, bytesLastRead);
+            Log("   Buffered: Offset=%ul Length=%ul\r\n", fileOffset, bytesLastRead);
             _U1TXIF = 1;
         }
+        Log("   Sending...\r\n");
         DELAY_105uS; //Give the esp time to do it's thing...
 
         //Advance the file forward
         bytesRemaining -= bytesLastRead;
         fileOffset += bytesLastRead;
 
+
         //Buffer the next packet
         nextBytesToRead = bytesRemaining;
         if (nextBytesToRead > 11680) nextBytesToRead = 11680;
-        ESP_TCP_StartStream(req->TCP_ChannelID);
-        BLOB_readStreamToWifi(handle, fileOffset, nextBytesToRead);
-        _U1TXIF = 1;
+        if (nextBytesToRead > 0) {
+            ESP_TCP_StartStream(req->TCP_ChannelID);
+            BLOB_readStreamToWifi(handle, fileOffset, nextBytesToRead);
+            Log("   Buffered: Offset=%ul Length=%ul\r\n", fileOffset, nextBytesToRead);
+            _U1TXIF = 1;
+        }
 
         //Now wait for the previous packet to finish sending...
         if (!ESP_TCP_Wait_WiFi_SendCompleted(req->TCP_ChannelID)) {
             //There was an error...so let's backup and try to send that packet again...
-
             bytesRemaining += bytesLastRead;
             fileOffset -= bytesLastRead;
-            Log("!!!WaitSendComplete Failed...Retry bytesRemaining=%l fileOffset=%l\r\n", bytesRemaining, fileOffset);
+            Log("   !!!WaitSendComplete Failed...Retry bytesRemaining=%l fileOffset=%l\r\n", bytesRemaining, fileOffset);
             ESP_TCP_StartStream(req->TCP_ChannelID);
             BLOB_readStreamToWifi(handle, fileOffset, bytesLastRead);
+            Log("   Buffered: Offset=%ul Length=%ul\r\n", fileOffset, bytesLastRead);
             _U1TXIF = 1;
             if ((retry--) == 0) goto FailErr;
         } else {
+            Log("   Send Completed OK\r\n");
             //The send was completed so make the latest read the past.
             retry = 3;
             bytesLastRead = nextBytesToRead;
             //Log("Send OK bytesRemaining=%l fileOffset=%l\r\n", bytesRemaining, fileOffset);
         }
     }
-    Log("OK\r\n");
+    Log("   COMPLETED GET File Resource=\"%s\"\r\n", req->Resource);
     return;
 FailErr:
-    Log("Unable to Send!\r\n");
+    Log("   FAILED GET File Resource=\"%s\"\r\n", req->Resource);
     return;
 }
 
 void HTTP_ServerLoop() {
+    char scratchBuffer[1536];
     HTTP_REQUEST *req;
     int x;
     int reqState;
@@ -1099,7 +1121,7 @@ void HTTP_ServerLoop() {
 
 
             char *cc = req->Resource;
-            char *dd = (char *) fileBuffer;
+            char *dd = scratchBuffer;
             char temp;
             while (1) {
                 temp = *(cc++);
@@ -1109,7 +1131,7 @@ void HTTP_ServerLoop() {
                 *(dd++) = temp;
             }
             *(dd++) = 0;
-            dd = (char *) fileBuffer;
+            dd = scratchBuffer;
 
             if (Global_Config_Mode != 1) {
                 if (strstr(dd, "SECURE") != NULL) {
@@ -1119,7 +1141,6 @@ void HTTP_ServerLoop() {
             }
 
             if (req->Method == HTTP_METHOD_HEAD ||
-                    req->Method == HTTP_METHOD_POST ||
                     req->Method == HTTP_METHOD_TRACE ||
                     req->Method == HTTP_METHOD_OPTIONS ||
                     req->Method == HTTP_METHOD_CONNECT) {
@@ -1136,7 +1157,7 @@ void HTTP_ServerLoop() {
                         } else {
                             ProcessAPI(req, API);
                         }
-                    } else if (req->Method == HTTP_METHOD_PUT) {
+                    } else if (req->Method == HTTP_METHOD_PUT || req->Method == HTTP_METHOD_POST) {
                         if (API->PutAuth) {
                             if (AuthorizeConnection(req)) ProcessAPI(req, API);
                         } else {
@@ -1147,8 +1168,8 @@ void HTTP_ServerLoop() {
                     }
                 }
             } else if (memcmp(req->Resource, "/device.xml", 11) == 0) {
-                uPnP_GetDeviceXML((char *) fileBuffer);
-                Send200_OK_SmallMsg(req, (char*) fileBuffer);
+                uPnP_GetDeviceXML(scratchBuffer);
+                Send200_OK_SmallMsg(req, scratchBuffer);
             } else {
                 if (req->Method == HTTP_METHOD_GET) {
                     if (req->Resource[0] == '/' && req->Resource[1] == 0) {
